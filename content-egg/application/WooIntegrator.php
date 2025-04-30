@@ -21,7 +21,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class WooIntegrator
 {
@@ -51,6 +51,15 @@ class WooIntegrator
         {
             \add_filter('woocommerce_product_single_add_to_cart_text', array(__CLASS__, 'customButtonText'), 10, 2);
             \add_filter('woocommerce_product_add_to_cart_text', array(__CLASS__, 'customButtonText'), 10, 2);
+        }
+
+        if (GeneralConfig::getInstance()->option('woocommerce_shortcode_single'))
+        {
+            \add_action('woocommerce_single_product_summary', array(__CLASS__, 'addShortcodeSingle'), 20);
+        }
+        if (GeneralConfig::getInstance()->option('woocommerce_shortcode_archive'))
+        {
+            \add_action('woocommerce_after_shop_loop_item', array(__CLASS__, 'addShortcodeArchive'), 20);
         }
     }
 
@@ -677,5 +686,20 @@ class WooIntegrator
         }
 
         return $price;
+    }
+
+    public static function addShortcodeSingle()
+    {
+        if (!$shortcode = GeneralConfig::getInstance()->option('woocommerce_shortcode_single'))
+            return;
+
+        echo \do_shortcode($shortcode);
+    }
+    public static function addShortcodeArchive()
+    {
+        if (!$shortcode = GeneralConfig::getInstance()->option('woocommerce_shortcode_archive'))
+            return;
+
+        echo \do_shortcode($shortcode);
     }
 }

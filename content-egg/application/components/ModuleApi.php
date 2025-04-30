@@ -17,7 +17,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class ModuleApi
 {
@@ -28,6 +28,7 @@ class ModuleApi
     {
         \add_action('wp_ajax_content-egg-module-api', array($this, 'addApiEntryModule'));
         \add_action('wp_ajax_content-egg-ai-api', array($this, 'addApiEntryAi'));
+        \add_action('wp_ajax_content-egg-smart-groups-api', array($this, 'addApiEntrySmartGroups'));
     }
 
     public static function apiBase()
@@ -37,7 +38,6 @@ class ModuleApi
 
     public function addApiEntryAi()
     {
-        sleep(3);
         if (!\current_user_can('edit_posts'))
             throw new \Exception("Access denied.");
 
@@ -74,6 +74,42 @@ class ModuleApi
         try
         {
             $items = AiProcessor::applayAiItems($items, $title_method, $description_method);
+        }
+        catch (\Exception $e)
+        {
+            $this->formatJson(array('error' => $e->getMessage()));
+        }
+
+        $this->formatJson(array('results' => $items, 'error' => ''));
+    }
+
+    public function addApiEntrySmartGroups()
+    {
+        if (!\current_user_can('edit_posts'))
+            throw new \Exception("Access denied.");
+
+        \check_ajax_referer('contentegg-metabox', '_contentegg_nonce');
+
+        @set_time_limit(240);
+        if (isset($_POST['params']))
+            $params = wp_unslash($_POST['params']); // phpcs:ignore
+        else
+            die("AI params is undefined.");
+
+        $params = json_decode($params, true);
+
+        if (!$params)
+            die("Error: 'ai_params' parameter cannot be empty.");
+
+        if (!isset($params['data']) || !isset($params['method']))
+            die("Error: Invalid Parameters");
+
+        $method = TextHelper::clear(sanitize_text_field(wp_unslash($params['method'])));
+        $items = $params['data'];
+
+        try
+        {
+            $items = AiProcessor::applaySmartGroups($items, $method);
         }
         catch (\Exception $e)
         {

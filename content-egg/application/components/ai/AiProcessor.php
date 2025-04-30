@@ -3,6 +3,7 @@
 namespace ContentEgg\application\components\ai;
 
 use ContentEgg\application\admin\GeneralConfig;
+use ContentEgg\application\helpers\TextHelper;
 
 use function ContentEgg\prn;
 use function ContentEgg\prnx;
@@ -14,7 +15,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 
 class AiProcessor
@@ -38,7 +39,7 @@ class AiProcessor
     {
         foreach ($items as $item)
         {
-            if (isset($item) && $item['_selected'])
+            if (isset($item['_selected']) && $item['_selected'])
                 return true;
         }
 
@@ -60,7 +61,17 @@ class AiProcessor
         $api_key = explode(',', $api_key);
         $api_key = trim($api_key[array_rand($api_key)]);
 
-        $prompt = new ProductPrompt($api_key, $model);
+        if ($model == 'openrouter/auto')
+        {
+            $openrouter_models_value = GeneralConfig::getInstance()->option('openrouter_models');
+            $openrouter_models = TextHelper::getArrayFromCommaList($openrouter_models_value);
+        }
+        else
+        {
+            $openrouter_models = array();
+        }
+
+        $prompt = new ProductPrompt($api_key, $model, $openrouter_models);
 
         $prompt->setProduct($item);
         $prompt->setProductNew($item);
@@ -74,6 +85,7 @@ class AiProcessor
             'rephrase' => 'rephraseProductTitle',
             'translate' => 'translateProductTitle',
             'shorten' => 'shortenProductTitle',
+            'subtitle_perfect_for' => 'generateSubtitlePerfectFor',
             'prompt1' => 'customPromptTitle2',
             'prompt2' => 'customPromptTitle2',
             'prompt3' => 'customPromptTitle3',
@@ -87,7 +99,14 @@ class AiProcessor
             {
                 try
                 {
-                    $item['title'] = $prompt->$method();
+                    $title = $prompt->$method();
+                    if ($title)
+                    {
+                        if (strstr($title_method, 'subtitle'))
+                            $item['subtitle'] = $title;
+                        else
+                            $item['title'] = $title;
+                    }
                 }
                 catch (\Exception $e)
                 {
@@ -102,6 +121,7 @@ class AiProcessor
             'translate' => 'translateProductDescription',
             'summarize' => 'summarizeProductDescription',
             'bullet_points' => 'bulletPointsProductDescription',
+            'bullet_points_compact' => 'bulletPointsCompactProductDescription',
             'turn_into_advertising' => 'turnIntoAdvertisingProductDescription',
             'cta_text' => 'ctaTextProductDescription',
             'write_paragraphs' => 'writeParagraphsProductDescription',
@@ -133,5 +153,63 @@ class AiProcessor
         }
 
         return $item;
+    }
+
+    public static function applaySmartGroups(array $data, $method)
+    {
+        if (!$api_key = GeneralConfig::getInstance()->option('ai_key'))
+            return $data;
+
+        $model = GeneralConfig::getInstance()->option('ai_model');
+
+        $api_key = explode(',', $api_key);
+        $api_key = trim($api_key[array_rand($api_key)]);
+
+        if ($model == 'openrouter/auto')
+        {
+            $openrouter_models_value = GeneralConfig::getInstance()->option('openrouter_models');
+            $openrouter_models = TextHelper::getArrayFromCommaList($openrouter_models_value);
+        }
+        else
+        {
+            $openrouter_models = array();
+        }
+
+        $prompt = new SmartGroupsPrompt($api_key, $model, $openrouter_models);
+        $prompt->setData($data);
+
+        if (\ContentEgg\application\Plugin::isDevEnvironment())
+            mt_srand(12345678);
+
+        $methods = array(
+            'price_comparison' => 'categorizePriceComparison',
+            'auto' => 'categorizeAuto',
+            'product_category' => 'categorizeProductCategory',
+            'features' => 'categorizeFeatures',
+            'brand' => 'categorizeBrand',
+            'price_range' => 'categorizePriceRange',
+            'by_usage' => 'categorizeUsage',
+            'age_group' => 'categorizeAgeGroup',
+            'material_ingredients' => 'categorizeMaterialIngredients',
+            'size_volume' => 'categorizeSizeVolume',
+        );
+
+        if (!isset($methods[$method]))
+            return $data;
+
+        $call_method = $methods[$method];
+        if (method_exists($prompt, $call_method))
+        {
+            try
+            {
+                $data = $prompt->$call_method();
+            }
+            catch (\Exception $e)
+            {
+                throw new \Exception('AI: Smart Groups error: ' . $e->getMessage());
+            }
+        }
+
+        return $data;
     }
 }

@@ -11,7 +11,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 
 class OpenAiClient extends AiClient
@@ -64,8 +64,20 @@ class OpenAiClient extends AiClient
 		if (!$data = json_decode($response, true))
 			throw new \Exception('Invalid JSON formatting.');
 
+		if (isset($data['error']['message']))
+		{
+			$errorMessage = 'AI API error: ' . $data['error']['message'];
+			if (isset($data['error']['code']))
+				$errorMessage .= ' | Error code: ' . $data['error']['code'];
+
+			if (isset($data['error']['metadata']['raw']))
+				$errorMessage .= ' | Raw metadata: ' . $data['error']['metadata']['raw'];
+
+			throw new \Exception($errorMessage);
+		}
+
 		if (!isset($data['choices'][0]['message']['content']))
-			throw new \Exception('No content message in the openai response.');
+			throw new \Exception('No content message in the AI response.');
 
 		$content = $data['choices'][0]['message']['content'];
 

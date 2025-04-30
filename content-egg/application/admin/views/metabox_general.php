@@ -1,4 +1,8 @@
-<?php defined('\ABSPATH') || exit; ?>
+<?php
+
+use ContentEgg\application\helpers\AdminHelper;
+
+defined('\ABSPATH') || exit; ?>
 <?php
 \wp_nonce_field('contentegg_metabox', 'contentegg_nonce');
 $tpl_manager = ContentEgg\application\components\BlockTemplateManager::getInstance();
@@ -68,13 +72,32 @@ if (!$global_keyword = \get_post_meta($post->ID, '_cegg_global_autoupdate_keywor
     <div class="col text-end">
         <div class="input-group input-group-sm">
             <input type="text" ng-model="newProductGroup" select-on-click on-enter="addProductGroup()" class="form-control form-control-sm" placeholder="<?php esc_html_e('Add a product group', 'content-egg'); ?>" aria-label="<?php esc_html_e('Add a product group ', 'content-egg'); ?>">
-            <div class="input-group-btn me-3">
-                <button ng-disabled="!newProductGroup" ng-click="addProductGroup()" type="button" class="btn btn-sm btn-outline-primary" aria-label="Add">
-                    <i class="bi bi-plus"></i>
+            <button ng-disabled="!newProductGroup" ng-click="addProductGroup()" type="button" class="btn btn-sm btn-outline-primary" aria-label="Add">
+                <i class="bi bi-plus"></i>
+            </button>
+            <button ng-show="productGroups.length" title="<?php esc_html_e('Remove all product groups', 'content-egg'); ?>" ng-click="removeProductGroups()" type="button" class="btn btn-sm btn-outline-danger" aria-label="Remove">
+                <i class="bi bi-trash3"></i>
+            </button>
+            <?php if (AdminHelper::isAiEnabled()) : ?>
+                <button ng-show="global_isAddedResults()" class="btn btn-outline-info btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span ng-show="aiProcessingSmartGroups" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <i class="bi bi-magic"></i>
+                    <?php esc_html_e('Smart groups', 'content-egg'); ?>
                 </button>
-            </div>
-
-            <input class="form-control form-control-sm" name="globalUpdateKeyword" value="<?php echo esc_attr($global_keyword); ?>" type="text" placeholder="<?php esc_html_e('Global auto-update keyword', 'content-egg'); ?>" title="<?php esc_html_e('Global auto-update keyword for all active modules', 'content-egg'); ?>">
+                <ul class="dropdown-menu cegg-ai-tools">
+                    <li class="small m-0"><a ng-click="smartGroups('auto')" class="dropdown-item"><?php echo esc_html(__('Auto-Groups', 'content-egg')); ?></a></li>
+                    <li class="small m-0"><a ng-click="smartGroups('price_comparison')" class="dropdown-item"><?php echo esc_html(__('Price Comparison', 'content-egg')); ?></a></li>
+                    <li class="small m-0"><a ng-click="smartGroups('product_category')" class="dropdown-item"><?php echo esc_html(__('By Shopping Category', 'content-egg')); ?></a></li>
+                    <li class="small m-0"><a ng-click="smartGroups('features')" class="dropdown-item"><?php echo esc_html(__('By Features', 'content-egg')); ?></a></li>
+                    <li class="small m-0"><a ng-click="smartGroups('brand')" class="dropdown-item"><?php echo esc_html(__('By Brand', 'content-egg')); ?></a></li>
+                    <li class="small m-0"><a ng-click="smartGroups('price_range')" class="dropdown-item"><?php echo esc_html(__('By Price Range', 'content-egg')); ?></a></li>
+                    <li class="small m-0"><a ng-click="smartGroups('by_usage')" class="dropdown-item"><?php echo esc_html(__('By Usage', 'content-egg')); ?></a></li>
+                    <li class="small m-0"><a ng-click="smartGroups('age_group')" class="dropdown-item"><?php echo esc_html(__('By Age Group', 'content-egg')); ?></a></li>
+                    <li class="small m-0"><a ng-click="smartGroups('material_ingredients')" class="dropdown-item"><?php echo esc_html(__('By Material or Ingredients', 'content-egg')); ?></a></li>
+                    <li class="small m-0"><a ng-click="smartGroups('size_volume')" class="dropdown-item"><?php echo esc_html(__('By Size or Volume', 'content-egg')); ?></a></li>
+                </ul>
+            <?php endif; ?>
+            <input class="form-control form-control-sm ms-3" name="globalUpdateKeyword" value="<?php echo esc_attr($global_keyword); ?>" type="text" placeholder="<?php esc_html_e('Global auto-update keyword', 'content-egg'); ?>" title="<?php esc_html_e('Global auto-update keyword for all active modules', 'content-egg'); ?>">
 
             <?php if ($keywordsExist || $global_keyword) : ?>
                 <input type="submit" id="cegg_update_lists" class="btn btn-sm btn-outline-primary ms-3" value="<?php esc_html_e('Refresh listings', 'content-egg'); ?>" title="<?php esc_html_e('Refresh all product listings using auto-update keywords', 'content-egg'); ?>">
@@ -85,6 +108,9 @@ if (!$global_keyword = \get_post_meta($post->ID, '_cegg_global_autoupdate_keywor
 
         </div>
     </div>
+</div>
+<div class="col-md-12 text-danger small mt-2" ng-show="smartGroupsError">
+    {{smartGroupsError}}
 </div>
 
 <div class="row mt-3">

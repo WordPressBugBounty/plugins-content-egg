@@ -2,6 +2,9 @@
 
 namespace ContentEgg\application\helpers;
 
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
+
 defined('\ABSPATH') || exit;
 
 /**
@@ -9,7 +12,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  *
  */
 class CurrencyHelper
@@ -165,7 +168,7 @@ class CurrencyHelper
                 'name' => 'Ukrainian hryvnia',
             ),
             'INR' => array(
-                'currency_symbol' => 'Rs.',
+                'currency_symbol' => '₹',
                 'currency_pos' => 'left_space',
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
@@ -596,6 +599,23 @@ class CurrencyHelper
                 'num_decimals' => 2,
                 'name' => 'Bangladeshi Taka',
             ),
+            'NPR' => array(
+                'currency_symbol' => '₨',
+                'currency_pos' => 'left_space',
+                'thousand_sep' => ',',
+                'decimal_sep' => '.',
+                'num_decimals' => 2,
+                'name' => 'Nepalese Rupee',
+            ),
+            'CHF' => array(
+                'currency_symbol' => 'CHF',
+                'currency_pos' => 'right_space',
+                'thousand_sep' => "'",
+                'decimal_sep' => '.',
+                'num_decimals' => 2,
+                'name' => 'Swiss Franc',
+            ),
+
         );
     }
 
@@ -768,15 +788,6 @@ class CurrencyHelper
 
     public static function getCurrencyRate($from, $to)
     {
-        if ($from == 'RUR')
-        {
-            $from = 'RUB';
-        }
-        if ($to == 'RUR')
-        {
-            $to = 'RUB';
-        }
-
         if ($rate = \apply_filters('content_egg_currency_rate', 0, $from, $to))
         {
             return $rate;
@@ -795,5 +806,13 @@ class CurrencyHelper
         }
 
         return self::$currencyRates[$transient_name];
+    }
+
+    public static function convertCurrency($price, $from, $to)
+    {
+        if (!$rate = CurrencyHelper::getCurrencyRate($from, $to))
+            return $price;
+
+        return round($price * $rate, 2);
     }
 }

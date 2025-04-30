@@ -1,26 +1,27 @@
 <?php
-defined( '\ABSPATH' ) || exit;
+
+use ContentEgg\application\helpers\TemplateHelper;
+
+defined('\ABSPATH') || exit;
 /*
   Name: Simple
  */
-__( 'Simple', 'content-egg' );
+__('Simple', 'content-egg');
 ?>
-<?php \wp_enqueue_style( 'egg-bootstrap' ); ?>
 
-<div class="egg-container egg-media">
-	<?php if ( $title ): ?>
-        <h3><?php echo esc_html( $title ); ?></h3>
-	<?php endif; ?>
-
-	<?php foreach ( $items as $item ): ?>
-        <div class="media">
-            <div class="media-body">
-                <h4 class="media-heading">
-                    <a target="_blank" rel="nofollow"
-                       href="<?php echo esc_url_raw($item['url']); ?>"><?php echo esc_html( $item['title'] ); ?></a>
-                </h4>
-                <p><?php echo wp_kses_post($item['description']); ?></p>
+<div class="container px-0 mb-5 mt-1 cegg-list" <?php $this->colorMode(); ?>>
+    <?php foreach ($items as $item): ?>
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="card-title h5">
+                    <?php TemplateHelper::openATag($item, $params, array('class' => 'fw-bolder')); ?>
+                    <?php echo esc_html($item['title']); ?>
+                    <?php TemplateHelper::closeATag(); ?>
+                </div>
+                <p class="card-text">
+                    <?php echo wp_kses_post($item['description']); ?>
+                </p>
             </div>
         </div>
-	<?php endforeach; ?>
+    <?php endforeach; ?>
 </div>

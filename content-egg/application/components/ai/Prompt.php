@@ -12,7 +12,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 
 class Prompt
@@ -21,9 +21,9 @@ class Prompt
     protected $temperature;
     protected $client;
 
-    public function __construct($api_key, $model)
+    public function __construct($api_key, $model, $models = array())
     {
-        $this->client = AiClient::createClient($api_key, $model);
+        $this->client = AiClient::createClient($api_key, $model, $models);
     }
 
     public function setLang($lang)
@@ -41,7 +41,7 @@ class Prompt
         $params = $this->prepareParams($params, $prompt);
         $prompt = PromptHelper::build($prompt, $params);
         if ($this->lang)
-            $system = sprintf('Make sure you answer in %s!', $this->lang);
+            $system = sprintf('Language: Ensure all texts are written in %s!', $this->lang);
 
         if ($this->temperature && !isset($ai_params['temperature']))
             $ai_params['temperature'] = $this->temperature;

@@ -11,7 +11,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 abstract class VirtualPage
 {
@@ -66,7 +66,7 @@ abstract class VirtualPage
 		{
 			$home_path = parse_url(\home_url('/'), PHP_URL_PATH);
 			$page      = (string) preg_replace("#^" . preg_quote($home_path) . "#", '', esc_url_raw(wp_unslash($_SERVER['REQUEST_URI'])));
-			$page      = parse_url($page, PHP_URL_PATH);
+			$page      = (string) parse_url($page, PHP_URL_PATH);
 			$page      = trim($page, '/');
 		}
 		else
@@ -87,8 +87,6 @@ abstract class VirtualPage
 			if (\locate_template(array($template)))
 				\add_action('template_redirect', array($this, 'renderTemplate'));
 		}
-
-		//if (self::isRehubTheme())
 
 		\add_filter('the_posts', array($this, 'createDummyPage'));
 	}

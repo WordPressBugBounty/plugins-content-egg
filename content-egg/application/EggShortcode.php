@@ -7,16 +7,19 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ModuleTemplateManager;
+use ContentEgg\application\components\ShortcodeAtts;
 use ContentEgg\application\components\Shortcoded;
 use ContentEgg\application\helpers\TextHelper;
-use ContentEgg\application\helpers\TemplateHelper;
+
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
 
 /**
  * EggShortcode class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class EggShortcode
 {
@@ -28,6 +31,7 @@ class EggShortcode
     {
         if (self::$instance == null)
             self::$instance = new self;
+
         return self::$instance;
     }
 
@@ -42,70 +46,18 @@ class EggShortcode
     {
         $allowed_atts = array(
             'module' => null,
-            'limit' => 0,
-            'offset' => 0,
-            'next' => 0,
-            'template' => '',
-            'locale' => '',
-            'ean' => '',
-            'title' => '',
-            'post_id' => 0,
-            'cols' => 0,
-            'currency' => '',
-            'groups' => '',
-            'group' => '',
             'disable_features' => 0,
-            'products' => '',
-            'product' => '',
-            'hide' => '',
-            'btn_text' => '',
-            'add_query_arg' => '',
-            'sort' => '',
-            'order' => '',
             'keyword' => '',
+            'template' => '',
+            'groups' => '',
         );
 
         $allowed_atts = \apply_filters('cegg_module_shortcode_atts', $allowed_atts);
         $a = \shortcode_atts($allowed_atts, $atts);
 
-        $a['next'] = (int) $a['next'];
-        $a['limit'] = (int) $a['limit'];
-        $a['offset'] = (int) $a['offset'];
-        $a['module'] = TextHelper::clear($a['module']);
-        $a['locale'] = TextHelper::clear($a['locale']);
-        $a['title'] = \sanitize_text_field($a['title']);
-        $a['post_id'] = (int) $a['post_id'];
-        $a['cols'] = (int) $a['cols'];
         $a['disable_features'] = filter_var($a['disable_features'], FILTER_VALIDATE_BOOLEAN);
-        $a['currency'] = strtoupper(TextHelper::clear($a['currency']));
-        $a['groups'] = \sanitize_text_field($a['groups']);
-        $a['group'] = \sanitize_text_field($a['group']);
-        $a['hide'] = TemplateHelper::hideParamPrepare($a['hide']);
-        $a['ean'] = TemplateHelper::eanParamPrepare($a['ean']);
-        $a['btn_text'] = \wp_strip_all_tags($a['btn_text'], true);
-        $a['add_query_arg'] = \sanitize_text_field(\wp_strip_all_tags($a['add_query_arg'], true));
         $a['keyword'] = \sanitize_text_field(html_entity_decode($a['keyword']));
-
-        if ($a['group'] && !$a['groups'])
-            $a['groups'] = $a['group'];
-        if ($a['groups'])
-            $a['groups'] = TextHelper::getArrayFromCommaList($a['groups']);
-        if ($a['product'] && !$a['products'])
-            $a['products'] = $a['product'];
-        if ($a['products'])
-            $a['products'] = TextHelper::getArrayFromCommaList($a['products']);
-        if ($a['add_query_arg'])
-            parse_str($a['add_query_arg'], $a['add_query_arg']);
-        $allowed_sort = array('price', 'discount', 'reverse', 'total_price');
-        $allowed_order = array('asc', 'desc');
-        $a['sort'] = strtolower($a['sort']);
-        $a['order'] = strtolower($a['order']);
-        if (!in_array($a['sort'], $allowed_sort))
-            $a['sort'] = '';
-        if (!in_array($a['order'], $allowed_order))
-            $a['order'] = '';
-        if ($a['sort'] == 'discount' && !$a['order'])
-            $a['order'] = 'desc';
+        $a['module'] = TextHelper::clear($a['module']);
 
         if ($a['template'] && $a['module'])
             $a['template'] = ModuleTemplateManager::getInstance($a['module'])->prepareShortcodeTempate($a['template']);
@@ -123,6 +75,9 @@ class EggShortcode
             else
                 $a['groups'] = array($a['keyword']);
         }
+
+        $general = ShortcodeAtts::prepare($atts);
+        $a = array_merge($general, $a);
 
         return $a;
     }

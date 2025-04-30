@@ -1,50 +1,43 @@
 <?php
 /*
  * Name: Buttons row
- * Modules:
  * Module Types: PRODUCT
- *
  */
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-if (empty($cols) || $cols > 12)
-    $cols = 3;
-$col_size = ceil(12 / $cols);
+defined('\ABSPATH') || exit;
 
-if (!$btn_text)
-    $btn_text = sprintf(__('%s at %s', 'content-egg-tpl'), '%PRICE%', '%MERCHANT%');
-
-$all_items = TemplateHelper::sortAllByPrice($data, $order);
+if (!empty($params['btn_text']))
+    $btn_text = $params['btn_text'];
+else
+    $btn_text = '';
 ?>
 
-<div class="egg-container egg-btns-row">
+<div class="container px-0 my-3" <?php $this->colorMode(); ?>>
+    <div class="row g-3<?php TemplateHelper::rowCols($params, 'row-cols-1 row-cols-md-3'); ?>">
 
-    <?php if ($title) : ?>
-        <h3><?php echo \esc_html($title); ?></h3>
-    <?php endif; ?>
+        <?php foreach ($items as $i => $btn_item): ?>
+            <?php
+            if (empty($btn_text))
+            {
+                if ($btn_item['price'])
+                    $params['btn_text'] = sprintf(TemplateHelper::__('%s at %s'), '%PRICE%', '%MERCHANT%');
+                elseif ($item['module_id'] == 'Udemy')
+                    $params['btn_text'] = sprintf(TemplateHelper::__('View on %s'), '%MERCHANT%');
+                else
+                    $params['btn_text'] = sprintf(TemplateHelper::__('View Price at %s'), '%MERCHANT%');
+            }
+            ?>
+            <?php $this->setItem($btn_item, $i); ?>
+            <div class="col">
+                <?php if ($this->isVisible('button')): ?>
+                    <div class="d-grid">
+                        <?php TemplateHelper::button($btn_item, $params); ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
 
-    <div class="container-fluid">
-        <div class="row">
-            <?php $i = 0; ?>
-            <?php foreach ($all_items as $item) : ?>
-
-                <?php
-                if ($btn_text == '%Buy Now%')
-                    $btn_text = TemplateHelper::btnText('btn_text_buy_now', __('BUY NOW', 'content-egg-tpl'), 0, $item);
-                ?>
-
-                <div class="col-md-<?php echo esc_attr($col_size); ?> col-xs-12 cegg-btn-cell">
-                    <a<?php TemplateHelper::printRel(); ?> target="_blank" href="<?php echo esc_url_raw($item['url']); ?>" class="btn btn-danger btn-block"><?php TemplateHelper::buyNowBtnText(true, $item, $btn_text); ?></a>
-                </div>
-
-                <?php
-                $i++;
-                if ($i % $cols == 0)
-                    echo '<div class="clearfix"></div>';
-                ?>
-            <?php endforeach; ?>
-        </div>
     </div>
-
 </div>

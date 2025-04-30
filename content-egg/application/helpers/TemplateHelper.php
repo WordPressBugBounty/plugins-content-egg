@@ -22,7 +22,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  *
  */
 class TemplateHelper
@@ -39,6 +39,14 @@ class TemplateHelper
     static $shop_info = null;
     static $shop_coupons = null;
     static $merchnat_info = null;
+    static $star_svg_definited = false;
+    static $product_fields = null;
+    static $coupon_offcanvas = array();
+    static $shop_info_offcanvas = array();
+    static $price_history_lowest_item = null;
+    static $price_history_highest_item = null;
+    static $price_history_since = null;
+    static $delivery_at_checkout = false;
 
     public static function formatPriceCurrency($price, $currencyCode, $before_symbol = '', $after_symbol = '')
     {
@@ -214,6 +222,12 @@ class TemplateHelper
 
     public static function formatDate($timestamp, $gmt = false)
     {
+        if (!$timestamp)
+            return '';
+
+        if (!is_numeric($timestamp) && $t = strtotime($timestamp))
+            $timestamp = $t;
+
         return date_i18n(get_option('date_format'), $timestamp, $gmt);
     }
 
@@ -305,13 +319,15 @@ class TemplateHelper
         }
         else
         {
-            return false;
+            foreach ($data as $item)
+            {
+                if (isset($item['module_id']) && strstr($item['module_id'], 'Amazon'))
+                    break;
+            }
         }
 
         if (empty($item['last_update']))
-        {
             return false;
-        }
 
         $last_update = $item['last_update'];
 
@@ -582,9 +598,9 @@ class TemplateHelper
         }
     }
 
-    private static function getMerchantImageUrl(array $item, $prefix = '', $remote_url = null, $blank_on_error = false)
+    private static function getMerchantImageUrl(array $item, $prefix = '', $remote_url = null, $blank_on_error = false, $color_mode = 'light')
     {
-        $default_ext = 'png'; // ???
+        $default_ext = 'png';
 
         if (!strpos($remote_url, 'www.google.com/s2/favicons?domain'))
         {
@@ -613,16 +629,25 @@ class TemplateHelper
         {
             return $blank_on_error ? self::getBlankImg() : false;
         }
-
-        $logo_file_name = str_replace('.', '-', $logo_file_name);
-        $logo_file_name .= '.' . $default_ext;
-        $logo_file_name = $prefix . $logo_file_name;
-
-        // check in distrib
-        if (file_exists(\ContentEgg\PLUGIN_PATH . 'res/logos/' . $logo_file_name))
+        if (!$prefix && strstr($item['domain'], 'amazon.'))
+            $logo_file_name = 'amazon.webp';
+        elseif (!$prefix &&  strstr($item['domain'], 'ebay.'))
+            $logo_file_name = 'ebay.webp';
+        else
         {
-            return \ContentEgg\PLUGIN_RES . '/logos/' . $logo_file_name;
+            $logo_file_name = str_replace('.', '-', $logo_file_name);
+            $logo_file_name .= '.' . $default_ext;
+            $logo_file_name = $prefix . $logo_file_name;
         }
+
+        if ($color_mode == 'dark')
+        {
+            if (file_exists(\ContentEgg\PLUGIN_PATH . 'res/logos/dark-' . $logo_file_name))
+                return \ContentEgg\PLUGIN_RES . '/logos/dark-' . $logo_file_name;
+        }
+
+        if (file_exists(\ContentEgg\PLUGIN_PATH . 'res/logos/' . $logo_file_name))
+            return \ContentEgg\PLUGIN_RES . '/logos/' . $logo_file_name;
 
         $uploads = \wp_upload_dir();
         if (!$logo_dir = self::getMerchantLogoDir())
@@ -656,7 +681,7 @@ class TemplateHelper
         }
     }
 
-    public static function getMerchantLogoUrl(array $item, $blank_on_error = false)
+    public static function getMerchantLogoUrl(array $item, $blank_on_error = false, $color_mode = 'light')
     {
         $prefix = '';
         if (!empty($item['module_id']))
@@ -682,7 +707,7 @@ class TemplateHelper
             $remote_url = '';
         }
 
-        return self::getMerchantImageUrl($item, $prefix, $remote_url, $blank_on_error);
+        return self::getMerchantImageUrl($item, $prefix, $remote_url, $blank_on_error, $color_mode);
     }
 
     public static function getMerhantLogoUrl(array $item, $blank_on_error = false)
@@ -720,38 +745,26 @@ class TemplateHelper
 
     public static function getMerhantName(array $item, $print = false, $small = false)
     {
-        if (!empty($item['domain']))
+        $name = '';
+
+        if (!empty($item['merchant']) && (empty($item['domain']) || \apply_filters('cegg_merchant_name_priority', false)))
+            $name = $item['merchant'];
+        else
         {
             $name = ucfirst($item['domain']);
 
             if ($name == 'Aliexpress.com')
-            {
                 $name = 'Aliexpress';
-            }
             elseif ($name == 'Flipkart.com')
-            {
                 $name = 'Flipkart';
-            }
             elseif ($name == 'Ebay.com')
-            {
                 $name = 'eBay';
-            } //it's should be ONLY "eBay" without ".com"
             elseif (strstr($name, 'Ebay.'))
-            {
                 $name = $name = 'eBay';
-            }
-        }
-        elseif (!empty($item['merchant']))
-        {
-            $name = $item['merchant'];
-        }
-        else
-        {
-            $name = '';
         }
 
         if ($name == 'eBay' && $item['merchant'] != 'eBay')
-            return $item['merchant'];
+            $name = $item['merchant'];
 
         if ($print)
         {
@@ -763,6 +776,7 @@ class TemplateHelper
         }
         else
         {
+            $name = \apply_filters('cegg_merchant_name', $name, $item['domain']);
             return $name;
         }
     }
@@ -954,6 +968,12 @@ class TemplateHelper
             if (!$a['price'] && !$b['price'])
                 return $modules_priority[$a['module_id']] - $modules_priority[$b['module_id']];
 
+            if (!$a['converted_price'] && !$b['converted_price'] && $a['price'] && $b['price'])
+                return ($a['price'] < $b['price']) ? -1 : 1;
+
+            if ($a['converted_price'] == -1 && $b['converted_price'] == -1 && $a['price'] && $b['price'])
+                return ($a['price'] > $b['price']) ? -1 : 1;
+
             if (!$a['converted_price'])
                 return 1;
 
@@ -999,14 +1019,63 @@ class TemplateHelper
         return $title;
     }
 
+    public static function mergeAndSort(array $data, $order = 'asc', $field = 'price')
+    {
+        if ($field)
+            return self::sortAllByPrice($data, $order, $field);
+
+        $items = self::mergeAll($data);
+
+        if (self::isNumbered($items))
+            return TemplateHelper::sortByNumber($items, $order);
+        else
+            return TemplateHelper::sortByBadgeAndPriority($items);
+    }
+
+    public static function sortByBadgeAndPriority(array $items)
+    {
+        $modules_priority = array();
+        foreach ($items as $i => $item)
+        {
+            $module_id = $item['module_id'];
+
+            if (!isset($modules_priority[$module_id]))
+            {
+                if (ModuleManager::getInstance()->moduleExists($module_id))
+                {
+                    $module = ModuleManager::getInstance()->factory($module_id);
+                    $modules_priority[$module_id] = (int) $module->config('priority');
+                }
+                else
+                    $modules_priority[$module_id] = 0;
+            }
+
+            $items[$i]['module_priority'] = $modules_priority[$module_id];
+        }
+
+        usort($items, array(self::class, 'compareByBadgeAndPriority'));
+        return $items;
+    }
+
+    private static function compareByBadgeAndPriority($a, $b)
+    {
+        $a_has_badge = !empty($a['badge']);
+        $b_has_badge = !empty($b['badge']);
+
+        if ($a_has_badge == $b_has_badge)
+            return $a['module_priority'] <=> $b['module_priority'];
+
+        return $b_has_badge <=> $a_has_badge;
+    }
+
     public static function sortAllByPrice(array $data, $order = 'asc', $field = 'price')
     {
-        $merged = self::mergeAll($data);
+        $items = self::mergeAll($data);
 
-        if (self::isNumbered($merged))
-            return TemplateHelper::sortByNumber($merged, $order, $field);
+        if (self::isNumbered($items))
+            return TemplateHelper::sortByNumber($items, $order);
         else
-            return TemplateHelper::sortByPrice($merged, $order, $field);
+            return TemplateHelper::sortByPrice($items, $order, $field);
     }
 
     public static function isNumbered(array $data)
@@ -1097,16 +1166,36 @@ class TemplateHelper
         }
     }
 
+    public static function getPostDisclimerText($force_default = false)
+    {
+        if (!$force_default && $d = GeneralConfig::getInstance()->option('post_disclaimer_text'))
+            return $d;
+        else
+            return __('This post contains affiliate links. Purchases may earn me a commission at no extra cost to you.', 'content-egg-tpl');
+    }
+
+    public static function getBlockDisclimerText($force_default = false)
+    {
+        if (!$force_default && $d = GeneralConfig::getInstance()->option('block_disclaimer_text'))
+            return $d;
+        else
+            return __('I may earn a commission at no cost to you.', 'content-egg-tpl');
+    }
+
+    public static function getAmazonPriceDisclimerText($force_default = false)
+    {
+        if (!$force_default && $d = GeneralConfig::getInstance()->option('disclaimer_text'))
+            return $d;
+        else
+            return
+                __('Product prices and availability are accurate as of the date/time indicated and are subject to change. Any price and availability information displayed on Amazon at the time of purchase will apply to the purchase of this product.', 'content-egg-tpl')
+                . ' '
+                . __('As an Amazon associate I earn from qualifying purchases.', 'content-egg-tpl');
+    }
+
     public static function getAmazonDisclaimer()
     {
-        if ($d = GeneralConfig::getInstance()->option('disclaimer_text'))
-        {
-            return $d;
-        }
-        else
-        {
-            return __('As an Amazon associate I earn from qualifying purchases.', 'content-egg-tpl') . ' ' . __('Product prices and availability are accurate as of the date/time indicated and are subject to change. Any price and availability information displayed on Amazon at the time of purchase will apply to the purchase of this product.', 'content-egg-tpl');
-        }
+        return self::getAmazonPriceDisclimerText();
     }
 
     public static function printAmazonDisclaimer()
@@ -1199,61 +1288,52 @@ class TemplateHelper
     public static function getStockStatusClass(array $item)
     {
         if (!isset($item['stock_status']))
-        {
             return '';
-        }
 
         if ($item['stock_status'] == ContentProduct::STOCK_STATUS_IN_STOCK)
-        {
             return 'instock';
-        }
         elseif ($item['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
-        {
             return 'outofstock';
-        }
         elseif ($item['stock_status'] == ContentProduct::STOCK_STATUS_UNKNOWN)
-        {
             return 'unknown';
-        }
         else
-        {
             return '';
-        }
+    }
+
+    public static function getStockStatusClass5(array $item)
+    {
+        if (!isset($item['stock_status']))
+            return '';
+
+        if ($item['stock_status'] == ContentProduct::STOCK_STATUS_IN_STOCK)
+            return 'text-success';
+        elseif ($item['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+            return 'text-danger';
+        elseif ($item['stock_status'] == ContentProduct::STOCK_STATUS_UNKNOWN)
+            return 'text-body-secondary';
+        else
+            return '';
     }
 
     public static function getStockStatusStr(array $item)
     {
         if (!isset($item['stock_status']))
-        {
             return '';
-        }
 
         $show_status = GeneralConfig::getInstance()->option('show_stock_status');
         if ($show_status == 'hide_status')
-        {
             return '';
-        }
         elseif ($show_status == 'show_outofstock' && $item['stock_status'] == ContentProduct::STOCK_STATUS_IN_STOCK)
-        {
             return '';
-        }
         elseif ($show_status == 'show_instock' && $item['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
-        {
             return '';
-        }
 
         if ($item['stock_status'] == ContentProduct::STOCK_STATUS_IN_STOCK)
-        {
             return TemplateHelper::__('in stock');
-        }
         elseif ($item['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
-        {
             return TemplateHelper::__('out of stock');
-        }
         else
-        {
             return '';
-        }
     }
 
     public static function getPrivacyUrl()
@@ -1289,13 +1369,13 @@ class TemplateHelper
                     $res[] = $g;
                 }
             }
-
+            $res = array_values($res);
             return $res;
         }
         else
         {
             natsort($groups);
-
+            $groups = array_values($groups);
             return $groups;
         }
     }
@@ -1314,8 +1394,15 @@ class TemplateHelper
                 $res[$plugin_id] = $r;
             }
         }
-
         return $res;
+    }
+
+    public static function filterItemsByGroup(array $items, $group)
+    {
+        return array_values(array_filter($items, function ($item) use ($group)
+        {
+            return $item['group'] === $group;
+        }));
     }
 
     public static function generateGlobalId($prefix)
@@ -1355,43 +1442,57 @@ class TemplateHelper
     public static function getCashbackStr(array $product)
     {
         if (GeneralConfig::getInstance()->option('cashback_integration') != 'enabled')
-        {
             return '';
-        }
 
         if (!self::isCashbackTrakerActive())
-        {
             return '';
-        }
 
         return \CashbackTracker\application\components\DeeplinkGenerator::getCashbackStrByUrl($product['url']);
     }
 
-    public static function hideParamPrepare($hide)
+    public static function prepareParamHideVisible($param)
     {
-        if (!$hide)
-        {
+        if (!$param)
             return array();
-        }
 
-        $allowed_hide = array(
+        $allowed = array(
             'price',
             'priceOld',
             'domain',
-            'rating',
             'title',
             'stock_status',
             'img',
             'merchant',
-            'description'
+            'description',
+            'button',
+            'percentageSaved',
+            'badge',
+            'merchant',
+            'promo',
+            'rating',
+            'disclaimer',
+            'price_update',
+            'number',
+            'prime',
+            'coupons',
+            'shop_info',
+            'new_used_price',
+            'logo',
+            'subtitle',
+            'shipping_cost',
+            'delivery_at_checkout',
+            'startDate',
+            'endDate',
+            'code',
+            'coupon_reveal',
         );
-        $hide = TextHelper::getArrayFromCommaList($hide);
-        if (in_array('price', $hide) && !in_array('priceOld', $hide))
-        {
-            $hide[] = 'priceOld';
-        }
 
-        return array_intersect($hide, $allowed_hide);
+        $param = TextHelper::getArrayFromCommaList($param);
+
+        if (in_array('price', $param) && !in_array('priceOld', $param))
+            $param[] = 'priceOld';
+
+        return array_intersect($param, $allowed);
     }
 
     public static function eanParamPrepare($ean)
@@ -1435,16 +1536,36 @@ class TemplateHelper
         return join(' ', $rel);
     }
 
+    public static function getGtagClickEvent(array $item)
+    {
+        if (GeneralConfig::getInstance()->option('send_ga_click_event') != 'enabled')
+            return '';
+
+        if (!empty($item['aff_url']))
+            $product_url = esc_url($item['aff_url']);
+        elseif (!empty($item['url']))
+            $product_url =  esc_url($item['url']);
+        else
+            $product_url =  '';
+
+        $product_title = isset($item['title']) ? esc_html($item['title']) : 'Product Name';
+
+        $onclick_event = sprintf(
+            "gtag('event', 'cegg_affiliate_click', {'cegg_link_url': '%s','cegg_product_title': '%s'});",
+            $product_url,
+            $product_title
+        );
+
+        return $onclick_event;
+    }
+
     public static function printRating(array $item, $size = 'default')
     {
         if (!$item['rating'])
-        {
             return;
-        }
+
         if (!in_array($size, array('small', 'big', 'default')))
-        {
             $size = 'default';
-        }
 
         $rating = $item['rating'] * 20;
         echo '<span class="egg-stars-container egg-stars-' . esc_attr($size) . ' egg-stars-' . esc_attr($rating) . '">★★★★★</span>';
@@ -1569,12 +1690,10 @@ class TemplateHelper
         echo esc_html(Translator::translate($str));
     }
 
-    public static function displayImage(array $item, $max_width, $max_height, array $params = array())
+    public static function displayImage(array $item, $max_width = 0, $max_height = 0, array $params = array())
     {
         if (!isset($item['img']))
-        {
             return;
-        }
 
         $params['src'] = self::getOptimizedImage($item, $max_width, $max_height);
 
@@ -1586,11 +1705,6 @@ class TemplateHelper
         elseif (!empty($item['_alt']))
             $params['alt'] = $item['_alt'];
 
-        /*
-        if ($sizes = self::getImageSizesRatio($item, $max_width, $max_height))
-            $params = array_merge($params, $sizes);
-        */
-
         echo '<img ' . self::buildTagParams($params) . ' />'; // phpcs:ignore
     }
 
@@ -1598,12 +1712,12 @@ class TemplateHelper
     {
         $res = '';
         $i = 0;
+
         foreach ($params as $key => $value)
         {
             if ($i > 0)
-            {
                 $res .= ' ';
-            }
+
             $res .= \esc_attr($key) . '="' . \esc_attr($value) . '"';
             $i++;
         }
@@ -1647,7 +1761,7 @@ class TemplateHelper
         return array();
     }
 
-    public static function getOptimizedImage(array $item, $max_width, $max_height)
+    public static function getOptimizedImage(array $item, $max_width = 0, $max_height = 0)
     {
         $item['img'] = preg_replace('/\._AC_SL\d+_\./', '._SS520_.', $item['img']);
         $item['img'] = preg_replace('/\._SL\d+_\./', '._SS520_.', $item['img']);
@@ -1657,9 +1771,9 @@ class TemplateHelper
             if (!isset($item['extra']['primaryImages']))
                 return $item['img'];
 
-            if ($max_height <= 160)
+            if ($max_height && $max_height <= 160)
                 return $item['extra']['primaryImages']['Medium']['URL'];
-            elseif ($max_height <= 75)
+            elseif ($max_height && $max_height <= 75)
                 return $item['extra']['primaryImages']['Small']['URL'];
             else
                 return $item['img'];
@@ -1757,7 +1871,7 @@ class TemplateHelper
     public static function getShopCoupons(array $item)
     {
         if (!isset($item['domain']))
-            return;
+            return '';
 
         $domain = $item['domain'];
 
@@ -1946,6 +2060,17 @@ class TemplateHelper
         return Translator::__($s);
     }
 
+    public static function selectItemByBadge(array $items)
+    {
+        foreach ($items as $item)
+        {
+            if ($item['badge'])
+                return $item;
+        }
+
+        return reset($items);
+    }
+
     public static function selectItemByDescription(array $items)
     {
         $min_len = 999999;
@@ -1967,7 +2092,7 @@ class TemplateHelper
         return $selected;
     }
 
-    public static function getGallery(array $data, $limit = null)
+    public static function getGallery(array $data, $limit = 12, $offset = 0)
     {
         $images = array();
         foreach ($data as $items)
@@ -1986,14 +2111,19 @@ class TemplateHelper
                     $images[] = array(
                         'url' => $item['url'],
                         'uri' => $g,
+                        'img' => $g,
+                        'title' => $item['title'],
                         'alt' => $item['title'],
+                        'module_id' => $item['module_id'],
                     );
-
-                    if ($limit && count($images) >= $limit)
-                        return $images;
                 }
             }
         }
+
+        if (!$limit)
+            $limit = 12;
+
+        $images = array_slice($images, $offset, $limit);
 
         return $images;
     }
@@ -2011,6 +2141,16 @@ class TemplateHelper
         return $r;
     }
 
+    public static function convertRatingScale10($x, $beta = 0.5)
+    {
+        if ($x < 1 || $x > 5)
+            return $x;
+
+        $y = 1 + 9 * pow((($x - 1) / 4), $beta);
+
+        return round($y, 1);
+    }
+
     public static function isPriceAvailable(array $items)
     {
         foreach ($items as $item)
@@ -2020,5 +2160,1285 @@ class TemplateHelper
         }
 
         return false;
+    }
+
+    public static function colorMode($params = array())
+    {
+        $color_mode_general = GeneralConfig::getInstance()->option('color_mode');
+
+        if (!empty($params['color_mode']))
+            $color_mode_shortcode = $params['color_mode'];
+        else
+            $color_mode_shortcode = '';
+
+        if ($color_mode_shortcode && $color_mode_shortcode != $color_mode_general)
+            echo ' data-bs-theme="' . esc_attr($color_mode_shortcode) . '"';
+        elseif ($color_mode_general !== 'light')
+            echo ' data-bs-theme="' . esc_attr($color_mode_general) . '"';
+    }
+
+    public static function badge(array $item, $classes = array(), array $params = array())
+    {
+        if (empty($item['badge']))
+            return;
+
+        if (!is_array($classes))
+            $classes = array($classes);
+
+        if (!empty($params['border']))
+            $style = '--border: ' . $params['border'] . 'px';
+        else
+            $style = '';
+
+        $icon_html = '';
+        $badge_text = $item['badge'];
+        $badge_parts = explode(':', $badge_text, 2);
+        $badge_text = end($badge_parts);
+        if (count($badge_parts) == 2)
+        {
+            $badge_icon = $badge_parts[0];
+            $icon_html = IconHelper::getIconByName($badge_icon);
+        }
+
+        $badge = '<div';
+        if ($style)
+            $badge .= ' style="' . esc_attr($style) . '"';
+        $badge .= ' class="' . esc_attr(join(' ', $classes)) . '">';
+        if ($icon_html)
+            $badge .= $icon_html . ' ';
+        $badge .= esc_html(TemplateHelper::truncate($badge_text, 60));
+        $badge .= '</div>';
+
+        echo wp_kses($badge, IconHelper::allowedTags());
+    }
+
+    public static function badge1(array $item, array $params = array(), $position = 'left')
+    {
+        if (!empty($item['badge_color']))
+            $color = $item['badge_color'];
+        else
+            $color = 'primary';
+
+        $classes = array(
+            'cegg-badge-' . $position,
+            'cegg-badge-' . $color,
+            'text-bg-' . $color,
+        );
+
+        self::badge($item, $classes, $params);
+    }
+
+    public static function badge2(array $item, array $params = array(), $position = 'left')
+    {
+        if (!empty($item['badge_color']))
+            $color = $item['badge_color'];
+        else
+            $color = 'primary';
+
+        $classes = array(
+            'cegg-badge-' . $position,
+            'cegg-badge-' . $color,
+            'text-bg-' . $color,
+            'cegg-badge-sm',
+        );
+
+        self::badge($item, $classes, $params);
+    }
+
+    public static function badge3(array $item, array $params = array())
+    {
+        if (!empty($item['badge_color']))
+            $color = $item['badge_color'];
+        else
+            $color = 'primary';
+
+        $classes = array(
+            'badge',
+            'badge-' . $color,
+            'text-bg-' . $color,
+            'rounded-0',
+        );
+
+        self::badge($item, $classes, $params);
+    }
+
+    public static function rowCols(array $params, $default)
+    {
+        $classes = array();
+        $breakpoints = array('xs', 'sm', 'md', 'lg', 'xl', 'xxl');
+
+        foreach ($breakpoints as $breakpoint)
+        {
+            $param = 'cols_' . $breakpoint;
+            if (empty($params[$param]) || $params[$param] < 1 || $params[$param] > 12)
+                continue;
+
+            $class = 'row-cols';
+            if ($breakpoint != 'xs')
+                $class .= '-' . $breakpoint;
+
+            $class .= '-' . $params[$param];
+            $classes[] = $class;
+        }
+
+        if ($classes)
+            $class_str = join(' ', $classes);
+        else
+            $class_str = $default;
+
+        echo esc_attr(' ' . $class_str . ' ');
+    }
+
+    public static function getColOrder(array $params, $position)
+    {
+        if (empty($params['cols_order']) || empty($params['cols_order'][$position - 1]))
+            return $position;
+
+        $order = $params['cols_order'][$position - 1];
+
+        if ($order > 5)
+            $order = 5;
+        elseif ($order < 1)
+            $order = 1;
+
+        return $order;
+    }
+
+    public static function colsOrder(array $params, $position, $breakpoint = '', $force_default = false)
+    {
+        if (empty($params['cols_order']) && !$force_default)
+            return;
+
+        if (empty($params['cols_order']) && $force_default)
+            $params['cols_order'] = $force_default;
+
+        $order = self::getColOrder($params, $position);
+        $class = ' order-';
+        if ($breakpoint)
+            $class .= $breakpoint . '-';
+        $class .= $order;
+
+        echo esc_attr(' ' . $class);
+    }
+
+    public static function tabsType(array $params, $default)
+    {
+        if (!empty($params['tabs_type']))
+            echo esc_attr('nav-' . $params['tabs_type']);
+        else
+            echo esc_attr($default);
+    }
+
+    public static function oldPrice(array $item, $params = array())
+    {
+        if (empty($item['priceOld']))
+            return;
+
+        echo esc_html(TemplateHelper::formatPriceCurrency($item['priceOld'], $item['currencyCode']));
+    }
+
+    public static function price(array $item, $params = array())
+    {
+        if (empty($item['price']))
+            return;
+
+        echo esc_html(TemplateHelper::formatPriceCurrency($item['price'], $item['currencyCode']));
+    }
+
+    public static function currencyCode(array $item, $params = array())
+    {
+        echo esc_html($item['currencyCode']);
+    }
+
+    public static function shippingCost(array $item)
+    {
+        if (!isset($item['shipping_cost']) || $item['shipping_cost'] == '')
+        {
+            self::$delivery_at_checkout = true;
+            echo '<span class="text-nowrap">' . esc_html(TemplateHelper::__('+ Delivery *')) . '</span>';
+        }
+        else
+        {
+            if (is_numeric($item['shipping_cost']) && (float) $item['shipping_cost'] == 0)
+                echo '<span class="text-success">' . esc_html(TemplateHelper::__('Free delivery')) . '</span>';
+            else
+                echo wp_kses(sprintf(TemplateHelper::__('%s incl. delivery'),  '<b>' . TemplateHelper::formatPriceCurrency($item['total_price'], $item['currencyCode']) . '</b>'), array('b' => array()));
+        }
+    }
+
+    public static function deliveryAtCheckout()
+    {
+        echo esc_html(TemplateHelper::__('* Delivery cost shown at checkout.'));
+    }
+
+    public static function priceClass(array $item, $params = array())
+    {
+        if ($item['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+            echo ' text-body-tertiary';
+    }
+
+    public static function newUsedPrice(array $item, $separator = ', ')
+    {
+        $new_price = !empty($item['extra']['lowestNewPrice']) ? $item['extra']['lowestNewPrice'] : 0;
+        $used_price = !empty($item['extra']['lowestUsedPrice']) ? $item['extra']['lowestUsedPrice'] : 0;
+
+        if ($new_price && $item['extra']['totalNew'] > 1)
+        {
+            echo esc_html(sprintf(TemplateHelper::__('%d new from %s'), $item['extra']['totalNew'], TemplateHelper::formatPriceCurrency($new_price, $item['currencyCode'])));
+            if (!empty($item['extra']['totalUsed']) && $separator)
+                echo  wp_kses($separator, array('br' => array()));
+        }
+
+        if (!empty($item['extra']['totalUsed']))
+            echo esc_html(sprintf(TemplateHelper::__('%d used from %s'), $item['extra']['totalUsed'], TemplateHelper::formatPriceCurrency($used_price, $item['currencyCode'])));
+    }
+
+    public static function merchant(array $item)
+    {
+        if ($merchant = self::getMerchantName($item))
+            echo esc_html($merchant);
+    }
+
+    public static function title(array $item, $class_str = '', $default_tag = 'div', array $params = array(), $truncate = 160)
+    {
+        if (isset($params['_number']))
+        {
+            self::titleWithNumber($item, $class_str, $default_tag, $params, $truncate);
+            return;
+        }
+
+        echo '<';
+        TemplateHelper::titleTag($params, $default_tag);
+        if ($class_str)
+            echo ' class="' . esc_attr($class_str) . '"';
+        echo '>';
+        echo esc_html(TemplateHelper::truncate($item['title'], $truncate));
+        echo '</';
+        TemplateHelper::titleTag($params, $default_tag);
+        echo '>';
+    }
+
+    public static function titleWithNumber(array $item, $class_str = '', $default_tag = 'div', array $params = array(), $truncate = 250)
+    {
+        if (isset($params['_number']))
+        {
+            if (!empty($params['start_number']))
+                $number = (int) $params['_number'] + (int) $params['start_number'];
+            else
+                $number = (int) $params['_number']++;
+        }
+        else
+            $number = 1;
+
+        echo '<div class="d-flex align-items-center mb-3">';
+        echo '<div class="me-3">';
+        echo '<div class="cegg-numhead-circle d-flex justify-content-center align-items-center rounded-circle fw-bold bg-danger text-white" style="width: 40px; height: 40px; font-size: 24px;">';
+        echo '<span>' . esc_html($number) . '</span>';
+        echo '</div>';
+        echo '</div>';
+        echo '<';
+        TemplateHelper::titleTag($params, $default_tag);
+        if ($class_str)
+            echo ' class="' . esc_attr($class_str) . '"';
+        echo '>';
+        echo esc_html(TemplateHelper::truncate($item['title'], $truncate));
+        echo '</';
+        TemplateHelper::titleTag($params, $default_tag);
+        echo '>';
+
+        echo '</div>';
+    }
+
+    public static function subtitle(array $item, $truncate = 160)
+    {
+        echo esc_html(TemplateHelper::truncate($item['subtitle'], $truncate));
+    }
+
+    public static function description(array $item, $truncate = null)
+    {
+        if ($truncate)
+            $item['description'] = TextHelper::truncateHtml($item['description'], $truncate);
+
+        echo wp_kses_post($item['description']);
+    }
+
+    public static function stockStatus(array $item)
+    {
+        echo '<span class="text-body-secondary">';
+        echo '<span class="' . esc_attr(TemplateHelper::getStockStatusClass5($item)) . '">';
+
+        if ($item['stock_status'] == ContentProduct::STOCK_STATUS_IN_STOCK)
+            echo '<span class="me-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></svg></span>';
+
+        echo '</span>';
+        echo esc_html(TemplateHelper::getStockStatusStr($item));
+        echo '</span>';
+    }
+
+    public static function prime(array $item)
+    {
+        if (empty($item['extra']['IsPrimeEligible']))
+            return;
+
+        $prime = '<span class="cegg-prime-badge position-relative badge bg-info" style="padding-left: 0.7rem;padding-right: 0.55rem;">';
+        $prime .= 'PRIME';
+
+        if (!empty($item['extra']['primePrice']))
+            $prime .= ': ' . TemplateHelper::formatPriceCurrency($item['extra']['primePrice'], $item['currencyCode']);
+
+        $prime .= '<span class="position-absolute top-50 start-0 translate-middle  border border-light rounded-circle bg-warning p-1"><span class="visually-hidden">PRIME</span></span>';
+        $prime .= '</span>';
+
+        echo wp_kses_post($prime);
+    }
+
+    public static function imgRatio(array $params, $default)
+    {
+        if (!empty($params['img_ratio']))
+            $ratio = 'ratio-' . $params['img_ratio'];
+        else
+            $ratio = $default;
+
+        echo esc_attr(' ' . $ratio . ' ');
+    }
+
+    public static function linkAttr(array $item, array $params = array(), array $custom_tag_params = array())
+    {
+        $tag_params = array();
+
+        if ($rel = TemplateHelper::getRelValue())
+            $tag_params['rel'] = $rel;
+
+        if ($onclick_event = TemplateHelper::getGtagClickEvent($item))
+            $tag_params['onclick'] = $onclick_event;
+
+        $tag_params['target'] = '_blank';
+        $tag_params['href'] = $item['url'];
+
+        $tag_params = array_merge($tag_params, $custom_tag_params);
+
+        echo self::arrayToTagParameters($tag_params); // phpcs:ignore
+
+    }
+
+    public static function openATag(array $item, array $params = array(), array $custom_tag_params = array())
+    {
+        echo '<a ';
+        self::linkAttr($item, $params, $custom_tag_params);
+        echo '>';
+    }
+
+    public static function closeATag()
+    {
+        echo '</a>';
+    }
+
+    public static function link($anchor, array $item, array $params = array(), array $custom_tag_params = array())
+    {
+        echo '<a ';
+        self::linkAttr($item, $params, $custom_tag_params);
+        echo '>' . esc_html($anchor) . '</a>';
+    }
+
+    public static function button(array $item, array $params = array(), array $custom_params = array(), $type = 'link', $is_coupon_btn = false)
+    {
+        $classes = array('btn');
+
+        if (!empty($params['btn_variant']))
+            $variant = $params['btn_variant'];
+        else
+            $variant = GeneralConfig::getInstance()->option('btn_variant');
+
+        $classes[] = 'btn-' . $variant;
+
+        if (!isset($custom_params['class']))
+            $custom_params['class'] = '';
+
+        if ($custom_params['class'])
+            $custom_params['class'] .= ' ';
+
+        $custom_params['class'] .= join(' ', $classes);
+
+        if ($is_coupon_btn)
+            $btn_text = TemplateHelper::couponBtnText(false, $item, $params['btn_text']);
+        else
+            $btn_text = TemplateHelper::buyNowBtnText(false, $item, $params['btn_text']);
+
+        if ($params['btn_text'] == '%Buy Now%')
+            $btn_text = TemplateHelper::btnText('btn_text_buy_now', __('BUY NOW', 'content-egg-tpl'), 0, $item);
+
+        if ($type == 'button')
+        {
+            echo '<button ';
+            echo self::arrayToTagParameters($custom_params); // phpcs:ignore
+            echo '>' . esc_html($btn_text) . '</button>';
+        }
+        else
+            self::link($btn_text, $item, $params, $custom_params);
+    }
+
+    public static function ratingStars(array $item, $display_value = true)
+    {
+        if (!empty($item['ratingDecimal']))
+            $rating = $item['ratingDecimal'];
+        elseif (!empty($item['rating']))
+            $rating = $item['rating'];
+        else
+            return;
+
+        $rating = round($rating, 1);
+
+        $star_rating = (float) $rating;
+        if ($star_rating == 10)
+            $star_rating = 5;
+        if ($star_rating > 5 && $star_rating < 10)
+            $star_rating = TemplateHelper::convertRatingScale($star_rating, 1, 10, 1, 5);
+        if ($star_rating < 0 || $star_rating > 5)
+            $star_rating = 0;
+        $star_rating = round($star_rating, 1);
+
+        if (!$star_rating)
+            return;
+
+        echo '<div class="cegg-rating-stars" style="--rating: ' . esc_attr($star_rating) . '">';
+        if ($display_value)
+            echo '<span class="cegg-rating-value ps-2 text-body-secondary">' . esc_html(number_format($rating, 1)) . '</span>';
+        echo '</div>';
+    }
+
+    public static function getRatingValueScale10(array $item)
+    {
+        if (empty($item['ratingDecimal']) && isset($item['extra']['data']['ratingDecimal']))
+            $item['ratingDecimal'] = TemplateHelper::convertRatingScale10($item['extra']['data']['ratingDecimal']);
+
+        if ($item['ratingDecimal'] && ($item['group'] !== 'Roundup' || $item['ratingDecimal'] < 5))
+            $item['ratingDecimal'] = TemplateHelper::convertRatingScale10($item['ratingDecimal']);
+
+        if (!$item['ratingDecimal'])
+            return 0;
+
+        $rating = $item['ratingDecimal'];
+        $rating = round($rating, 1);
+
+        return $rating;
+    }
+
+    public static function promo(array $item, $display_icon = true)
+    {
+        if ($display_icon)
+            echo '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bookmark-check me-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0" /><path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1z" /></svg>' . ' ';
+        echo esc_html($item['promo']);
+    }
+
+    public static function logo(array $item, array $params = array(), $class_str = '')
+    {
+        if (!empty($params['color_mode']))
+            $color_mode = 'dark';
+        else
+            $color_mode = GeneralConfig::getInstance()->option('color_mode');
+
+        if (!$logo_uri = TemplateHelper::getMerchantLogoUrl($item, false, $color_mode))
+            return;
+
+        echo '<img class="cegg-merhant-logo';
+        if ($class_str)
+            echo ' ' . esc_attr($class_str);
+
+        echo '" src="' . $logo_uri . '" alt="' . esc_attr(self::getMerchantName($item)) . '" />';
+    }
+
+    public static function icon(array $item, array $params = array(), $class_str = '')
+    {
+        if (!$icon_uri = TemplateHelper::getMerchantIconUrl($item, false))
+            return;
+
+        echo '<img class="cegg-merchant-icon';
+        if ($class_str)
+            echo ' ' . esc_attr($class_str);
+
+        echo '" src="' . $icon_uri . '" alt="' . esc_attr(self::getMerchantName($item)) . '" />';
+    }
+
+    public static function cashback(array $item, $display_icon = true)
+    {
+        if (!$cashback_str = TemplateHelper::getCashbackStr($item))
+            return;
+
+        if ($display_icon)
+            echo '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bag-plus" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 7.5a.5.5 0 0 1 .5.5v1.5H10a.5.5 0 0 1 0 1H8.5V12a.5.5 0 0 1-1 0v-1.5H6a.5.5 0 0 1 0-1h1.5V8a.5.5 0 0 1 .5-.5"/><path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/></svg>' . ' ';
+
+        echo esc_html($cashback_str);
+    }
+
+    public static function number($item, array $params, $number, $variant = 'primary')
+    {
+        if (!empty($params['start_number']))
+            $number += $params['start_number'];
+        else
+            $number++;
+
+        $parts = explode('-', $variant);
+
+        if (count($parts) == 2)
+            $outline = true;
+        else
+            $outline = false;
+
+        if (!empty($params['border_color']))
+            $variant = $params['border_color'];
+        else
+            $variant = end($parts);
+
+        if (!$params['border'])
+            $border_class = 'border-1';
+        elseif ($params['border'] <= 3)
+            $border_class = ' border-' . $params['border'];
+        else
+            $border_class = 'border-2';
+
+        if ($outline)
+            echo '<div class="cegg-circle ' . esc_attr($border_class) . ' border-' . esc_attr($variant) . ' text-' . esc_attr($variant) . ' bg-body">';
+        else
+            echo '<div class="rounded-circle text-bg-' . esc_attr($variant) . ' fw-bolder d-flex justify-content-center align-items-center" style="width: 2rem; height: 2rem;">';
+
+        echo esc_html($number);
+        echo '</div>';
+    }
+    public static function border(array $params, $default = '')
+    {
+        if ($params['border'] === '')
+            $class_str = $default;
+        else
+        {
+            $class_str = 'border';
+            $class_str .= ' border-' . $params['border'];
+        }
+
+        if ($params['border_color'])
+            $class_str .= ' border-' . $params['border_color'];
+
+        echo esc_attr(' ' . $class_str);
+    }
+
+    public static function borderColor(array $params, $default = '')
+    {
+        if ($params['border'] === 0)
+            return;
+
+        if ($params['border_color'] === '')
+        {
+            $class_str = $default;
+        }
+        else
+        {
+            $classes = array();
+            $classes[] = 'border-' . $params['border_color'] . '';
+            $class_str = join(' ', $classes);
+        }
+
+        echo esc_attr(' ' . $class_str);
+    }
+
+    public static function disclaimer()
+    {
+        echo wp_kses_post(TemplateHelper::getBlockDisclimerText());
+    }
+
+    public static function titleTag(array $params, $default = 'div')
+    {
+        if (!empty($params['title_tag']))
+            echo esc_html($params['title_tag']);
+        elseif ($default)
+            echo esc_html($default);
+        else
+            echo 'div';
+    }
+
+    public static function priceUpdateAmazon(array $items, $price_disclaimer = true)
+    {
+        if (!$date = TemplateHelper::getLastUpdateFormattedAmazon($items))
+            return;
+
+        echo wp_kses_post(sprintf(Translator::translate('Amazon price updated:') . ' <span class="text-nowrap">' . $date));
+
+        if ($price_disclaimer)
+        {
+            $disclaimer_text = TemplateHelper::getAmazonPriceDisclimerText();
+            echo '<a href="#" class="ms-1 text-decoration-none text-body-secondary" title="' . esc_attr($disclaimer_text) . '" onclick="event.preventDefault(); alert(this.title);">';
+            echo '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/></svg>';
+            echo '</a>';
+        }
+
+        echo '</span>';
+    }
+
+    public static function arrayToTagParameters($array)
+    {
+        $attributes = '';
+        foreach ($array as $key => $value)
+        {
+            $key = esc_attr($key);
+            $value = esc_attr($value);
+            $attributes .= $key . '="' . $value . '" ';
+        }
+
+        return trim($attributes);
+    }
+
+    public static function isAmazonPriceExists(array $items)
+    {
+        foreach ($items as $item)
+        {
+            if (strstr($item['module_id'], 'Amazon') && (float)$item['price'])
+                return true;
+        }
+
+        return false;
+    }
+
+    public static function isVisibleDisclaimer(array $params)
+    {
+        $field = 'disclaimer';
+
+        if (isset($params['visible']) && in_array($field, $params['visible']))
+            return true;
+
+        if (isset($params['hide']) && in_array($field, $params['hide']))
+            return false;
+
+        if (GeneralConfig::getInstance()->option('product_block_disclaimer') == 'enabled')
+            return true;
+        else
+            return false;
+    }
+
+    public static function isVisiblePriceUpdate(array $params, array $items = array())
+    {
+        if (isset($params['hide']) && in_array('price', $params['hide']))
+            return false;
+
+        $field = 'price_update';
+
+        if (in_array($params['template'], array('block_top_listing', 'block_top_listing_show_more')) && !in_array('price', $params['visible']))
+            return false;
+
+        if ($items && !self::isAmazonPriceExists($items))
+            return false;
+
+        if (isset($params['visible']) && in_array($field, $params['visible']))
+            return true;
+
+        if (isset($params['hide']) && in_array($field, $params['hide']))
+            return false;
+
+        if (GeneralConfig::getInstance()->option('amazon_price_update_display') == 'enabled')
+            return true;
+        else
+            return false;
+    }
+
+    public static function isVisibleDisclaimerOrPriceUpdate(array $items, array $params)
+    {
+        return self::isVisibleDisclaimer($params) || self::isVisiblePriceUpdate($params, $items);
+    }
+
+    public static function isVisible(array $item, $field, array $params, array $items = array(), $default = true)
+    {
+        if ($default == false && isset($params['visible']) && !in_array($field, $params['visible']))
+            return false;
+
+        if ($field == 'disclaimer')
+            return self::isVisibleDisclaimer($params);
+
+        if ($field == 'price_update')
+            return self::isVisiblePriceUpdate($params, $items);
+
+        if ($field == 'coupons' && !self::getShopCoupons($item))
+            return false;
+
+        if ($field == 'shop_info' && !self::getShopInfo($item))
+            return false;
+
+        if ($field == 'delivery_at_checkout')
+        {
+            $ret = self::$delivery_at_checkout;
+            self::$delivery_at_checkout = false;
+            return $ret;
+        }
+
+        if ($field == 'new_used_price')
+        {
+            if (empty($item['extra']['totalNew']) || (int)$item['extra']['totalNew'] <= 1)
+                return false;
+
+            $new_price = !empty($item['extra']['lowestNewPrice']) ? $item['extra']['lowestNewPrice'] : 0;
+            $used_price = !empty($item['extra']['lowestUsedPrice']) ? $item['extra']['lowestUsedPrice'] : 0;
+
+            if (!$new_price && !$used_price)
+                return false;
+        }
+
+        if (!$item)
+            return false;
+
+        if (isset($params['hide']) && in_array($field, $params['hide']))
+            return false;
+
+        if ($field == 'percentageSaved' && in_array('price', $params['hide']))
+            return false;
+
+        if ($field == 'prime' && empty($item['extra']['IsPrimeEligible']))
+            return false;
+
+        elseif ($field == 'percentageSaved' && empty($item['price']))
+            return false;
+
+        elseif ($field == 'priceOld' && empty($item['price']))
+            return false;
+
+        elseif ($field == 'merchant' && !TemplateHelper::getMerchantName($item))
+            return false;
+
+        elseif ($field == 'merchant' && TemplateHelper::getMerchantName($item))
+            return true;
+
+        elseif ($field == 'logo' && !TemplateHelper::getMerchantLogoUrl($item))
+            return false;
+
+        elseif ($field == 'logo' && TemplateHelper::getMerchantLogoUrl($item))
+            return true;
+
+        elseif ($field == 'shipping_cost' && isset($params['visible']) && in_array($field, $params['visible']))
+            return true;
+
+        if ($field == 'price' && !$item['price'])
+        {
+            foreach ($items as $it)
+            {
+                if (isset($it['price']) && $it['price'])
+                    return true;
+            }
+
+            return false;
+        }
+
+        if (isset($item[$field]) && !$item[$field])
+            return false;
+
+        if (self::$product_fields === null)
+        {
+            $instance = new ContentProduct;
+            self::$product_fields = array_keys(get_object_vars($instance));
+        }
+
+        if (in_array($field, self::$product_fields) && empty($item[$field]))
+            return false;
+
+        if (isset($params['visible']) && in_array($field, $params['visible']))
+            return true;
+
+        return $default;
+    }
+
+    public static function conditionClass($condition, $class1, $class2)
+    {
+        if ($condition)
+            echo esc_attr(' ' . $class1);
+        else
+            echo esc_attr(' ' . $class2);
+    }
+
+    public static function couponsOffcanvas(array $item)
+    {
+        if (!$merchant_name = TemplateHelper::getMerchantName($item))
+            return;
+
+        if (!$shop_coupons = self::getShopCoupons($item))
+            return;
+
+        $id = 'cegg-coupons-' . TextHelper::clear($merchant_name);
+        $label = 'cegg-coupons-label-' . TextHelper::clear($merchant_name);
+
+        if (!isset(self::$coupon_offcanvas[$merchant_name]))
+        {
+            \wp_enqueue_script('cegg-bootstrap5');
+
+            echo '<div class="offcanvas offcanvas-start" tabindex="-1" id="' . esc_attr($id) . '" aria-labelledby="' . esc_attr($label) . '">';
+            echo '<div class="offcanvas-header">';
+            echo '<h6 class="offcanvas-title" id="' . esc_attr($label) . '">' . esc_html($merchant_name) . '</h6>';
+            echo '<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>';
+            echo '</div>';
+            echo '<div class="offcanvas-body">';
+            echo '<div>';
+            echo wp_kses_post($shop_coupons);
+            echo '</div>';
+            echo '</div>';
+            echo '</div>';
+
+            self::$coupon_offcanvas[$merchant_name] = true;
+        }
+    }
+
+    public static function coupons(array $item)
+    {
+        if (!$merchant_name = TemplateHelper::getMerchantName($item))
+            return;
+
+        if (!isset(self::$coupon_offcanvas[$merchant_name]))
+            self::couponsOffcanvas($item);
+
+        $id = 'cegg-coupons-' . TextHelper::clear($merchant_name);
+
+        echo '<a data-bs-toggle="offcanvas" href="#' . esc_attr($id) . '" aria-controls="' . esc_attr($id) . '" class="icon-link icon-link-hover link-secondary text-body-secondary link-underline-opacity-25 link-underline-opacity-100-hover">';
+        echo '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-tags" viewBox="0 0 16 16"><path d="M3 2v4.586l7 7L14.586 9l-7-7zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586z" /><path d="M5.5 5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m0 1a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M1 7.086a1 1 0 0 0 .293.707L8.75 15.25l-.043.043a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 0 7.586V3a1 1 0 0 1 1-1z" /></svg>';
+        echo esc_html(TemplateHelper::__('Coupons'));
+        echo '</a>';
+    }
+
+    public static function shopInfoOffcanvas(array $item)
+    {
+        if (!$merchant_name = TemplateHelper::getMerchantName($item))
+            return;
+
+        if (!$shop_info = self::getShopInfo($item))
+            return;
+
+        $id = 'cegg-shop_info-' . TextHelper::clear($merchant_name);
+        $label = 'cegg-shop_info-label-' . TextHelper::clear($merchant_name);
+
+        if (!isset(self::$shop_info_offcanvas[$merchant_name]))
+        {
+            \wp_enqueue_script('cegg-bootstrap5');
+
+            echo '<div class="offcanvas offcanvas-start" tabindex="-1" id="' . esc_attr($id) . '" aria-labelledby="' . esc_attr($label) . '">';
+            echo '<div class="offcanvas-header">';
+            echo '<h6 class="offcanvas-title" id="' . esc_attr($label) . '">' . esc_html($merchant_name) . '</h6>';
+            echo '<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>';
+            echo '</div>';
+            echo '<div class="offcanvas-body">';
+            echo '<div>';
+            echo wp_kses_post($shop_info);
+            echo '</div>';
+            echo '</div>';
+            echo '</div>';
+
+            self::$shop_info_offcanvas[$merchant_name] = true;
+        }
+    }
+
+    public static function shopInfo(array $item)
+    {
+        if (!$merchant_name = TemplateHelper::getMerchantName($item))
+            return;
+
+        if (!isset(self::$shop_info_offcanvas[$merchant_name]))
+            self::shopInfoOffcanvas($item);
+
+        $id = 'cegg-shop_info-' . TextHelper::clear($merchant_name);
+
+        echo '<a data-bs-toggle="offcanvas" href="#' . esc_attr($id) . '" aria-controls="' . esc_attr($id) . '" class="icon-link icon-link-hover link-secondary text-body-secondary link-underline-opacity-25 link-underline-opacity-100-hover">';
+        echo '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-square d-none d-sm-block" viewBox="0 0 16 16"><path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/></svg>';
+        echo esc_html($merchant_name);
+        echo '</a>';
+    }
+
+    public static function getLowestPriceItem(array $items)
+    {
+        $items = TemplateHelper::sortByPrice($items);
+        $item = reset($items);
+        return $item;
+    }
+
+    public static function getItemPriceHistory($unique_id, $module_id, $currency = '', $days = 180)
+    {
+        $where = PriceHistoryModel::model()->prepareWhere(
+            (array('unique_id = %s AND module_id = %s', array($unique_id, $module_id))),
+            false
+        );
+        $params = array(
+            'select' => 'date(create_date) as date, price as price',
+            'where' => $where . ' AND TIMESTAMPDIFF( DAY, create_date, "' . \current_time('mysql') . '") <= ' . $days,
+            'order' => 'date ASC'
+        );
+        $results = PriceHistoryModel::model()->findAll($params);
+
+        $prices = array();
+
+        foreach ($results as $key => $r)
+        {
+            if ($key > 0 && $results[$key - 1]['date'] == $r['date'])
+                continue;
+
+            $price = array(
+                'date' => $r['date'],
+                'price' => (float)$r['price'],
+            );
+            $prices[] = $price;
+        }
+
+        global $post;
+        if (empty($post))
+            return $prices;
+
+        $item = ContentManager::getProductbyUniqueId($unique_id, $module_id, $post->ID);
+        if ($item['price'])
+        {
+            $prices[] = array(
+                'date' => date('Y-m-d'),
+                'price' => (float)$item['price']
+            );
+        }
+
+        if ($currency && $item['currencyCode'] != $currency)
+        {
+            foreach ($prices as $i => $p)
+            {
+                $prices[$i]['price'] =  CurrencyHelper::getInstance()->convertCurrency($p['price'], $item['currencyCode'], $currency);
+            }
+        }
+
+        return $prices;
+    }
+
+    public static function getItemsPriceHistory(array $items, $currency = '', $days = 180)
+    {
+        self::$price_history_lowest_item = null;
+        self::$price_history_highest_item = null;
+        self::$price_history_since = null;
+
+        $priceHistory = array();
+        foreach ($items as $item)
+        {
+            if (!$data = self::getItemPriceHistory($item['unique_id'], $item['module_id'], $currency, $days))
+                continue;
+
+            if (!$merchant = self::getMerchantName($item))
+                continue;
+
+            if (!isset($priceHistory[$merchant]))
+                $priceHistory[$merchant] = array();
+
+            $priceHistory[$merchant] = array_merge($priceHistory[$merchant], $data);
+        }
+
+        $lowestPrices = array();
+        $lastKnownPrices = array();
+
+        $currentDate = new \DateTime();
+        $dateAgo = (clone $currentDate)->modify('-' . $days . ' days');
+
+        for ($date = clone $dateAgo; $date <= $currentDate; $date->modify('+1 day'))
+        {
+            $dateString = $date->format('Y-m-d');
+
+            foreach ($priceHistory as $merchant => $prices)
+            {
+                $priceOnDate = null;
+                foreach ($prices as $priceData)
+                {
+                    if ($priceData['date'] === $dateString)
+                    {
+                        $priceOnDate = floatval($priceData['price']);
+                        break;
+                    }
+                }
+
+                if ($priceOnDate === null && isset($lastKnownPrices[$merchant]))
+                    $priceOnDate = $lastKnownPrices[$merchant];
+
+                if ($priceOnDate !== null)
+                {
+                    $lastKnownPrices[$merchant] = $priceOnDate;
+
+                    if (!isset($lowestPrices[$dateString]) || $priceOnDate < $lowestPrices[$dateString]['price'])
+                    {
+                        $lowestPrices[$dateString] = array(
+                            'price' => $priceOnDate,
+                            'merchant' => $merchant
+                        );
+                    }
+                }
+            }
+        }
+
+        // remove items when the price has not changed compared to the previous day
+        $filtered_price_history = array();
+        $last_price = null;
+        $lowest_item = null;
+        $highest_item = null;
+        $latest_date = array_key_last($lowestPrices);
+        foreach ($lowestPrices as $date => $data)
+        {
+            if (self::$price_history_since === null)
+                self::$price_history_since = strtotime($date);
+
+            if ($lowest_item === null || $data['price'] < $lowest_item['price'])
+            {
+                $lowest_item = $data;
+                $lowest_item['date'] = $date;
+            }
+
+            if ($highest_item === null || $data['price'] > $highest_item['price'])
+            {
+                $highest_item = $data;
+                $highest_item['date'] = $date;
+            }
+
+            if ($date === $latest_date || $last_price !== $data['price'])
+            {
+                $filtered_price_history[$date] = $data;
+                $last_price = $data['price'];
+            }
+        }
+
+        $lowest_item['currencyCode'] = $currency;
+        $highest_item['currencyCode'] = $currency;
+        self::$price_history_lowest_item = $lowest_item;
+        self::$price_history_highest_item = $highest_item;
+
+        return $filtered_price_history;
+    }
+
+    public static function getPriceHistoryLowestItem()
+    {
+        return self::$price_history_lowest_item;
+    }
+
+    public static function getPriceHistoryHighestItem()
+    {
+        return self::$price_history_highest_item;
+    }
+
+    public static function getPriceHistorySince()
+    {
+        return self::$price_history_since;
+    }
+
+    public static function getDeliveryAtCheckout()
+    {
+        return self::$delivery_at_checkout;
+    }
+
+    public static function chartjs(array $items, array $params = array(), $days = 180)
+    {
+        if (!$items)
+            return;
+
+        if (!empty($params['currency']))
+            $currency = $params['currency'];
+        else
+            $currency = $items[0]['currencyCode'];
+
+        if (!$lowestPrices = self::getItemsPriceHistory($items, $currency, $days))
+            return;
+
+        $dates = array_map(function ($date)
+        {
+            return date_i18n(get_option('date_format'), strtotime($date));
+        }, array_keys($lowestPrices));
+
+        $prices = array_column($lowestPrices, 'price');
+        $merchants = array_column($lowestPrices, 'merchant');
+
+        $canvas_id = TemplateHelper::generateGlobalId('cegg-price-history-chart-');
+
+        \wp_enqueue_script('cegg-chartjs');
+        // \wp_enqueue_script('cegg-chartjs-adapter-date-fns');
+
+        $locale = get_locale();
+        $locale = str_replace('_', '-', $locale);
+
+        $localized_data = [
+            'dates' => $dates,
+            'prices' => $prices,
+            'merchants' => $merchants,
+            'currency' => $currency,
+            'dateFormat' => get_option('date_format'),
+            'locale' => $locale,
+        ];
+        wp_localize_script('cegg-chartjs', 'priceHistoryData', $localized_data);
+
+        ob_start();
+?>
+        <canvas id="<?php echo esc_attr($canvas_id); ?>" height="120" aria-label="price history chart" role="img"></canvas>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const ctx = document.getElementById('<?php echo esc_attr($canvas_id); ?>');
+                const {
+                    dates,
+                    prices,
+                    merchants,
+                    currency,
+                    locale
+                } = priceHistoryData;
+                const rootStyles = getComputedStyle(document.documentElement);
+                const borderColor = rootStyles.getPropertyValue('--cegg-primary').trim();
+                const rgb = rootStyles.getPropertyValue('--cegg-primary-rgb').trim();
+                const backgroundColor = `rgba(${rgb}, 0.2)`;
+                const computedStyles = getComputedStyle(ctx);
+                const bodyColorRgb = computedStyles.getPropertyValue('--cegg-body-color-rgb').trim();
+                const color = `rgb(${bodyColorRgb})`;
+                const gridColor = `rgba(${bodyColorRgb}, 0.1)`;
+
+                const data = {
+                    labels: dates,
+                    datasets: [{
+                        data: prices,
+                        stepped: 'before',
+                        borderColor: borderColor,
+                        backgroundColor: backgroundColor,
+                        fill: true,
+                        borderWidth: 1,
+                        radius: 1,
+                        tension: 0.1
+                    }]
+                };
+
+                const config = {
+                    type: 'line',
+                    data: data,
+                    options: {
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        scales: {
+                            x: {
+                                type: 'category',
+                                ticks: {
+                                    color: color,
+                                    autoSkip: true,
+                                    maxTicksLimit: 8
+                                },
+                                grid: {
+                                    color: gridColor,
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: false,
+                                },
+                                beginAtZero: false,
+                                ticks: {
+                                    color: color,
+                                    autoSkip: true,
+                                    maxTicksLimit: 6,
+                                    callback: function(value, index, values) {
+                                        return new Intl.NumberFormat(locale, {
+                                            style: 'currency',
+                                            currency: currency
+                                        }).format(value);
+                                    }
+                                },
+                                grid: {
+                                    color: gridColor,
+                                },
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false,
+                                labels: {
+                                    color: color,
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(tooltipItem) {
+                                        const price = tooltipItem.raw;
+                                        const merchant = merchants[tooltipItem.dataIndex];
+                                        const formattedPrice = new Intl.NumberFormat(locale, {
+                                            style: 'currency',
+                                            currency: currency
+                                        }).format(price);
+                                        return `${merchant}: ${formattedPrice}`;
+                                    }
+                                }
+                            },
+                        }
+                    }
+                };
+
+                const priceHistoryChart = new Chart(ctx, config);
+            });
+        </script>
+<?php
+        $code = ob_get_clean();
+        echo self::minifyBasic($code); // phpcs:ignore
+    }
+
+    public static function minifyBasic($input)
+    {
+        $output = preg_replace('/\s+/', ' ', $input);
+        return trim($output);
+    }
+
+    public static function ratingRing(array $item)
+    {
+        if (empty($item['ratingDecimal']))
+            return;
+
+        $rating = floatval($item['ratingDecimal']);
+        $rating = max(0, min(10, $rating));
+
+        $percentage = ($rating / 10) * 100;
+
+        $size = 75;
+        $strokeWidth = 8;
+        $radius = ($size / 2) - ($strokeWidth / 2);
+        $circumference = 2 * M_PI * $radius;
+
+        $offset = $circumference - ($percentage / 100 * $circumference);
+
+        echo '<div style="width: ' . esc_attr($size) . 'px; height: ' . esc_attr($size) . 'px; position: relative;">';
+        echo '<svg width="' . esc_attr($size) . '" height="' . esc_attr($size) . '" style="transform: rotate(-90deg);">';
+        // Background circle
+        echo '<circle cx="' . esc_attr($size / 2) . '" cy="' . esc_attr($size / 2) . '" r="' . esc_attr($radius) . '" stroke="#e6e6e6" stroke-width="' . esc_attr($strokeWidth) . '" fill="none" />';
+        // Progress circle
+        echo '<circle cx="' . esc_attr($size / 2) . '" cy="' . esc_attr($size / 2) . '" r="' . esc_attr($radius) . '" stroke="currentColor" class="text-primary" stroke-width="' . esc_attr($strokeWidth) . '" fill="none" stroke-dasharray="' . esc_attr($circumference) . '" stroke-dashoffset="' . esc_attr($offset) . '" />';
+        echo '</svg>';
+        // Rating text
+        echo '<div style="font-size: 20px; position: absolute; top: 0; left: 0; width: ' . esc_attr($size) . 'px; height: ' . esc_attr($size) . 'px; display: flex; align-items: center; justify-content: center;">';
+        echo '<span>' . esc_html($rating) . '</span>';
+        echo '</div>';
+        echo '</div>';
+    }
+
+    public static function ratingProgress(array $item)
+    {
+        if (!$rating = self::getRatingValueScale10($item))
+            return;
+
+        $rating = max(0, min(10, $rating));
+        $percentage = ($rating / 10) * 100;
+
+        $percentage_attr = esc_attr($percentage . '%');
+        $aria_now = esc_attr(round($percentage));
+        $aria_label = esc_attr('Product rating: ' . $rating . ' out of 10');
+
+        $output = '<div class="progress" role="progressbar" aria-label="' . $aria_label . '"';
+        $output .= ' aria-valuenow="' . esc_attr($aria_now) . '" aria-valuemin="0" aria-valuemax="100" style="height: 7px">';
+        $output .= '<div class="progress-bar" style="width: ' . $percentage_attr . ';"></div>';
+        $output .= '</div>';
+
+        echo $output;
+    }
+
+    static public function addShopInfoOffcanvases(array $items, array $params, $default = true)
+    {
+        foreach ($items as $item)
+        {
+            if (TemplateHelper::isVisible($item, 'shop_info', $params, $items, $default))
+                TemplateHelper::shopInfoOffcanvas($item);
+        }
+    }
+
+    static public function addCouponOffcanvases(array $items, array $params, $default = true)
+    {
+        foreach ($items as $item)
+        {
+            if (TemplateHelper::isVisible($item, 'coupons', $params, $items, $default))
+                TemplateHelper::shopInfoOffcanvas($item);
+        }
     }
 }

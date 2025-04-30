@@ -17,7 +17,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 abstract class TemplateManager
 {
@@ -25,6 +25,13 @@ abstract class TemplateManager
     private $templates = null;
     private $last_render_data;
     private static $product_style_enqueued = false;
+    private static $product_style5_enqueued = false;
+    private static $product_style5_enqueued_full = false;
+
+    protected $items = array();
+    protected $params = array();
+    protected $item;
+    protected $current_i;
 
     abstract public function getTempatePrefix();
 
@@ -32,7 +39,7 @@ abstract class TemplateManager
 
     abstract public function getCustomTempateDirs();
 
-    public function getTemplatesList($short_mode = false)
+    public function getTemplatesList($short_mode = false, $exclude_custom = false)
     {
         $prefix = $this->getTempatePrefix();
         $this->templates = null;
@@ -43,14 +50,38 @@ abstract class TemplateManager
             {
                 $templates = array_merge($templates, $this->scanTemplates($dir, $prefix, $custom_name));
             }
-            $templates = array_merge($templates, $this->scanTemplates($this->getTempateDir(), $prefix, false));
+            $templates = array_merge($this->scanTemplates($this->getTempateDir(), $prefix, false), $templates);
             $this->templates = $templates;
+        }
+
+        $all = $this->templates;
+
+        if ($exclude_custom)
+        {
+            $all = array_filter($all, function ($key)
+            {
+                return !self::isCustomTemplate($key);
+            }, ARRAY_FILTER_USE_KEY);
+        }
+        else
+        {
+            // Sort to move custom templates to the top
+            uasort($all, function ($a, $b)
+            {
+                $isCustomA = strpos($a, '[custom]') !== false;
+                $isCustomB = strpos($b, '[custom]') !== false;
+
+                if ($isCustomA === $isCustomB)
+                    return 0;
+
+                return $isCustomA ? -1 : 1;
+            });
         }
 
         if ($short_mode)
         {
             $list = array();
-            foreach ($this->templates as $id => $name)
+            foreach ($all as $id => $name)
             {
                 $custom = '';
                 if (self::isCustomTemplate($id))
@@ -67,7 +98,7 @@ abstract class TemplateManager
             return $list;
         }
 
-        return $this->templates;
+        return $all;
     }
 
     private function scanTemplates($path, $prefix, $custom_name = false)
@@ -116,38 +147,62 @@ abstract class TemplateManager
     {
         $file = $this->getViewPath($view_name);
         if (!$file)
-        {
             return '';
-        }
 
         $this->last_render_data = $_data;
         extract($_data, EXTR_PREFIX_SAME, 'data');
 
         ob_start();
         ob_implicit_flush(false);
-        include $file;
-        $res = ob_get_clean();
 
-        return $res;
+        include $file;
+        $content = ob_get_clean();
+        $content = trim($content);
+
+        if (!self::isCustomTemplate($view_name))
+        {
+            $this->enqueueCeggStyle();
+
+            if ($view_name != 'block_customizable')
+            {
+
+                $class = self::generateContainerClassName($view_name);
+                $content = '<div class="cegg5-container ' . esc_attr($class) . '">' . $content . '</div>';
+            }
+        }
+
+        return $content;
     }
 
     public function renderPartial($view_name, array $_data = array())
     {
         $file = $this->getPartialViewPath($view_name, false);
+
         if (!$file)
-        {
             return '';
-        }
+
         $this->renderPath($file, $_data);
     }
 
     public function renderBlock($view_name, array $data = array())
     {
+        if (!isset($data['item']))
+            $data['item'] = $this->item;
+
+        if (!isset($data['items']))
+            $data['items'] = $this->items;
+
+        if (!isset($data['params']))
+            $data['params'] = $this->params;
+
+        if (!isset($data['i']))
+            $data['i'] = $this->current_i;
+
         $file = $this->getPartialViewPath($view_name, true);
+
         if (!$file)
-        {
             return '';
-        }
+
         $this->renderPath($file, $data);
     }
 
@@ -286,6 +341,72 @@ abstract class TemplateManager
         return $template;
     }
 
+    public function enqueueCeggStyle($full = false)
+    {
+        if (!is_admin() && self::$product_style5_enqueued_full)
+            return;
+        elseif (!is_admin() && !$full && self::$product_style5_enqueued)
+            return;
+
+        if ($full)
+        {
+            \wp_enqueue_style('cegg-bootstrap5-full');
+            self::$product_style5_enqueued_full = true;
+        }
+        else
+        {
+            \wp_enqueue_style('cegg-bootstrap5');
+            self::$product_style5_enqueued = true;
+        }
+
+        \wp_enqueue_style('cegg-products');
+
+        if ($css = self::getVariantCss())
+            \wp_add_inline_style('cegg-products', $css);
+    }
+
+    private static function getPrimaryColorBackwardCompatibility()
+    {
+        $activation_date = \get_option(Plugin::slug . '_first_activation_date', false);
+        if ($activation_date && $activation_date < strtotime('09/15/2024'))
+        {
+            $color = GeneralConfig::getInstance()->option('button_color');
+            if ($color !== '#d9534f')
+                return $color;
+        }
+
+        return false;
+    }
+
+    public static function getVariantCss()
+    {
+        $color_mode = GeneralConfig::getInstance()->option('color_mode');
+        $st = new StyleVariant($color_mode);
+
+        $css = '';
+        foreach (self::getColorVariants() as $variant)
+        {
+            if (!$backround = GeneralConfig::getInstance()->option($variant . '_color'))
+            {
+                if ($variant != 'primary' || !$backround = self::getPrimaryColorBackwardCompatibility())
+                    continue;
+            }
+
+            $st->setVariant($variant, $backround);
+            $css .= esc_html($st->generateVariantCss());
+        }
+
+        return $css;
+    }
+
+    public static function getColorVariants()
+    {
+        return array('primary', 'secondary', 'success', 'danger', 'warning', 'info', 'light', 'dark');
+    }
+
+    /**
+     * Deprecated
+     */
     public function enqueueProductsStyle()
     {
         if (self::$product_style_enqueued)
@@ -311,5 +432,56 @@ abstract class TemplateManager
 
         \wp_add_inline_style('egg-products', $custom_css);
         self::$product_style_enqueued = true;
+    }
+
+    public function setItems(array $items)
+    {
+        $this->items = $items;
+    }
+
+    public function setItem(array $item, $i = null)
+    {
+        $this->item = $item;
+        $this->current_i = $i;
+    }
+
+    public function setParams(array $params)
+    {
+        $this->params = $params;
+    }
+
+    public function getParams()
+    {
+        return $this->params;
+    }
+
+    static function generateContainerClassName($view_name)
+    {
+        $class = 'cegg-';
+        $class .= str_replace('block_', '', $view_name);
+        return $class;
+    }
+
+    public function isVisible($field, $default = true)
+    {
+        if (!$this->item)
+            return false;
+
+        return TemplateHelper::isVisible($this->item, $field, $this->params, $this->items, $default);
+    }
+
+    public function isHide($field, $default = false)
+    {
+        return !$this->isHide($this->item, $field, $this->params, !$default);
+    }
+
+    public function isVisibleDisclaimerOrPriceUpdate()
+    {
+        return TemplateHelper::isVisibleDisclaimerOrPriceUpdate($this->items, $this->params);
+    }
+
+    public function colorMode()
+    {
+        TemplateHelper::colorMode($this->params);
     }
 }

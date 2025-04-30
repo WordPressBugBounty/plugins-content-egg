@@ -9,11 +9,10 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class WidgetTemplateManager extends TemplateManager
 {
-
     const TEMPLATE_DIR = 'templates';
     const CUSTOM_TEMPLATE_DIR = 'content-egg-templates';
     const TEMPLATE_PREFIX = 'wdgt_';
@@ -58,15 +57,5 @@ class WidgetTemplateManager extends TemplateManager
         );
 
         return \apply_filters('content_egg_widget_template_dirs', $paths);
-    }
-
-    public function render($view_name, array $_data = array())
-    {
-        if (!self::isCustomTemplate($view_name))
-        {
-            $this->enqueueProductsStyle();
-        }
-
-        return parent::render($view_name, $_data);
     }
 }

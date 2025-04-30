@@ -1,64 +1,93 @@
 <?php
 /*
  * Name: Product card with price comparison popup
- * Modules:
  * Module Types: PRODUCT
- *
  */
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-\wp_enqueue_script('bootstrap-modal');
+defined('\ABSPATH') || exit;
 
-$all_items = TemplateHelper::sortAllByPrice($data, $order);
-$cheapest = reset($all_items);
-$item = TemplateHelper::selectItemByDescription($all_items);
+\wp_enqueue_script('cegg-bootstrap5');
+
+$cheapest = reset($items);
+$item = TemplateHelper::selectItemByDescription($items);
 ?>
 
-<?php if ($title) : ?>
-    <h3 class="cegg-shortcode-title"><?php echo \esc_html($title); ?></h3>
-<?php endif; ?>
+<div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>
+    <?php $this->setItem($item, 1); ?>
+    <div class="cegg-item-card cegg-card <?php TemplateHelper::border($params, 'border'); ?>">
 
-<div class="egg-container egg-item-popup">
-    <div class="products">
-
-        <div class="row">
-            <div class="col-md-3 text-center cegg-image-container cegg-mb20">
-                <?php if ($item['img']) : ?>
-                    <?php TemplateHelper::displayImage($item, 350, 350); ?>
-                <?php endif; ?>
+        <?php if ($this->isVisible('number', false)): ?>
+            <div class="position-absolute top-50 z-3 start-0 translate-middle">
+                <?php TemplateHelper::number($item, $params, $i); ?>
             </div>
-            <div class="col-md-9">
-                <?php if ($item['title']) : ?>
-                    <h3 class="cegg-item-title"><?php echo esc_html($item['title']); ?></h3>
-                <?php endif; ?>
-                <?php if ($item['description']) : ?>
-                    <?php echo wp_kses_post($item['description']); ?>
-                <?php endif; ?>
+        <?php endif; ?>
 
-                <?php if ($cheapest['price']) : ?>
-                    <div class="cegg-price-row" style="padding-top: 10px;">
-                        <?php if (count($all_items) > 1) : ?>
-                            <?php echo esc_html(TemplateHelper::__('from')); ?>
+        <?php $badge_position = (TemplateHelper::getColOrder($params, 1) == 1) ? 'left' : 'right'; ?>
+        <?php if ($this->isVisible('badge')) TemplateHelper::badge1($item, $params, $badge_position); ?>
+
+        <div class="row p-3">
+            <div class="cegg-item-card-img-col <?php TemplateHelper::conditionClass(TemplateHelper::getColOrder($params, 1) == 1, 'col-md-5', 'col-md-5'); ?> position-relative<?php TemplateHelper::colsOrder($params, 1, 'md'); ?>" style="max-width: 400px;">
+
+                <?php if ($this->isVisible('img')): ?>
+                    <div class="position-relative">
+
+                        <?php if ($this->isVisible('percentageSaved', false)): ?>
+                            <div class="badge bg-danger rounded-1 position-absolute bottom-0 end-0 z-3">-<?php echo esc_html($item['percentageSaved']); ?>%</div>
                         <?php endif; ?>
-                        <span class="cegg-price cegg-price-color"><?php echo esc_html(TemplateHelper::formatPriceCurrency($cheapest['price'], $cheapest['currencyCode'])); ?></span>
 
-                        <?php if (count($all_items) <= 1 && ($item['module_id'] == 'Amazon' || $item['module_id'] == 'AmazonNoApi')) : ?>
-                            <?php if ($item['price']) : ?>
-
-                                <div class="cegg-font60 cegg-lineheight15">
-                                    <?php echo esc_html(sprintf(TemplateHelper::__('as of %s'), TemplateHelper::dateFormatFromGmtAmazon($item['module_id'], $item['last_update']))); ?>
-                                    <?php TemplateHelper::printAmazonDisclaimer(); ?>
-                                </div>
-                            <?php endif; ?>
-
-                        <?php endif; ?>
+                        <?php TemplateHelper::openATag($item); ?>
+                        <div class="ratio<?php TemplateHelper::imgRatio($params, 'ratio-1x1'); ?>">
+                            <?php TemplateHelper::displayImage($item, 350, 350, array('class' => 'object-fit-scale rounded')); ?>
+                        </div>
+                        <?php TemplateHelper::closeATag(); ?>
 
                     </div>
                 <?php endif; ?>
 
-                <div class="cegg-btn-row cegg-mb5" style="padding-top: 10px;">
-                    <?php $this->renderPartial('block_popup_button', array('btn_class' => 'cegg-btn-big', 'btn_text' => $btn_text, 'title' => $title)); ?>
+            </div>
+
+            <div class="col<?php TemplateHelper::conditionClass(TemplateHelper::getColOrder($params, 2) == 1, 'ps-xl-5', 'ps-xl-3'); ?><?php TemplateHelper::colsOrder($params, 2, 'md'); ?>">
+
+                <?php if ($this->isVisible('title')): ?>
+                    <?php TemplateHelper::title($item, 'card-title h4 fw-normal  cegg-text-truncate-2 pt-3', 'h1', $params); ?>
+                <?php else: ?>
+                    <div class="mb-5"></div>
+                <?php endif; ?>
+                <?php if ($this->isVisible('subtitle')): ?>
+                    <div class="cegg-item-subtitle fs-6 text-body-secondary cegg-text-truncate-2"><?php TemplateHelper::subtitle($item); ?></div>
+                <?php endif; ?>
+
+                <?php if ($this->isVisible('rating')): ?>
+                    <div class="pt-0 fs-4">
+                        <?php TemplateHelper::ratingStars($item, true); ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($this->isVisible('description')): ?>
+                    <div class="cegg-desc-small small lh-sm pt-3"><?php TemplateHelper::description($item); ?></div>
+                <?php endif; ?>
+
+                <?php
+                $this->setItem($cheapest);
+                if ($this->isVisible('price')): ?>
+                    <div class="cegg-card-price lh-1 mt-3 mb-2">
+                        <?php if (count($items) > 1) : ?>
+                            <?php echo esc_html(TemplateHelper::__('from')); ?>
+                        <?php endif; ?>
+                        <span class="cegg-price fs-4<?php TemplateHelper::priceClass($cheapest); ?>">
+                            <?php TemplateHelper::price($cheapest); ?>
+                        </span>
+                    </div>
+                <?php
+                endif;
+                $this->setItem($item);
+                ?>
+
+                <div class="d-grid">
+                    <?php $this->renderPartial('block_popup_button', array('btn_class' => 'col-12 col-md-8')); ?>
+
                 </div>
 
             </div>

@@ -3,36 +3,28 @@
  * Name: Product images row
  * Modules:
  * Module Types: PRODUCT
- *
  */
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-if (empty($cols) || $cols > 12)
-    $cols = 2;
+use function ContentEgg\prnx;
 
-$col_size_md = ceil(12 / $cols);
+defined('\ABSPATH') || exit;
 
-if ($col_size_md >= 6)
-    $col_size_xs = $col_size_md;
-else
-    $col_size_xs = 6;
-
-if (!$images = TemplateHelper::getGallery($data, $cols))
+if (!$images = TemplateHelper::getGallery($data, $cols, $params['start_number']))
     return;
 ?>
+<div class="container px-0 mb-5 mt-4" <?php $this->colorMode(); ?>>
+    <div class="row g-3<?php TemplateHelper::rowCols($params, 'row-cols-2 row-cols-md-2'); ?>">
+        <?php foreach ($images as $item) : ?>
 
-<div class="egg-container egg-gallery">
-    <?php if ($title) : ?>
-        <h3><?php echo esc_html($title); ?></h3>
-    <?php endif; ?>
+            <div class="col">
+                <?php TemplateHelper::openATag($item); ?>
+                <div class="ratio<?php TemplateHelper::imgRatio($params, 'ratio-1x1'); ?>">
+                    <?php TemplateHelper::displayImage($item, 190, 170, array('class' => 'object-fit-scale img-thumbnail')); ?>
+                </div>
+                <?php TemplateHelper::closeATag(); ?>
 
-    <div class="row">
-        <?php foreach ($images as $image) : ?>
-            <div class="col-md-<?php echo esc_attr($col_size_md); ?> col-xs-<?php echo esc_attr($col_size_xs); ?> text-center">
-                <a<?php TemplateHelper::printRel(); ?> target="_blank" href="<?php echo esc_url_raw($image['url']); ?>">
-                    <img src="<?php echo esc_attr($image['uri']); ?>" alt="<?php echo esc_attr($image['alt']); ?>" class="img-thumbnail" style="max-height:400px;" />
-                    </a>
             </div>
         <?php endforeach; ?>
     </div>

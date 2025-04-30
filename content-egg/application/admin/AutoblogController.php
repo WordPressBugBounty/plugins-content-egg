@@ -9,12 +9,15 @@ use ContentEgg\application\models\AutoblogModel;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\AutoblogScheduler;
 
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
+
 /**
  * AutoblogController class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class AutoblogController
 {
@@ -145,6 +148,7 @@ class AutoblogController
             $item['user_id'] = isset($pitem['user_id']) ? absint($pitem['user_id']) : '';
             $item['template_body'] = isset($pitem['template_body']) ? \wp_kses_post($pitem['template_body']) : '';
             $item['template_title'] = isset($pitem['template_title']) ? trim(\sanitize_text_field($pitem['template_title'])) : '';
+            $item['template_title'] = str_replace('ed__', '%Feed__', $item['template_title']);
             $item['template_slug'] = isset($pitem['template_slug']) ? trim(\sanitize_text_field($pitem['template_slug'])) : '';
             $item['post_type'] = isset($pitem['post_type']) ? sanitize_key($pitem['post_type']) : null;
             $item['category'] = isset($pitem['category']) ? intval($pitem['category']) : null;

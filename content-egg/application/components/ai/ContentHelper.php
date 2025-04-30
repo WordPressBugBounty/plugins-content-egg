@@ -15,7 +15,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 
 class ContentHelper
@@ -129,10 +129,33 @@ class ContentHelper
 
     public static function prepareMarkdown($text)
     {
+        $text = self::removeMarkdownCodeBlock($text);
+
         $parsedown = new Parsedown();
-        $text = $parsedown->text($text);
-        $text = TextHelper::sanitizeHtml($text);
-        $text = trim($text, " \"");
+
+        $html = $parsedown->text($text);
+
+        $html = self::prepareHtml($html);
+        return $html;
+    }
+
+    public static function prepareHtml($html)
+    {
+        $html = preg_replace('~<a.*?>(.*?)</a>~ui', '$1', $html);
+        $html = preg_replace('/<img[^>]+\>/ui', '', $html);
+        $html = preg_replace("~\n+~u", '', $html);
+
+        $html = TextHelper::sanitizeHtml($html);
+
+        return $html;
+    }
+
+    public static function removeMarkdownCodeBlock($text)
+    {
+        $text = preg_replace('/^```[a-zA-Z]*/', '', $text);
+        $text = trim($text, '`');
+        $text = trim($text);
+
         return $text;
     }
 
@@ -180,7 +203,9 @@ class ContentHelper
                 '~</?((table)|(th)|(td)|(caption))~iu',
             ),
             array(
-                "\n\$0", "\n\$0", "\n\$0",
+                "\n\$0",
+                "\n\$0",
+                "\n\$0",
             ),
             $html
         );
@@ -216,5 +241,17 @@ class ContentHelper
         }
 
         return false;
+    }
+
+    public static function prepareJsonResponse($text)
+    {
+        $text = str_replace('```json', '', $text);
+        $text = trim($text, '`');
+        $text = trim($text);
+
+        if ($json = json_decode($text, true))
+            return $json;
+        else
+            return array();
     }
 }

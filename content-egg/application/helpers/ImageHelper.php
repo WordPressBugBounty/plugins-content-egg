@@ -2,6 +2,11 @@
 
 namespace ContentEgg\application\helpers;
 
+use ContentEgg\application\ImageProxy;
+
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
+
 defined('\ABSPATH') || exit;
 
 /**
@@ -9,7 +14,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  *
  */
 class ImageHelper

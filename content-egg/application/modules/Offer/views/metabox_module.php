@@ -62,7 +62,7 @@ $isAffiliateParser = $module->isAffiliateParser();
                     ?>
                     <div ng-model="models.<?php echo esc_attr($module_id); ?>.added" ui-sortable="sortableOptions" ng-if="models.<?php echo esc_attr($module_id); ?>.added.length" id="<?php echo \esc_attr($module->getId()); ?>" style="max-height: 600px;overflow-y: scroll;padding-right: 15px;">
                         <div class="row egg-hover-row mt-2 pb-2 pt-2" ng-repeat="data in models.<?php echo esc_attr($module_id); ?>.added">
-                            <div class="col-md-1 col-xs-12 pe-0 text-center small">
+                            <div class="col-md-1 col-xs-12 pe-0 text-center small" id="<?php echo \esc_attr($module->getId()); ?>-{{data.unique_id}}">
                                 <img ng-show="data.img" ng-src="{{data.img}}" class="img-thumbnail" style="max-height:75px;" />
                                 <div class="mt-1">
                                     <span class="cegg-item-handle bg-light px-2 py-1" title="<?php esc_html_e('Sort', 'content-egg'); ?>">☰</span>
@@ -84,14 +84,8 @@ $isAffiliateParser = $module->isAffiliateParser();
                                     <input style="flex-basis: 35%;" type="text" placeholder="<?php esc_html_e('Product URL', 'content-egg'); ?> (<?php esc_html_e('required', 'content-egg'); ?>)" ng-model="data.orig_url" class="form-control">
                                     <input type="text" placeholder="<?php esc_html_e('Merchant name', 'content-egg'); ?>" ng-model="data.merchant" class="form-control">
                                     <input type="text" placeholder="<?php esc_html_e('Domain', 'content-egg'); ?>" ng-model="data.domain" class="form-control">
-                                    <select class="form-control" ng-model="data.rating" convert-to-number>
-                                        <option value="">- <?php esc_html_e('Rating', 'content-egg'); ?> -</option>
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4</option>
-                                        <option value="5">5</option>
-                                    </select>
+                                    <input type="text" placeholder="<?php esc_html_e('Rating (e.g., 4.5)', 'content-egg'); ?>" ng-model="data.ratingDecimal" title="<?php esc_html_e('Product Rating (X out of 5)', 'content-egg'); ?>" class="form-control">
+
                                 </div>
 
                                 <div class="input-group input-group-sm mt-1">
@@ -116,6 +110,30 @@ $isAffiliateParser = $module->isAffiliateParser();
                                         <textarea ui-tinymce="tinymceOptions" ng-model="data.description"></textarea>
                                     </div>
                                 </div>
+
+                                <?php if ($isAffiliateParser) : ?>
+                                    <div class="row">
+                                        <div class="col mt-1">
+                                            <div class="input-group input-group-sm">
+
+                                                <input type="number" min="0" max="999" placeholder="<?php esc_html_e('Order', 'content-egg'); ?>" title="<?php esc_html_e('Order Number: Lower Value - Product Ranks Higher in the List', 'content-egg'); ?>" ng-model="data.order_num" class="form-control">
+                                                <input style="flex-basis: 25%;" type="text" placeholder="<?php esc_html_e('Subtitle', 'content-egg'); ?>" title="<?php esc_html_e('Subtitle', 'content-egg'); ?>" ng-model="data.subtitle" class="form-control">
+                                                <select class="form-control" ng-model="data.badge_color" title="<?php esc_html_e('Badge Color', 'content-egg'); ?>">
+                                                    <option value="">- <?php esc_html_e('Badge color', 'content-egg'); ?> -</option>
+                                                    <option value="primary">primary</option>
+                                                    <option value="secondary">secondary</option>
+                                                    <option value="success">success</option>
+                                                    <option value="danger">danger</option>
+                                                    <option value="warning">warning</option>
+                                                    <option value="info">info</option>
+                                                    <option value="light">light</option>
+                                                    <option value="dark">dark</option>
+                                                </select>
+                                                <input type="text" placeholder="<?php esc_html_e('Badge (e.g., Our pick)', 'content-egg'); ?>" title="<?php esc_html_e('Badge Label', 'content-egg'); ?>" ng-model="data.badge" class="form-control">
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
 
                                 <?php if ($isAffiliateParser) : ?>
                                     <div class="row small p-0 m-0 pt-1">

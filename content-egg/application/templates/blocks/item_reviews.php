@@ -42,9 +42,7 @@ use ContentEgg\application\helpers\TemplateHelper;
             </blockquote>
         </div>
     <?php endforeach; ?>
-    <p class="text-right">
-        <a<?php TemplateHelper::printRel(); ?> target="_blank" class="btn btn-info" href="<?php echo esc_url($item['url']) ?>"><?php esc_html_e('View all reviews', 'content-egg-tpl'); ?></a>
-    </p>
+
 <?php endif; ?>
 
 <?php if (!empty($item['extra']['Reviews'])) : ?>

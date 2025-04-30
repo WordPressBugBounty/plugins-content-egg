@@ -12,6 +12,7 @@ use ContentEgg\application\PriceAlert;
 use ContentEgg\application\helpers\CurrencyHelper;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
+use ContentEgg\application\ImageProxy;
 
 use function ContentEgg\prn;
 use function ContentEgg\prnx;
@@ -21,7 +22,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class ContentManager
 {
@@ -36,6 +37,7 @@ class ContentManager
 
     public static function saveData(array $data, $module_id, $post_id, $is_last_iteration = true)
     {
+
         if (!$data)
         {
             self::deleteData($module_id, $post_id, $is_last_iteration);
@@ -43,6 +45,7 @@ class ContentManager
         }
 
         $data = self::dataPresavePrepare($data, $module_id, $post_id);
+
         $old_data = ContentManager::getData($post_id, $module_id);
 
         $outdated = array();
@@ -93,7 +96,11 @@ class ContentManager
         {
             if (is_object($d))
                 $data[$i] = ArrayHelper::object2Array($d);
+
+            $data[$i]['module_id'] = $module_id;
+            $data[$i]['post_id'] = $post_id;
         }
+
         $data = self::setIds($data);
         // Sanitize content for allowed HTML tags and more.
         array_walk_recursive($data, array(__CLASS__, 'sanitizeData'));
@@ -185,6 +192,7 @@ class ContentManager
     {
         if (in_array((string) $key, array('img', 'url', 'IFrameURL', 'orig_url')))
         {
+            $data = (string) $data;
             if ($key == 'img')
             {
                 $data = \esc_url_raw($data);
@@ -197,33 +205,57 @@ class ContentManager
         }
         elseif ($key === 'description')
         {
-            $data = TextHelper::sanitizeHtml($data);
+            $data = TextHelper::sanitizeHtml((string)$data);
         }
         elseif ($key === 'linkHtml')
         {
-            $data = wp_kses_post($data);
+            $data = wp_kses_post((string)$data);
         }
-        elseif ($key === 'title')
+        elseif ($key === 'title' || $key === 'subtitle' || $key === 'badge')
         {
-            $data = \sanitize_text_field($data);
+            $data = \sanitize_text_field((string)$data);
         }
         elseif ($key === 'last_update' && !$data)
         {
             $data = time();
         }
+        elseif ($key === 'order_num')
+        {
+            $data = (int) $data;
+            if (!$data)
+                $data = '';
+        }
         elseif ($key === 'ean' && $data)
         {
-            $data = TextHelper::fixEan(sanitize_text_field($data));
+            $data = TextHelper::fixEan(sanitize_text_field((string)$data));
+        }
+        elseif ($key === 'ratingDecimal')
+        {
+            $data = (float) $data;
+            if ($data < 0 || $data > 10)
+                $data = 0;
+            $data = round($data, 1);
+            if (!$data)
+                $data = '';
         }
         else
         {
-            $data = wp_strip_all_tags($data);
+            $data = wp_strip_all_tags((string)$data);
         }
     }
 
     public static function isDataExists($post_id, $module_id)
     {
         if (\get_post_meta($post_id, ContentManager::META_PREFIX_DATA . $module_id, true))
+            return true;
+        else
+            return false;
+    }
+
+    public static function isNotEmptyDataExists($post_id, $module_id)
+    {
+        $data = \get_post_meta($post_id, ContentManager::META_PREFIX_DATA . $module_id, true);
+        if ($data && is_array($data) && count($data))
             return true;
         else
             return false;
@@ -256,6 +288,12 @@ class ContentManager
         }
 
         return $data;
+    }
+
+    public static function setViewData($module_id, $post_id, $data)
+    {
+        $data_id = $post_id . '-' . $module_id;
+        self::$_view_data[$data_id] = $data;
     }
 
     public static function getViewData($module_id, $post_id, $params = array())
@@ -387,6 +425,7 @@ class ContentManager
     public static function dataPreviewPrepare(array $data, $module_id, $post_id, $params = array())
     {
         $is_ssl = \is_ssl();
+
         foreach ($data as $key => $d)
         {
             if ($module_id == 'Amazon' && !empty($d['extra']['IsEligibleForSuperSaverShipping']))
@@ -448,6 +487,16 @@ class ContentManager
             {
                 $data[$key]['rating'] = $d['extra']['data']['rating'];
             }
+            if (!empty($data[$key]['startDate']))
+            {
+                if (date('Y', $data[$key]['startDate']) < 2023 || date('Y', $data[$key]['startDate']) > 2050)
+                    $data[$key]['startDate'] = '';
+            }
+            if (!empty($data[$key]['endDate']))
+            {
+                if (date('Y', $data[$key]['endDate']) < 2023 || date('Y', $data[$key]['endDate']) > 2050)
+                    $data[$key]['endDate'] = '';
+            }
 
             if (isset($d['price']) && isset($d['priceOld']) && $d['price'] == $d['priceOld'])
                 $data[$key]['priceOld'] = 0;
@@ -462,6 +511,19 @@ class ContentManager
                 $data[$key]['rating'] = round(($data[$key]['rating'] * 2) / 2);
             }
 
+            if (empty($data[$key]['ratingDecimal']) && !empty($data[$key]['rating']))
+                $data[$key]['ratingDecimal'] = $data[$key]['rating'];
+
+            if (empty($data[$key]['rating']) && !empty($data[$key]['ratingDecimal']))
+                $data[$key]['rating'] = round($data[$key]['ratingDecimal']);
+
+            if ($badge_data = self::getBadgeFromDescription($data[$key]['description']))
+            {
+                list($badge, $color) = $badge_data;
+                $data[$key]['badge'] = $badge;
+                $data[$key]['badge_color'] = $color;
+            }
+
             $data[$key]['number'] = 999;
             $number = TemplateHelper::getNumberFromTitle($data[$key]['title']);
             if ($number !== false)
@@ -469,10 +531,15 @@ class ContentManager
                 $data[$key]['title'] = TemplateHelper::fixNumberedTitle($data[$key]['title']);
                 $data[$key]['number'] = $number;
             }
+            if (!empty($data[$key]['order_num']))
+                $data[$key]['number'] = $data[$key]['order_num'];
 
             $data[$key]['post_id'] = $post_id;
             $data[$key]['module_id'] = $module_id;
         }
+
+        // image proxy
+        self::preparePoductImages($data);
 
         // local redirect & other
         $module = ModuleManager::getInstance()->factory($module_id);
@@ -483,6 +550,50 @@ class ContentManager
         }
 
         return \apply_filters('cegg_view_data_prepare', $data, $module_id, $post_id, $params);
+    }
+
+    private static function preparePoductImages(&$data)
+    {
+        if (GeneralConfig::getInstance()->option('image_proxy') !== 'enabled')
+            return;
+
+        foreach ($data as $key => $d)
+        {
+            if (!empty($d['img']))
+            {
+                $data[$key]['img'] = ImageProxy::maybeGenerateProxyImageUrl($d['img']);
+            }
+
+            if (!empty($d['img_large']))
+            {
+                $data[$key]['img_large'] = ImageProxy::maybeGenerateProxyImageUrl($d['img_large']);
+            }
+
+            if (!empty($d['images']) && is_array($d['images']))
+            {
+                foreach ($d['images'] as $i => $img)
+                {
+                    $data[$key]['images'][$i] = ImageProxy::maybeGenerateProxyImageUrl($img);
+                }
+            }
+        }
+    }
+
+    private static function getBadgeFromDescription(&$description)
+    {
+        if (\apply_filters('cegg_disable_badge_from_description', false))
+            return false;
+
+        $pattern = '/<span class="label label-([a-z]+)">([^<]*)<\/span>/';
+        if (preg_match($pattern, $description, $matches))
+        {
+            $labelColor = $matches[1];
+            $labelText = $matches[2];
+            $description = preg_replace($pattern, '', $description, 1);
+            return array($labelText, $labelColor);
+        }
+
+        return false;
     }
 
     public static function getProductbyUniqueId($unique_id, $module_id, $post_id, $params = array())
@@ -990,45 +1101,50 @@ class ContentManager
         return $keyword;
     }
 
-    public static function findDuplicateIds(array $items, $field)
+    /**
+     * Find duplicate unique_ids by a specified field, considering module priorities.
+     */
+    public static function findDuplicatesByField($items, $field)
     {
-        $used = array();
-        $duplicate_ids = array();
+        //prnx($field);
         $modules_priority = self::getModulesPriority($items);
 
-        foreach ($items as $module_id => $module_data)
+        $all_items = TemplateHelper::mergeData($items);
+
+        uasort($modules_priority, function ($a, $b)
         {
-            foreach ($module_data as $unique_id => $data)
+            return $b - $a;
+        });
+
+        $grouped_items = [];
+        foreach ($all_items as $item)
+        {
+            if (isset($item[$field]))
             {
-                if (empty($data[$field]))
-                    continue;
-
-                if (isset($used[$data[$field]]))
-                {
-                    $d_module_id = $used[$data[$field]][0];
-
-                    if ($d_module_id == $module_id)
-                    {
-                        $duplicate_ids[] = $unique_id;
-                        continue;
-                    }
-
-                    if ($modules_priority[$module_id] > $modules_priority[$d_module_id])
-                    {
-                        $used[$data[$field]] = array($module_id, $unique_id);
-                        $duplicate_ids[] = $unique_id;
-                    }
-                    else
-                        $duplicate_ids[] = $used[$data[$field]][1];
-                }
-                else
-                    $used[$data[$field]] = array($module_id, $unique_id);
+                $grouped_items[$item[$field]][] = $item;
             }
         }
 
-        $duplicate_ids = array_unique($duplicate_ids);
+        $duplicate_unique_ids = [];
+        foreach ($grouped_items as $key => $items)
+        {
+            if (count($items) > 1)
+            {
+                usort($items, function ($a, $b) use ($modules_priority)
+                {
+                    $priorityA = $modules_priority[$a['module_id']] ?? 0;
+                    $priorityB = $modules_priority[$b['module_id']] ?? 0;
+                    return $priorityB - $priorityA;
+                });
+                // Collect all unique_ids except the first (highest-priority) item
+                foreach (array_slice($items, 1) as $item)
+                {
+                    $duplicate_unique_ids[] = $item['unique_id'];
+                }
+            }
+        }
 
-        return $duplicate_ids;
+        return $duplicate_unique_ids;
     }
 
     public static function getModulesPriority(array $items)
@@ -1064,5 +1180,34 @@ class ContentManager
             $keyword = '';
 
         return \apply_filters('cegg_keyword_update', $keyword, $post_id, $module_id);
+    }
+
+    public static function isProductDataExists($post_id)
+    {
+        $product_module_ids = ModuleManager::getInstance()->getParserModuleIdsByTypes('PRODUCT', true);
+
+        foreach ($product_module_ids as $module_id)
+        {
+            if (self::getData($post_id, $module_id))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static function deleteAllDataForModule($module_id)
+    {
+        $post_ids = get_posts(array(
+            'numberposts' => -1,
+            'post_type'   => 'any',
+            'fields'      => 'ids',
+        ));
+
+        foreach ($post_ids as $post_id)
+        {
+            self::deleteData($module_id, $post_id, false);
+        }
+
+        return true;
     }
 }

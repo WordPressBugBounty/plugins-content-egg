@@ -15,7 +15,7 @@ use ContentEgg\application\components\ModuleManager;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link httsp://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class ToolsController
 {

@@ -1,10 +1,10 @@
 === Content Egg ===
 Contributors: keywordrush
 Tags: affiliate marketing, price comparison, csv import, ai content generation, autoblogging
-Requires at least: 4.6.1
-Tested up to: 6.6.1
-Requires PHP: 5.4
-Stable tag: 7.0.0
+Requires at least: 5.9
+Tested up to: 6.8
+Requires PHP: 7.4
+Stable tag: 8.0.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -31,7 +31,7 @@ AI Power: [www.keywordrush.com/toomuchniche](https://www.keywordrush.com/toomuch
 * Add offers
 * Start to earn
 
-[youtube https://www.youtube.com/watch?v=7oUazXI2-ic]
+[youtube https://www.youtube.com/watch?v=yN2ceEDDWe4]
 
 = Plugin features =
 
@@ -64,7 +64,7 @@ Content Egg includes a special module to work with product feeds.
 
 Do you want to get even more? The Pro version offers numerous additional modules and extended features.
 
-**Modules of the Free Version:** CSV Feed, CJ Links, Coupon, GdeSlon, Google Images, Offer, Pixabay, Related Keywords, RSS Fetcher, Skimlinks Coupons, Viglink (Sovrn), YouTube.
+**Modules of the Free Version:** CSV Feed, CJ Links, Coupon, GdeSlon, Google Images, Offer, Pixabay, Related Keywords, RSS Fetcher, Skimlinks Coupons, Sovrn, YouTube.
 
 **Additional Modules of the PRO Version:** Aliexpress, Amazon, Amazon NoAPI, Avantlink, AWIN, BestBuy, Bol.com, CJ Products, CityAds.com, Clickbank, Daisycon, eBay, Envato, Flipkart, Impact Radius, Kelkoogroup, Kieskeurig.nl, Linkwise, Lomadee.com, Paytm.com, Pepperjam, Rakuten (LinkShare), Shareasale, Shopeeh, Walmart, Webgains.
 
@@ -97,7 +97,7 @@ Enhance your affiliate product content effortlessly with our advanced AI integra
 * Rewrites
 * And More...
 
-Customize prompts with dynamic variables for tailored content creation. Our supported AI models include GPT-4, GPT-3.5, GPT 4o-mini, GPT 4o, Claude 3: Haiku, Claude 3.5: Sonnet, and more.
+Customize prompts with dynamic variables for tailored content creation. Our supported AI models include GPT-4, GPT 4o-mini, GPT 4o, Claude 3: Haiku, Claude 3.5: Sonnet, and more.
 
 = Real-World Usage of the Content Egg Plugin on Live Sites =
 
@@ -109,8 +109,8 @@ Customize prompts with dynamic variables for tailored content creation. Our supp
 
 **Requirements**
 
-* PHP version 5.4 or higher.
-* Wordpress 4.6.1 or higher.
+* PHP version 7.4 or higher.
+* Wordpress 5.9 or higher.
 
 Installation Instructions
 
@@ -168,8 +168,67 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 4. Output demo 1
 5. Output demo 2
 6. Price history
+7. AI features
 
 == Changelog ==
+
+= 8.0.0 =
+
+* New: Introduced Gutenberg product blocks for product display.
+* New: Complete redesign and improvement of all templates.
+* New: Dark mode added, which can be enabled via global settings or shortcode parameter.
+* New: Affiliate link tracking integrated with GA4 custom events for better analytics.
+* New: Price history charts now show the lowest prices from multiple merchants.
+* New: Reveal coupon feature added.
+* New: Affiliate disclaimer option for posts.
+* New: Affiliate disclaimer feature for individual product blocks.
+* New: Product badge label and badge color fields.
+* New: Badge icons available.
+* New: Added product subtitle field for additional details.
+* New: Product rating field.
+* New: Product order number field added.
+* New: Button variants added, customizable through global options or shortcode parameters.
+* New: Option to display Amazon price update date.
+* New: `exclude_modules` shortcode parameter.
+* New: `tabs_type` shortcode parameter.
+* New: `border` and `border_color` shortcode parameters.
+* New: `start_number` shortcode parameter.
+* New: `title_tag` shortcode parameter.
+* New: `img_ratio` shortcode parameter.
+* New: Shortcode parameters: `cols_sm`, `cols_md`, `cols_lg`, `cols_xl`, `cols_xxl`.
+* New: Show/hide values: `price_update` and `disclaimer`.
+* New: Show/hide values: `cols_order`, `shipping_cost`, `new_used_price`, `logo`, `prime`.
+* New: Show/hide values: `button`, `percentageSaved`, `priceOld`, `badge`, `merchant`.
+* New: CSS purge optimization for faster load times and cleaner code.
+* New: Default sorting by product badge and module priority.
+* New: Enabled attribute mapping support in Feed modules.
+* New: AI prompts to generate concise bullet points and product subtitles.
+* New: Clone option added for all affiliate modules.  
+* New: Feed modules can now be deleted along with all associated data.  
+* New: Support for OpenRouter, a unified interface for LLMs.  
+* New: Added AI models – GPT-4.5-preview and Claude-3.7-Sonnet-latest.
+* New: Added support for Claude 3.5 haiku.
+* New: Added local proxy support for external images.
+* New: WooCommerce Settings: Added a shortcode for Single Product Pages.
+* New: WooCommerce Settings: Added a shortcode for Archive Pages.
+* New: Introduced a Feed Module supporting regex syntax for extracting product data from feed fields.
+* New: Added a new template: Review Box.
+* New: Added a new template: Top Listings with "Show More" Button.
+* New: Added a new template, "Sorted offers list with store logos and buttons".
+* New: `hide=coupon_reveal` shortcode parameter added.
+* New: Added full Bootstrap 5 CSS for custom templates.
+* New: Added Deeplink settings to the CJ Products module.
+* New: Smart Groups added to categorize products with AI.
+* Improvement: Added support for WordPress 6.8.
+* Improvements: Added a Products IDs Filter to the CE block.
+* Improvement: Price history charts: dates follow WordPress date settings.
+* Improvement: Price history charts: prices follow locale settings.
+* Improvement: Frontend search - shortcode parameters applied.
+* Improvement: Security patch.
+* Deprecated: "Title" module option removed.
+* Deprecated: "Show stock status" option removed.
+* Deprecated: Shop info > Popup type option removed.
+* Deprecated: `btn_color` and `btn_class` shortcode parameters.
 
 = 7.0.0 =
 

@@ -13,7 +13,7 @@ use ContentEgg\application\helpers\CurrencyHelper;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class OfferConfig extends AffiliateParserModuleConfig
 {
@@ -31,7 +31,7 @@ class OfferConfig extends AffiliateParserModuleConfig
 			),
 			'global'           => array(
 				'title'       => __('Global settings', 'content-egg'),
-				'description' => __('Global settings by domain.', 'content-egg') . ' ' . sprintf(__('Read more <a target="_blank" href="%s">here</a>.', 'content-egg'), 'https://www.keywordrush.com/docs/content-egg/OfferModule.html'),
+				'description' => __('Global settings by domain.', 'content-egg'),
 				'callback'    => array($this, 'render_xpath_line_block'),
 				'default'     => array(),
 				'validator'   => array(
@@ -52,7 +52,8 @@ class OfferConfig extends AffiliateParserModuleConfig
 		unset($parent['ttl']);
 		$parent['ttl_items']['default'] = 2592000;
 
-		return array_merge($parent, $options);
+		$options = array_merge($parent, $options);
+		return self::moveRequiredUp($options);
 	}
 
 	public function render_xpath_line($args)

@@ -4,6 +4,7 @@ namespace ContentEgg\application;
 
 defined('\ABSPATH') || exit;
 
+use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\admin\LicConfig;
 use ContentEgg\application\models\AutoblogModel;
@@ -13,7 +14,7 @@ use ContentEgg\application\models\AutoblogModel;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class Installer
 {
@@ -64,11 +65,12 @@ class Installer
     {
         ModuleUpdateScheduler::clearScheduleEvent();
         AutoblogScheduler::clearScheduleEvent();
+        ProductPrefillScheduler::clearScheduleEvent();
     }
 
     public static function requirements()
     {
-        $php_min_version = '5.3';
+        $php_min_version = '7.4';
         $extensions = array(
             'simplexml',
             'mbstring',
@@ -110,6 +112,8 @@ class Installer
             \delete_option(Plugin::slug . '_env_install');
         if (Plugin::isPro())
             \delete_option(LicConfig::getInstance()->option_name());
+        \delete_option(Plugin::getShortSlug() . '_sys_status');
+        \delete_option(Plugin::getShortSlug() . '_sys_deadline');
     }
 
     public static function upgrade()
@@ -138,7 +142,7 @@ class Installer
 
     private static function upgradeTables()
     {
-        $models = array('AutoblogModel', 'PriceHistoryModel', 'PriceAlertModel', 'ProductModel');
+        $models = array('AutoblogModel', 'PriceHistoryModel', 'PriceAlertModel', 'ProductModel', 'PrefillQueueModel');
         $sql = '';
         foreach ($models as $model)
         {

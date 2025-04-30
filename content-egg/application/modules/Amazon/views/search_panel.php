@@ -7,18 +7,15 @@ $module       = \ContentEgg\application\components\ModuleManager::getInstance()-
 $search_index = $module->config('search_index');
 ?>
 
-
-
-
 <?php if (count($locales) > 1) : ?>
-    <select class="form-control form-control-sm" ng-model="query_params.Amazon.locale" ng-init="query_params.Amazon.locale = '<?php echo esc_attr($default_locale); ?>'">
+    <select class="form-control form-control-sm" ng-model="query_params.<?php echo esc_attr($module_id); ?>.locale" ng-init="query_params.<?php echo esc_attr($module_id); ?>.locale = '<?php echo esc_attr($default_locale); ?>'">
         <?php foreach ($locales as $value => $name) : ?>
             <option value="<?php echo \esc_attr($value); ?>"><?php echo \esc_html($name); ?></option>
         <?php endforeach; ?>
     </select>
 <?php endif; ?>
 
-<input type="text" class="form-control form-control-sm" ng-model="query_params.Amazon.associate_tag" ng-init="query_params.Amazon.associate_tag = ''" placeholder="Custom tag" title="Custom associate tag" />
+<input type="text" class="form-control form-control-sm" ng-model="query_params.<?php echo esc_attr($module_id); ?>.associate_tag" ng-init="query_params.<?php echo esc_attr($module_id); ?>.associate_tag = ''" placeholder="Custom tag" title="Custom associate tag" />
 
 <?php if ($search_index && $search_index != 'All') : ?>
 
@@ -40,6 +37,6 @@ $search_index = $module->config('search_index');
     </select>
     <div class="clearfix"></div>
 
-    <input type="text" class="form-control form-control-sm" ng-model="query_params.Amazon.minimum_price" ng-init="query_params.Amazon.minimum_price = ''" placeholder="<?php esc_html_e('Min. price', 'content-egg') ?>" title="<?php esc_html_e('Min. price.', 'content-egg') ?> <?php esc_html_e('It require that you specify a category.', 'content-egg') ?>" />
-    <input type="text" class="form-control form-control-sm" ng-model="query_params.Amazon.maximum_price" ng-init="query_params.Amazon.maximum_price = ''" placeholder="<?php esc_html_e('Max. price', 'content-egg') ?>" title="<?php esc_html_e('Max. price.', 'content-egg') ?> <?php esc_html_e('It require that you specify a category.', 'content-egg') ?>" />
+    <input type="text" class="form-control form-control-sm" ng-model="query_params.<?php echo esc_attr($module_id); ?>.minimum_price" ng-init="query_params.<?php echo esc_attr($module_id); ?>.minimum_price = ''" placeholder="<?php esc_html_e('Min. price', 'content-egg') ?>" title="<?php esc_html_e('Min. price.', 'content-egg') ?> <?php esc_html_e('It require that you specify a category.', 'content-egg') ?>" />
+    <input type="text" class="form-control form-control-sm" ng-model="query_params.<?php echo esc_attr($module_id); ?>.maximum_price" ng-init="query_params.<?php echo esc_attr($module_id); ?>.maximum_price = ''" placeholder="<?php esc_html_e('Max. price', 'content-egg') ?>" title="<?php esc_html_e('Max. price.', 'content-egg') ?> <?php esc_html_e('It require that you specify a category.', 'content-egg') ?>" />
 <?php endif; ?>

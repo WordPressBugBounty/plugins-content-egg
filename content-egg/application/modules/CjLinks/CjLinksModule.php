@@ -14,7 +14,7 @@ use ContentEgg\application\admin\PluginAdmin;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class CjLinksModule extends AffiliateParserModule
 {
@@ -98,6 +98,7 @@ class CjLinksModule extends AffiliateParserModule
 		}
 
 		$results = $this->getCJClient()->search($keyword, $options);
+
 		if (!is_array($results) || !isset($results['links']['link']))
 		{
 			return array();
@@ -139,7 +140,7 @@ class CjLinksModule extends AffiliateParserModule
 			if ($images = $doc->getElementsByTagName('img'))
 			{
 				// pixel img?
-				if ($images->item(0)->getAttribute('height') != 1)
+				if ($images->item && $images->item(0)->getAttribute('height') != 1)
 				{
 					$content->img = $images->item(0)->getAttribute('src');
 				}

@@ -1,57 +1,28 @@
 <?php
 /*
- * Name: Grid with prices (3 column)
- * Modules:
+ * Name: Grid with prices
  * Module Types: PRODUCT
- *
  */
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-__('Grid with prices (3 column)', 'content-egg-tpl');
+defined('\ABSPATH') || exit;
 
-if (empty($cols) || $cols > 12)
-    $cols = 3;
-$col_size = ceil(12 / $cols);
-$amazon_last_updated = TemplateHelper::getLastUpdateFormattedAmazon($data);
+
+__('Grid with prices', 'content-egg-tpl');
+
+TemplateHelper::addShopInfoOffcanvases($items, $params);
 
 ?>
 
-<div class="egg-container egg-grid">
+<div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>
+    <div class="row g-3<?php TemplateHelper::rowCols($params, 'row-cols-2 row-cols-md-3'); ?>">
+        <?php foreach ($items as $i => $item): ?>
 
-    <?php if ($title) : ?>
-        <h3><?php echo \esc_html($title); ?></h3>
-    <?php endif; ?>
+            <?php $this->setItem($item, $i); ?>
+            <?php $this->renderBlock('grid_row'); ?>
 
-    <div class="container-fluid">
-        <div class="row">
-            <?php
-            $i = 0;
-            foreach ($data as $module_id => $items)
-            {
-                foreach ($items as $item)
-                {
-                    $this->renderBlock('grid_row', array('item' => $item, 'col_size' => $col_size, 'i' => $i,));
-                    $i++;
-                    if ($i % $cols == 0)
-                        echo '<div class="clearfix hidden-xs"></div>';
-                    if ($i % 2 == 0)
-                        echo '<div class="clearfix visible-xs-block"></div>';
-                }
-            }
-            ?>
-        </div>
-
-        <?php if ($amazon_last_updated) : ?>
-            <div class="row cegg-no-top-margin" style="padding: 0px;">
-                <div class="col-md-12 text-right">
-                    <small class="text-muted"><?php echo esc_html(sprintf(TemplateHelper::__('Last Amazon price update was: %s'), $amazon_last_updated)); ?>
-                        <?php TemplateHelper::printAmazonDisclaimer(); ?>
-                    </small>
-                </div>
-            </div>
-
-        <?php endif; ?>
+        <?php endforeach; ?>
     </div>
-
+    <?php $this->renderBlock('disclaimer'); ?>
 </div>

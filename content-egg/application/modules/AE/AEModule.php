@@ -21,7 +21,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class AEModule extends AffiliateParserModule
 {
@@ -39,7 +39,6 @@ class AEModule extends AffiliateParserModule
     public function info()
     {
         $name = \Keywordrush\AffiliateEgg\ShopManager::getInstance()->getShopName($this->getMyShortId());
-        $uri = $this->getShopHost();
         $shop = \Keywordrush\AffiliateEgg\ShopManager::getInstance()->getItem($this->getMyShortId());
         if ($shop && method_exists($shop, 'isDeprecated') && $shop->isDeprecated())
         {
@@ -48,8 +47,7 @@ class AEModule extends AffiliateParserModule
 
         return array(
             'name' => $name . ' [AE]',
-            'description' => sprintf(__('Affiliate Egg parser for %s', 'content-egg'), $uri),
-            'docs_uri' => 'https://ce-docs.keywordrush.com/modules/affiliate-egg-integration#avoid-getting-blocked',
+            'docs_uri' => 'https://ce-docs.keywordrush.com/modules/affiliate-egg-integration',
         );
     }
 
@@ -231,9 +229,15 @@ class AEModule extends AffiliateParserModule
 
             $content->extra = new ExtraDataAE;
 
+            if (isset($r['extra']['ratingDecimal']))
+                $content->ratingDecimal = $r['extra']['ratingDecimal'];
+
             if (isset($r['extra']['rating']))
             {
                 $content->rating = $r['extra']['rating'];
+                if (!$content->ratingDecimal)
+                    $content->rating = $content->rating;
+
                 unset($r['extra']['rating']);
             }
 
@@ -269,6 +273,11 @@ class AEModule extends AffiliateParserModule
             {
                 $content->category = $r['extra']['category'];
                 unset($r['extra']['category']);
+            }
+
+            if (isset($r['extra']['ratingCount']))
+            {
+                $content->reviewsCount = (int) $r['extra']['ratingCount'];
             }
 
             if (isset($r['extra']['categoryPath']))

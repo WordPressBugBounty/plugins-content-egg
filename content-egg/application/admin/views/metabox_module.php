@@ -79,7 +79,7 @@ $templates = $tpl_manager->getTemplatesList(true);
                         </button>
 
                         <?php if (stristr($module_id, 'Amazon') || $module_id == 'Bolcom') : ?>
-                            <button title="<?php esc_html_e('Copy the keyword + product IDs for use in Too Much Niche articles', 'content-egg'); ?>" type="button" class="btn btn-sm btn-outline-primary" ng-click="copyKeywordProductIdsToClipboard('<?php echo esc_attr($module_id); ?>', $event)" ng-disabled="!keywords.<?php echo esc_attr($module_id); ?> || !models.<?php echo esc_attr($module_id); ?>.added.length"><i class="bi bi-magnet"></i></button>
+                            <button title="<?php esc_html_e('Copy the product IDs for use in Too Much Niche articles', 'content-egg'); ?>" type="button" class="btn btn-sm btn-outline-primary" ng-click="copyKeywordProductIdsToClipboard('<?php echo esc_attr($module_id); ?>', $event)" ng-disabled="!keywords.<?php echo esc_attr($module_id); ?> || !models.<?php echo esc_attr($module_id); ?>.added.length"><i class="bi bi-magnet"></i></button>
                         <?php endif; ?>
 
                         <?php if (\apply_filters('cegg_enable_autoupdate_keyword_button', false) && $module->isAffiliateParser()) : ?>
@@ -94,7 +94,7 @@ $templates = $tpl_manager->getTemplatesList(true);
 
                     <?php if ($module->isFeedModule() && $module->isImportTime()) : ?>
                         <img ng-show="models.<?php echo esc_attr($module_id); ?>.processing" src="<?php echo esc_url(\ContentEgg\PLUGIN_RES) . '/img/importing.gif' ?>" />
-                        <span ng-show="models.<?php echo esc_attr($module_id); ?>.processing">
+                        <span class="small" ng-show="models.<?php echo esc_attr($module_id); ?>.processing">
                             <?php esc_html_e('Loading data feed... Please wait...', 'content-egg'); ?>
                         </span>
                     <?php else : ?>

@@ -11,14 +11,14 @@ use ContentEgg\application\components\ParserModuleConfig;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class RelatedKeywordsConfig extends ParserModuleConfig
 {
 
 	public function options()
 	{
-		$optiosn = array(
+		$options = array(
 			'subscription_key'        => array(
 				'title'       => 'Subscription Key <span class="cegg_required">*</span>',
 				'description' => __('Key access to Bing Autosuggest API. You can get <a href="https://azure.microsoft.com/en-us/try/cognitive-services/?api=autosuggest-api">here</a>.', 'content-egg') .
@@ -78,7 +78,8 @@ class RelatedKeywordsConfig extends ParserModuleConfig
 		$parent  = parent::options();
 		unset($parent['featured_image']);
 
-		return array_merge($parent, $optiosn);
+		$options = array_merge(parent::options(), $options);
+		return self::moveRequiredUp($options);
 	}
 
 	static public function marketCodes()

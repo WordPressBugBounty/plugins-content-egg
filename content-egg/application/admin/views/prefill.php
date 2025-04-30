@@ -4,7 +4,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\admin\GeneralConfig;
 ?>
 
-<?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()): ?>
+<?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
     <div class="cegg-maincol">
     <?php endif; ?>
     <div class="wrap">
@@ -34,17 +34,17 @@ use ContentEgg\application\admin\GeneralConfig;
                         <option value="20000">20</option>
                         <option value="30000">30</option>
                         <option value="0">0</option>
-                        
+
                     </select>
                     <p class="description"><?php esc_html_e('Delay in seconds between each post prefill.', 'content-egg'); ?></p>
 
                 </td>
-            </tr>            
+            </tr>
             <tr>
                 <th scope="row"><label for="module_id"><?php esc_html_e('Add data for module', 'content-egg'); ?></label></th>
                 <td>
                     <select id="module_id">
-                        <?php foreach (ModuleManager::getInstance()->getParserModules(true) as $module): ?>
+                        <?php foreach (ModuleManager::getInstance()->getParserModules(true) as $module) : ?>
                             <option value="<?php echo esc_attr($module->getId()); ?>"><?php echo esc_html($module->getName()); ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -58,10 +58,10 @@ use ContentEgg\application\admin\GeneralConfig;
                         <option value="_density"><?php esc_html_e('Keyword density', 'content-egg'); ?></option>
                         <option value="_tags"><?php esc_html_e('Post tags', 'content-egg'); ?></option>
                         <option value="_custom_field"><?php esc_html_e('Arbitrary custom field', 'content-egg'); ?></option>
-                        <?php foreach (ModuleManager::getInstance()->getAffiliateParsers(true) as $module): ?>
+                        <?php foreach (ModuleManager::getInstance()->getAffiliateParsers(true) as $module) : ?>
                             <option value="_keyword_<?php echo esc_attr($module->getId()); ?>"><?php echo \esc_html($module->getName() . ': ' .  __('autoupdate keyword', 'content-egg')); ?> </option>
                         <?php endforeach; ?>
-                        <?php foreach (ModuleManager::getInstance()->getAffiliateParsers(true) as $module): ?>
+                        <?php foreach (ModuleManager::getInstance()->getAffiliateParsers(true) as $module) : ?>
                             <option value="_ean_<?php echo esc_attr($module->getId()); ?>"><?php echo \esc_html($module->getName() . ': ' .  __('EAN', 'content-egg')); ?> </option>
                         <?php endforeach; ?>
                     </select>
@@ -75,19 +75,19 @@ use ContentEgg\application\admin\GeneralConfig;
                     <label><input id="autoupdate" type="checkbox" value="1"> <?php esc_html_e('Add Keyword for the automatic update', 'content-egg'); ?></label>
                     <p class="description"><?php esc_html_e('Only for those modules, which have autoupdate function.', 'content-egg'); ?></p>
                 </td>
-            </tr>            
+            </tr>
 
             <tr>
                 <th scope="row"><label for="keyword_count"><?php esc_html_e('Number of words', 'content-egg'); ?></label></th>
                 <td>
                     <select id="keyword_count">
-                        <?php for ($i = 1; $i <= 10; $i++): ?>
-                            <option value="<?php echo esc_attr($i); ?>"<?php if ($i == 5) echo ' selected="selected"'; ?>><?php echo esc_html($i); ?></option>
+                        <?php for ($i = 1; $i <= 10; $i++) : ?>
+                            <option value="<?php echo esc_attr($i); ?>" <?php if ($i == 5) echo ' selected="selected"'; ?>><?php echo esc_html($i); ?></option>
                         <?php endfor; ?>
                     </select>
                     <p class="description"><?php esc_html_e('Maximum words for one search query.', 'content-egg'); ?></p>
                 </td>
-            </tr>      
+            </tr>
 
             <tr>
                 <th scope="row"><label for="minus_words"><?php esc_html_e('"Minus" words', 'content-egg'); ?></label></th>
@@ -95,13 +95,13 @@ use ContentEgg\application\admin\GeneralConfig;
                     <input id="minus_words" type="text" class="regular-text">
                     <p class="description"><?php esc_html_e('Remove these words from keyword. You can set several minus words/phrases with commas.', 'content-egg'); ?></p>
                 </td>
-            </tr>       
+            </tr>
 
             <tr>
                 <th scope="row"><label for="post_type"><?php esc_html_e('Post type', 'content-egg'); ?></label></th>
                 <td>
                     <select id="post_type" multiple="multiple">
-                        <?php foreach (GeneralConfig::getInstance()->option('post_types') as $post_type): ?>
+                        <?php foreach (GeneralConfig::getInstance()->option('post_types') as $post_type) : ?>
                             <option value="<?php echo \esc_attr($post_type); ?>" selected="selected"><?php echo \esc_attr($post_type); ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -117,29 +117,28 @@ use ContentEgg\application\admin\GeneralConfig;
                     $selected_post_statuses = array('publish', 'future');
                     ?>
                     <select id="post_status" multiple="multiple" size="5">
-                        <?php foreach ($post_statuses as $post_status_value => $post_status_name): ?>
-                            <option value="<?php echo \esc_attr($post_status_value); ?>" 
-                                    <?php if (in_array($post_status_value, $selected_post_statuses)): ?>selected="selected"<?php endif; ?>>
-                                        <?php echo \esc_attr($post_status_name); ?>
+                        <?php foreach ($post_statuses as $post_status_value => $post_status_name) : ?>
+                            <option value="<?php echo \esc_attr($post_status_value); ?>" <?php if (in_array($post_status_value, $selected_post_statuses)) : ?>selected="selected" <?php endif; ?>>
+                                <?php echo \esc_attr($post_status_name); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </td>
-            </tr>  
+            </tr>
 
             <tr>
                 <th scope="row"><label for="custom_fields"><?php esc_html_e('Add custom fields', 'content-egg'); ?></label></th>
                 <td>
-                    <?php for ($i = 0; $i < 5; $i++): ?>
+                    <?php for ($i = 0; $i < 5; $i++) : ?>
                         <input type="text" name="custom_field_names[]" placeholder="<?php echo esc_attr(sprintf(__('Custom Field %d', 'content-egg'), $i + 1)); ?>" id="custom_fields" class="regular-text" />
                         <input type="text" name="custom_field_values[]" placeholder="<?php echo esc_attr(sprintf(__('Value %d', 'content-egg'), $i + 1)); ?>" class="regular-text" /><br>
                     <?php endfor; ?>
                     <?php $tags = '%KEYWORD%, %RANDOM(10,50)%, %PRODUCT.title%, %PRODUCT.price%, ...'; ?>
                     <p class="description"><?php echo esc_html(sprintf(__('You can use tags: %s.', 'content-egg'), $tags)); ?></p>
                 </td>
-            </tr>             
+            </tr>
 
-        </table>        
+        </table>
 
         <div id="progressbar" name="progressbar"></div>
         <div><?php esc_html_e('Total posts', 'content-egg'); ?>: <b><span id="post_ids_total"></span></b></div>
@@ -161,7 +160,7 @@ use ContentEgg\application\admin\GeneralConfig;
 
 
     </div>
-    <?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()): ?>
-    </div>    
+    <?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
+    </div>
     <?php include('_promo_box.php'); ?>
-<?php endif; ?>  
+<?php endif; ?>

@@ -15,7 +15,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 
 class ProductPrompt extends Prompt
@@ -84,6 +84,14 @@ class ProductPrompt extends Prompt
         return ContentHelper::prepareProductTitle($this->query($prompt));
     }
 
+    public function generateSubtitlePerfectFor()
+    {
+        $prompt = "Write a concise product subtitle (maximum 5-8 words) that complements the title. Highlight a unique feature, benefit, or accolade—for example, 'Perfect for travel'. Respond in plain text only, with no additional notes.";
+        $prompt .= "\nTitle: \"%title%\".";
+
+        return ContentHelper::prepareProductTitle($this->query($prompt));
+    }
+
     public function rewriteProductDescription()
     {
         if (!$this->product['description'])
@@ -133,17 +141,32 @@ class ProductPrompt extends Prompt
         if (!$this->product['description'] && !$this->product['features'])
             return '';
 
-        $prompt = "Summarize the product description below in bullet points list. Answer from 5 to 8 Bullet points.";
-        $prompt .= " Format the bullet points list into a plain text list.";
+        $prompt = "Summarize the product description below into 5 to 8 concise bullet points. Format the bullet points as a Markdown list.";
         $prompt .= "\nProduct title: %title%.";
         $prompt .= "\nProduct description: %description%";
         if ($this->product['features'])
             $prompt .= "\nProduct specifications:\n%features%";
         $prompt .= "\n\nBullet points:";
-        if (!$list = ContentHelper::listToArray($this->query($prompt)))
-            return array();
 
-        return "<ul><li>" . join("</li>\n<li>", $list) . "</li></ul>";
+        return ContentHelper::prepareMarkdown($this->query($prompt));
+    }
+
+    public function bulletPointsCompactProductDescription()
+    {
+        if (!$this->product['description'] && !$this->product['features'])
+            return '';
+
+        $prompt = "Generate exactly 4 ultra-concise, spec-style bullet points for the product below. Each bullet must be 30 characters or fewer. Format the output as an HTML <ul> list. Example:\n<ul>\n<li>Battery: 18–36 hrs</li>\n<li>Display: Always-On Retina</li>\n<li>Sensors: ECG, Blood Oxygen, Temp</li>\n<li>Chip: Latest S10</li>\n</ul>";
+
+        $prompt .= "\n\nProduct title: %title%.";
+
+        if ($this->product['description'])
+            $prompt .= "\nProduct description: %description%";
+        if ($this->product['features'])
+            $prompt .= "\nProduct specifications:\n%features%";
+        $prompt .= "\n\nBullet points:";
+
+        return ContentHelper::prepareHtml($this->query($prompt));
     }
 
     public function turnIntoAdvertisingProductDescription()
@@ -154,6 +177,7 @@ class ProductPrompt extends Prompt
         $prompt = "Turn into advertising the following product description of the product titled \"%title%\".  Format everything in Markdown.";
         $prompt .= "\n\nProduct description:\n%description%";
         $prompt .= "\n\nResult:";
+
         return ContentHelper::prepareMarkdown($this->query($prompt));
     }
 
@@ -289,7 +313,7 @@ class ProductPrompt extends Prompt
             $params['features'] = TextHelper::truncate($params['features'], self::MAX_INPUT_CONTENT_LENGTH);
         }
 
-        if (!isset($params['reviews']))
+        if (!isset($params['reviews']) && isset($this->product['extra']['comments']))
         {
             $reviews = array();
             foreach ($this->product['extra']['comments'] as $i => $r)

@@ -1,43 +1,35 @@
 <?php
-defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-use function ContentEgg\prnx;
-
-if (TemplateHelper::isModuleDataExist($items, array('Amazon', 'AmazonNoApi')))
-{
-    \wp_enqueue_script('cegg-frontend', \ContentEgg\PLUGIN_RES . '/js/frontend.js', array('jquery'));
-}
+defined('\ABSPATH') || exit;
 ?>
 
-<?php if ($title) : ?>
-    <h3 class="cegg-shortcode-title"><?php echo \esc_html($title); ?></h3>
-<?php endif; ?>
-<?php foreach ($items as $item) : ?>
+<?php foreach ($items as $i => $item): ?>
+    <div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>
 
-    <div class="egg-container egg-item">
-        <div class="products">
+        <?php $this->setItem($item, $i); ?>
+        <?php
+        $item_row_params = $params;
+        $item_row_params['hide'][] = 'description';
+        $this->setParams($item_row_params);
+        ?>
+        <?php $this->renderBlock('item_row', array('item' => $item, 'params' => $item_row_params)); ?>
+        <?php $this->setParams($params); ?>
+        <?php $this->renderBlock('disclaimer'); ?>
 
-            <?php $this->renderBlock('item_row', array('item' => $item)); ?>
+        <div class="row">
+            <div class="col">
 
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="cegg-mb25">
-                        <?php $this->renderPartialModule('_item_details_top', array('Flipkart'), array('item' => $item)); ?>
-                        <?php $this->renderBlock('item_features', array('item' => $item)); ?>
-                        <?php if ($item['description']) : ?>
-                            <p><?php echo wp_kses_post($item['description']); ?></p>
-                        <?php endif; ?>
-                        <?php
-                        $this->renderPartialModule('_item_details_bottom', array(
-                            'Envato',
-                            'Udemy'
-                        ), array('item' => $item));
-                        ?>
-                        <?php if ($item['module_id'] !== 'AmazonNoApi') $this->renderBlock('item_reviews', array('item' => $item)); ?>
-                    </div>
-                </div>
+                <?php $this->renderPartialModule('_item_details_top', array('Flipkart'), array('item' => $item)); ?>
+                <?php $this->renderBlock('item_features', array('item' => $item)); ?>
+
+                <?php if ($this->isVisible('description')): ?>
+                    <div class="egg-description text-body my-4"><?php TemplateHelper::description($item); ?></div>
+                <?php endif; ?>
+
+                <?php $this->renderPartialModule('_item_details_bottom', array('Udemy'), array('item' => $item)); ?>
+                <?php if ($item['module_id'] !== 'AmazonNoApi') $this->renderBlock('item_reviews', array('item' => $item)); ?>
             </div>
         </div>
     </div>

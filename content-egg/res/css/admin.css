@@ -191,7 +191,7 @@
     max-width: 100%
 }
 
-.button-cegg-banner {
+.button-cegg-banner2 {
     background: #479f76;
     color: #fff !important;
     text-shadow: 0 0 2px #d1e7dd;
@@ -204,7 +204,7 @@
     border-radius: .25em;
 }
 
-.button-cegg-banner:hover {
+.button-cegg-banner2:hover {
     color: #fff !important;
     opacity: 0.9
 }
@@ -417,4 +417,50 @@ table.wp-list-table mark.inactive {
 
 body.cegg_wait *, body.cegg_wait, .cegg_wait, .cegg_wait * {
         cursor: progress !important;
+}
+
+body .no_bottom_margin {
+  margin-bottom: 0 !important;
+}
+
+.cegg_nomargin_components .components-base-control__field,
+body .cegg_nomargin_components .components-base-control,
+body .cegg_nomargin_components .components-range-control .components-base-control__label
+{
+  margin-bottom: 0 !important;
+}
+
+.cegg-control-separator {
+    margin-bottom: 20px;
+}
+.cegg-components-label {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+    text-transform: uppercase;
+    box-sizing: border-box;
+    display: block;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    max-width: 100%;
+    z-index: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 8px;
+}
+
+.cegg5-container .cegg-template-card {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #fff;
+}
+
+.cegg5-container .cegg-template-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+    border-color: #3083d5;
 }

@@ -8,12 +8,14 @@ use ContentEgg\application\Plugin;
 use ContentEgg\application\models\Model;
 use ContentEgg\application\helpers\TemplateHelper;
 
+use function ContentEgg\prnx;
+
 /**
  * MyListTable class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 if (!class_exists('\WP_List_Table'))
 {
@@ -44,6 +46,11 @@ class MyListTable extends \WP_List_Table
         return 'id';
     }
 
+    function default_order()
+    {
+        return 'desc';
+    }
+
     protected function getWhereFilters()
     {
         return '';
@@ -67,7 +74,8 @@ class MyListTable extends \WP_List_Table
 
         $paged = isset($_REQUEST['paged']) ? max(0, intval($_REQUEST['paged']) - 1) : 0;
         $orderby = (isset($_REQUEST['orderby']) && in_array($_REQUEST['orderby'], array_keys($this->get_sortable_columns()))) ? sanitize_text_field(wp_unslash($_REQUEST['orderby'])) : $this->default_orderby();
-        $order = (isset($_REQUEST['order']) && in_array($_REQUEST['order'], array('asc', 'desc'))) ? sanitize_key($_REQUEST['order']) : 'desc';
+
+        $order = (isset($_REQUEST['order']) && in_array($_REQUEST['order'], array('asc', 'desc'))) ? sanitize_key($_REQUEST['order']) : $this->default_order();
 
         $params = array(
             'select' => 'SQL_CALC_FOUND_ROWS *',
@@ -93,9 +101,8 @@ class MyListTable extends \WP_List_Table
         return \esc_html($item[$column_name]);
     }
 
-    private function view_column_datetime($item, $col_name)
+    protected function view_column_datetime($item, $col_name)
     {
-
         if ($item[$col_name] == '0000-00-00 00:00:00')
             return ' - ';
 

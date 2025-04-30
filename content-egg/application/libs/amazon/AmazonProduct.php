@@ -12,7 +12,7 @@ use ContentEgg\application\libs\RestClient;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  *
  * @link http://docs.amazonwebservices.com/AWSECommerceService/latest/DG/ Amazon Product Advertising API
  */
@@ -376,7 +376,6 @@ class AmazonProduct extends RestClient
 		{
 			$header_html = $header_html[0];
 
-			//prnx($header_html);
 			// Total Reviews
 			preg_match('/>([\d,]+)\s.+?\)<\/span>/', $header_html, $matches);
 			$totalreviews = $matches ? $matches[1] : 0;
@@ -469,7 +468,6 @@ class AmazonProduct extends RestClient
 		unset($matches);
 		$result['Reviews'] = $reviews;
 
-		//prnx($result);
 		return $result;
 	}
 }

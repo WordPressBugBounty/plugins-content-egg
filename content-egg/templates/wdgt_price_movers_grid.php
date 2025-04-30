@@ -1,97 +1,118 @@
 <?php
 /*
  * Name: Grid
- * 
  */
 
 __('Grid', 'content-egg-tpl');
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-if ($is_shortcode)
-    $cols = 3;
-else
-    $cols = 1;
+defined('\ABSPATH') || exit;
 
-$col_size = 12 / $cols;
+if (!$is_shortcode)
+    $params['cols_xs'] = 1;
+
 ?>
 
-<div class="egg-container egg-grid egg-grid-wdgt">
-    <div class="container-fluid">
-        <div class="row">
-            <?php $i = 0; ?>
-            <?php foreach ($items as $key => $item): ?>
+<div class="container px-0 mb-5 pt-2" <?php $this->colorMode(); ?>>
 
-                <div class="col-md-<?php echo esc_attr($col_size); ?> cegg-gridbox<?php if (!$is_shortcode) echo ' cegg-gridbox-border'; ?>">
-                    <a<?php TemplateHelper::printRel(); ?> target="_blank" href="<?php echo esc_url_raw($item['url']); ?>">
+    <div class="row g-3 <?php if ($is_shortcode): ?> row-gap-2<?php endif; ?><?php TemplateHelper::rowCols($params, 'row-cols-2 row-cols-md-3'); ?>">
 
-                        <div class="cegg-thumb">
-                            <div class="cegg-position-container2">
-                                <span class="cegg-position-text2"><?php echo (int) $key + 1; ?></span>
-                            </div>
+        <?php foreach ($items as $i => $item): ?>
+            <?php $this->setItem($item, $i); ?>
+            <div class="col">
+                <div class="cegg-grid-card cegg-card h-100 p-3<?php TemplateHelper::border($params); ?>">
 
-                            <?php if ($item['img']): ?>
-                                <img src="<?php echo \esc_attr($item['img']) ?>" alt="<?php echo \esc_attr($item['title']); ?>" />
-                            <?php endif; ?>
+                    <?php if ($this->isVisible('number')): ?>
+                        <div class="position-absolute z-3 <?php if ($is_shortcode): ?> translate-middle top-0 start-50 <?php else: ?> top-0 start-0 pt-2 ps-2<?php endif; ?>">
+
+                            <?php TemplateHelper::number($item, $params, $i, 'danger'); ?>
                         </div>
+                    <?php endif; ?>
 
-                        <div class="producttitle">
-                            <?php if ($merchant = TemplateHelper::getMerhantName($item)): ?>
-                                <div class="cegg-mb10">    
-                                    <small class="text-muted title-case"><?php echo \esc_html($merchant); ?></small>
-                                </div>
-                            <?php endif; ?>
+                    <?php if ($this->isVisible('img')): ?>
+                        <?php
+                        if ($params['cols_xs'] == 1)
+                            $default_ratio = 'ratio-16x9';
+                        elseif ($params['cols'] == 2)
+                            $default_ratio = 'ratio-16x9';
+                        else
+                            $default_ratio = 'ratio-1x1';
 
-                            <?php if ($item['rating']): ?>
-                                <div class="cegg-title-rating">
-                                    <?php TemplateHelper::printRating($item, 'small'); ?>
-                                </div>
-                            <?php endif; ?>            
-
-                            <?php echo \esc_html(TemplateHelper::truncate($item['title'], 80)); ?>                 
+                        ?>
+                        <div class="ratio<?php TemplateHelper::imgRatio($params, $default_ratio); ?>">
+                            <?php TemplateHelper::displayImage($item, 190, 170, array('class' => 'card-img-top object-fit-scale rounded')); ?>
                         </div>
+                    <?php endif; ?>
 
+                    <div class="card-body p-0">
+                        <?php if ($this->isVisible('merchant')): ?>
+                            <div class="cegg-merchant small fs-6 text-body-secondary text-truncate">
+                                <small><?php TemplateHelper::merchant($item); ?></small>
+                            </div>
+                        <?php endif; ?>
 
-                        <div class="row cegg-mb5">
-                            <?php if ($item['_price_movers']['discount_percent'] > 0): ?>
-                                <div class="col-xs-2 cegg-product-discount">
-                                    <span class="product-discount-value"><?php echo esc_html($item['_price_movers']['discount_percent']); ?><span class="product-discount-symbol">%</span></span>
-                                    <div class="product-discount-off">
-                                        <?php TemplateHelper::esc_html_e('OFF'); ?>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-                            <div class="col-xs-10">
-                                <div class="productprice">
+                        <?php if ($this->isVisible('rating')): ?>
+                            <div class="pt-0 fs-5">
+                                <?php TemplateHelper::ratingStars($item, true); ?>
+                            </div>
+                        <?php endif; ?>
 
-                                    <?php if ($item['price']): ?>
+                        <?php if ($this->isVisible('title')): ?>
+                            <?php TemplateHelper::title($item, 'card-title fs-6 fw-normal lh-base cegg-hover-title cegg-text-truncate-2 pt-2', 'div', $params); ?>
+                        <?php endif; ?>
 
-                                        <?php if ($item['_price_movers']['discount_value']): ?>
-                                            <div class="text-muted"><s title="<?php echo \esc_attr(TemplateHelper::getDaysAgo($item['_price_movers']['price_old_date'])); ?>"><?php echo esc_html(TemplateHelper::formatPriceCurrency($item['_price_movers']['price_old'], $item['currencyCode'])); ?></s></div>
-                                        <?php endif; ?>
-                                        <span title="<?php echo \esc_attr(sprintf(TemplateHelper::__('as of %s'), TemplateHelper::dateFormatFromGmt($item['last_update']))); ?>" class="cegg-price cegg-price-color"><?php echo esc_html(TemplateHelper::formatPriceCurrency($item['price'], $item['currencyCode'])); ?></span>
+                        <?php if ($this->isVisible('subtitle', false)): ?>
+                            <div class="card-subtitle fs-6 text-body-secondary cegg-text-truncate-2"><?php TemplateHelper::subtitle($item); ?></div>
+                        <?php endif; ?>
 
-                                    <?php endif; ?>
+                        <?php if ($this->isVisible('description', false)): ?>
+                            <div class="cegg-desc-small card-text small lh-sm pt-3"><?php echo \wp_kses_post($item['description']); ?></div>
+                        <?php endif; ?>
 
-                                    <?php if ($item['_price_movers']['discount_value'] > 0): ?>
-                                        <span class="text-success">
-                                            &#9660;<?php echo esc_html(TemplateHelper::formatPriceCurrency($item['_price_movers']['discount_value'], $item['currencyCode'])); ?>
-                                        </span>
-                                    <?php endif; ?>                        
+                    </div>
 
+                    <div class="row">
+                        <?php if ($item['_price_movers']['discount_percent'] > 0): ?>
+                            <div class="col-auto lh-1 text-danger fw-bolder">
+                                <span class="fs-5"><?php echo esc_html($item['_price_movers']['discount_percent']); ?></span>%</span>
+                                <div class="fs-6">
+                                    <?php TemplateHelper::esc_html_e('OFF'); ?>
                                 </div>
                             </div>
-                        </div>                          
-                    </a>
-                </div>            
+                        <?php endif; ?>
+                        <div class="col lh-1">
 
-                <?php
-                $i++;
-                if ($i % $cols == 0)
-                    echo '<div class="clearfix"></div>';
-                ?>
-            <?php endforeach; ?>
-        </div>
+                            <?php if ($item['price']): ?>
+
+                                <?php if ($item['_price_movers']['discount_value']): ?>
+                                    <div class="cegg-old-price fs-6 text-body-tertiary fw-normal me-1"><s title="<?php echo \esc_attr(TemplateHelper::getDaysAgo($item['_price_movers']['price_old_date'])); ?>"><?php echo esc_html(TemplateHelper::formatPriceCurrency($item['_price_movers']['price_old'], $item['currencyCode'])); ?></s></div>
+                                <?php endif; ?>
+                                <span class="cegg-card-price fs-5 lh-1 mb-0" title="<?php echo \esc_attr(sprintf(TemplateHelper::__('as of %s'), TemplateHelper::dateFormatFromGmt($item['last_update']))); ?>"><?php echo esc_html(TemplateHelper::formatPriceCurrency($item['price'], $item['currencyCode'])); ?></span>
+
+                            <?php endif; ?>
+
+                            <?php if ($item['_price_movers']['discount_value'] > 0): ?>
+                                <span class="text-success cegg-discount-value ms-1 fs-6 lh-1">
+                                    &#9660;<?php echo esc_html(TemplateHelper::formatPriceCurrency($item['_price_movers']['discount_value'], $item['currencyCode'])); ?>
+                                </span>
+                            <?php endif; ?>
+
+                        </div>
+                    </div>
+
+                    <?php if ($this->isVisible('button', false)): ?>
+                        <div class="cegg-card-button pt-3">
+                            <div class="d-grid">
+                                <?php TemplateHelper::button($item, $params, array('class' => 'stretched-link')); ?>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <?php TemplateHelper::link(' ', $item, $params, array('class' => 'stretched-link')); ?>
+                    <?php endif; ?>
+
+                </div>
+            </div>
+        <?php endforeach; ?>
     </div>
-
 </div>

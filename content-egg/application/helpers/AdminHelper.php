@@ -14,7 +14,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  *
  */
 class AdminHelper
@@ -180,5 +180,13 @@ class AdminHelper
 		}
 
 		return $results;
+	}
+
+	public static function isAiEnabled()
+	{
+		if (GeneralConfig::getInstance()->option('ai_key'))
+			return true;
+		else
+			return false;
 	}
 }

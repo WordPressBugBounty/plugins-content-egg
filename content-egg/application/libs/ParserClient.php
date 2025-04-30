@@ -11,7 +11,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  *
  */
 class ParserClient
@@ -56,8 +56,9 @@ class ParserClient
 			'sslverify'   => false,
 			'redirection' => 3,
 			'timeout'     => 60,
-			'user-agent'  => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0',
+			'user-agent'  => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:136.0) Gecko/20100101 Firefox/136.0',
 		);
+
 		if ($opts)
 		{
 			$_opts = $opts + $_opts;

@@ -10,12 +10,15 @@ use ContentEgg\application\LocalRedirect;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\Plugin;
 
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
+
 /**
  * ParserModule abstract class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 abstract class ParserModule extends Module
 {
@@ -239,6 +242,7 @@ abstract class ParserModule extends Module
     private static function filterDuplicateItems(array $items)
     {
         $results = array();
+
         foreach ($items as $item)
         {
             $dup = false;

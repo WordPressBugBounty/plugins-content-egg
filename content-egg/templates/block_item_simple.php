@@ -1,31 +1,17 @@
 <?php
 /*
- * Name: Product card (no features)
- * Modules:
+ * Name: Product card
  * Module Types: PRODUCT
- *
  */
 
-defined('\ABSPATH') || exit;
-
-use ContentEgg\application\helpers\TemplateHelper;
-
-use function ContentEgg\prnx;
+defined('\ABSPATH') || exit; 
 
 ?>
-<?php foreach ($data as $module_id => $items) : ?>
 
-  <?php foreach ($items as $item) : ?>
-    <?php
-    if (TemplateHelper::isModuleDataExist($items, array('Amazon', 'AmazonNoApi')))
-      \wp_enqueue_script('cegg-frontend', \ContentEgg\PLUGIN_RES . '/js/frontend.js', array('jquery'));
-    ?>
-    <div class="egg-container egg-item">
-      <div class="products">
-
-        <?php $this->renderBlock('item_row', array('item' => $item, 'module_id' => $item['module_id'])); ?>
-
-      </div>
-    </div>
-  <?php endforeach; ?>
+<?php foreach ($items as $i => $item): ?>
+  <div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>
+    <?php $this->setItem($item, $i); ?>
+    <?php $this->renderBlock('item_row', array('item' => $item)); ?>
+    <?php $this->renderBlock('disclaimer'); ?>
+  </div>
 <?php endforeach; ?>

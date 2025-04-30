@@ -9,14 +9,14 @@ __('Specifications', 'content-egg-tpl');
 ?>
 
 <?php foreach ($items as $key => $item) : ?>
-  <div class="egg-container egg-specs">
+  <div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>
 
     <?php if (empty($item['features'])) continue; ?>
-    <table class='table table-condensed cegg-features-table'>
+    <table class='table table-sm cegg-features-table'>
       <tbody>
         <?php foreach ($item['features'] as $feature) : ?>
           <tr>
-            <td class='text-muted col-md-4 col-sm-4 col-xs-3'><?php echo esc_html(__($feature['name'], 'content-egg-tpl')) ?></td>
+            <td class='text-body-secondary col-4'><?php echo esc_html(__($feature['name'], 'content-egg-tpl')) ?></td>
             <td><?php echo esc_html($feature['value']); ?></td>
           </tr>
         <?php endforeach; ?>

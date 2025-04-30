@@ -4,12 +4,14 @@ namespace ContentEgg\application\libs;
 
 use ContentEgg\application\helpers\TextHelper;
 
+use function ContentEgg\prnx;
+
 /**
  * RestClient class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  *
  * Simple Rest Client
  * @todo: PUT/DELETE Request
@@ -138,7 +140,6 @@ class RestClient
         $this->_prepareRest($path);
         $client = self::getHttpClient();
         $client->setParameterGet($query);
-
         return $this->_getResult($client->request('GET'));
     }
 

@@ -1,5 +1,12 @@
 <?php
 
+namespace ContentEgg\application\vendor;
+
+defined('\ABSPATH') || exit;
+/**
+ *  Modified version of CrawlerDetect with minor code changes by support@keywordrush.com
+ */
+
 /**
  * CrawlerDetect is a PHP class for detecting bots/crawlers/spiders via the user agent.
  *
@@ -31,11 +38,10 @@
   SOFTWARE.
  */
 
-namespace Jaybizzle\CrawlerDetect;
+defined('\ABSPATH') || exit;
 
-defined( '\ABSPATH' ) || exit;
-
-class CrawlerDetect {
+class CrawlerDetect
+{
 
 	protected $userAgent = null;
 	protected $httpHeaders = array();
@@ -463,64 +469,79 @@ class CrawlerDetect {
 	/**
 	 * Class constructor.
 	 */
-	public function __construct( array $headers = null, $userAgent = null ) {
-		$this->setHttpHeaders( $headers );
-		$this->setUserAgent( $userAgent );
+	public function __construct(array $headers = null, $userAgent = null)
+	{
+		$this->setHttpHeaders($headers);
+		$this->setUserAgent($userAgent);
 	}
 
-	public function setHttpHeaders( $httpHeaders = null ) {
+	public function setHttpHeaders($httpHeaders = null)
+	{
 		// use global _SERVER if $httpHeaders aren't defined
-		if ( ! is_array( $httpHeaders ) || ! count( $httpHeaders ) ) {
+		if (! is_array($httpHeaders) || ! count($httpHeaders))
+		{
 			$httpHeaders = $_SERVER;
 		}
 		// clear existing headers
 		$this->httpHeaders = array();
 		// Only save HTTP headers. In PHP land, that means only _SERVER vars that
 		// start with HTTP_.
-		foreach ( $httpHeaders as $key => $value ) {
-			if ( substr( $key, 0, 5 ) === 'HTTP_' ) {
-				$this->httpHeaders[ $key ] = $value;
+		foreach ($httpHeaders as $key => $value)
+		{
+			if (substr($key, 0, 5) === 'HTTP_')
+			{
+				$this->httpHeaders[$key] = $value;
 			}
 		}
 	}
 
-	public function getUaHttpHeaders() {
+	public function getUaHttpHeaders()
+	{
 		return self::$uaHttpHeaders;
 	}
 
-	public function setUserAgent( $userAgent = null ) {
-		if ( false === empty( $userAgent ) ) {
+	public function setUserAgent($userAgent = null)
+	{
+		if (false === empty($userAgent))
+		{
 			return $this->userAgent = $userAgent;
-		} else {
+		}
+		else
+		{
 			$this->userAgent = null;
-			foreach ( $this->getUaHttpHeaders() as $altHeader ) {
-				if ( false === empty( $this->httpHeaders[ $altHeader ] ) ) { // @todo: should use getHttpHeader(), but it would be slow. (Serban)
-					$this->userAgent .= $this->httpHeaders[ $altHeader ] . ' ';
+			foreach ($this->getUaHttpHeaders() as $altHeader)
+			{
+				if (false === empty($this->httpHeaders[$altHeader]))
+				{ // @todo: should use getHttpHeader(), but it would be slow. (Serban)
+					$this->userAgent .= $this->httpHeaders[$altHeader] . ' ';
 				}
 			}
 
-			return $this->userAgent = ( ! empty( $this->userAgent ) ? trim( $this->userAgent ) : null );
+			return $this->userAgent = (! empty($this->userAgent) ? trim($this->userAgent) : null);
 		}
 	}
 
-	public function getRegex() {
-		return '(' . implode( '|', self::$crawlers ) . ')';
+	public function getRegex()
+	{
+		return '(' . implode('|', self::$crawlers) . ')';
 	}
 
-	public function isCrawler( $userAgent = null ) {
-		$agent = is_null( $userAgent ) ? $this->userAgent : $userAgent;
+	public function isCrawler($userAgent = null)
+	{
+		$agent = is_null($userAgent) ? $this->userAgent : $userAgent;
 
-		$result = preg_match( '/' . $this->getRegex() . '/i', $agent, $matches );
+		$result = preg_match('/' . $this->getRegex() . '/i', (string) $agent, $matches);
 
-		if ( $matches ) {
+		if ($matches)
+		{
 			$this->matches = $matches;
 		}
 
 		return (bool) $result;
 	}
 
-	public function getMatches() {
+	public function getMatches()
+	{
 		return $this->matches[0];
 	}
-
 }

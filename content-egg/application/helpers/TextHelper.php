@@ -12,7 +12,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class TextHelper
 {
@@ -406,34 +406,71 @@ class TextHelper
         return $result;
     }
 
-    public static function parsePriceAmount($money)
+    public static function parsePriceAmount(string $money): float
     {
+        // 1. Keep only digits, dots and commas.
+        $clean = preg_replace('/[^\d.,]+/u', '', $money);
 
-        if (is_float($money) || is_int($money))
-            return $money;
-
-        if (strstr($money, 'đ'))
-            $is_vnd = true;
-        else
-            $is_vnd = false;
-
-        if (strstr($money, '-'))
+        if ($clean === '')
         {
-            $parts = explode('-', $money);
-            $money = $parts[0];
+            return 0.0;
         }
 
-        $cleanString = preg_replace('/([^0-9\.,])/i', '', $money);
-        $onlyNumbersString = preg_replace('/([^0-9])/i', '', $money);
-        $separatorsCountToBeErased = strlen($cleanString) - strlen($onlyNumbersString) - 1;
-        $stringWithCommaOrDot = preg_replace('/([,\.])/', '', $cleanString, $separatorsCountToBeErased);
-        $removedThousendSeparator = preg_replace('/(\.|,)(?=[0-9]{3,}$)/', '', $stringWithCommaOrDot);
+        $lastDot   = strrpos($clean, '.');
+        $lastComma = strrpos($clean, ',');
 
-        $p = (float) str_replace(',', '.', $removedThousendSeparator);
-        if (!$is_vnd && $p >= 100000000 && !preg_match('/\.000$/', $cleanString) && !preg_match('/\,000$/', $cleanString))
-            return (float) $money;
+        // 2. Decide which (if any) mark is the decimal separator.
+        $decimalSep = null;
+        if ($lastDot !== false && $lastComma !== false)
+        {
+            $decimalSep = ($lastDot > $lastComma) ? '.' : ',';
+        }
+        elseif ($lastDot !== false)
+        {
+            $decimalSep = self::decideSingleSeparator($clean, '.', $lastDot);
+        }
+        elseif ($lastComma !== false)
+        {
+            $decimalSep = self::decideSingleSeparator($clean, ',', $lastComma);
+        }
 
-        return $p;
+        // 3. Strip thousands marks & normalize decimal to dot.
+        if ($decimalSep === '.')
+        {
+            $number = str_replace(',', '', $clean);
+        }
+        elseif ($decimalSep === ',')
+        {
+            $number = str_replace('.', '', $clean);
+            $number = str_replace(',', '.', $number);
+        }
+        else
+        {
+            $number = str_replace([',', '.'], '', $clean);
+        }
+
+        // 4. Cast and round to 2 decimal places.
+        return round((float)$number, 2);
+    }
+
+    protected static function decideSingleSeparator(string $str, string $sep, int $pos): ?string
+    {
+        // Multiple occurrences → thousands
+        if (substr_count($str, $sep) > 1)
+        {
+            return null;
+        }
+
+        $digitsAfter  = strlen($str) - $pos - 1;
+        $digitsBefore = $pos;
+
+        // Looks like thousands if exactly 3 digits after and ≤3 digits before
+        if ($digitsAfter === 3 && $digitsBefore <= 3)
+        {
+            return null;
+        }
+
+        return $sep;
     }
 
     public static function parseCurrencyCode($money)
@@ -476,13 +513,16 @@ class TextHelper
 
     public static function getHostName($url)
     {
+        $url = (string)$url;
         $url = trim($url);
-
+        if (!parse_url($url, PHP_URL_HOST))
+            return '';
         return TextHelper::getDomainWithoutSubdomain(strtolower(str_ireplace('www.', '', parse_url($url, PHP_URL_HOST))));
     }
 
     public static function isValidDomainName($domain)
     {
+        $domain = (string)$domain;
         return preg_match('/^(?!\-)(?:[a-zA-Z\d\-]{0,62}[a-zA-Z\d]\.){1,126}(?!\d+)[a-zA-Z\d]{1,63}$/', $domain);
     }
 
@@ -1271,7 +1311,7 @@ class TextHelper
             'h4' => array(),
             'h5' => array(),
             'h6' => array(),
-            'div' => array(),
+            'div' => array('class' => array(), 'style' => array()),
         );
 
         return \wp_kses($string, $allowed_html);

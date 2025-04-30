@@ -2,6 +2,7 @@
 
 namespace ContentEgg\application\components;
 
+use function ContentEgg\prn;
 use function ContentEgg\prnx;
 
 defined('\ABSPATH') || exit;
@@ -11,7 +12,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 abstract class Config
 {
@@ -183,10 +184,13 @@ abstract class Config
             {
                 $params['checkbox_options'] = $field['checkbox_options'];
             }
-
             if (!empty($field['render_after']))
             {
                 $params['render_after'] = $field['render_after'];
+            }
+            if (!empty($field['placeholder']))
+            {
+                $params['placeholder'] = $field['placeholder'];
             }
             if (empty($field['section']))
             {
@@ -253,7 +257,14 @@ abstract class Config
     {
         echo '<textarea name="' . esc_attr($args['option_name']) . '['
             . esc_attr($args['name']) . ']" id="'
-            . esc_attr($args['label_for']) . '" rows="2" class="large-text code">' . esc_html($args['value']) . '</textarea>';
+            . esc_attr($args['label_for'])
+            . '" rows="3" class="large-text code"';
+
+        if (!empty($args['placeholder']))
+            echo ' placeholder="' . esc_attr($args['placeholder']) . '"';
+
+        echo '>' . esc_html($args['value']) .
+            '</textarea>';
         if (!empty($args['render_after']))
         {
             echo wp_kses_post($args['render_after']);
@@ -404,6 +415,11 @@ abstract class Config
         \wp_enqueue_style('wp-color-picker');
         \wp_enqueue_script('wp-color-picker', \admin_url('js/color-picker.min.js'));
         echo '<script type="text/javascript">' . "jQuery(document).ready(function($){jQuery('#" . esc_attr($args['label_for']) . "').wpColorPicker();});" . '</script>';
+    }
+
+    public function render_text($args)
+    {
+        echo wp_kses_post($args['description']);
     }
 
     public function option_exists($option)

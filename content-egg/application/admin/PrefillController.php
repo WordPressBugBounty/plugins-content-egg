@@ -16,7 +16,7 @@ use ContentEgg\application\models\AutoblogModel;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class PrefillController
 {
@@ -173,14 +173,17 @@ class PrefillController
                 if (!$cf_name || empty($custom_field_values[$i]))
                     continue;
                 $cf_value = $custom_field_values[$i];
+                $max_length = 200;
+                $cf_value = mb_substr($cf_value, 0, $max_length);
                 if (\is_serialized($cf_value))
-                    $cf_value = @unserialize($cf_value);
-                else
                 {
-                    $modules_data = array($parser->getId() => $data);
-                    $main_product = ContentManager::getMainProduct($modules_data, 'min_price');
-                    $cf_value = AutoblogModel::buildTemplate($cf_value, $modules_data, $keyword, array(), $main_product);
+                    continue;
                 }
+
+                $modules_data = array($parser->getId() => $data);
+                $main_product = ContentManager::getMainProduct($modules_data, 'min_price');
+                $cf_value = AutoblogModel::buildTemplate($cf_value, $modules_data, $keyword, array(), $main_product);
+
                 \update_post_meta($post->ID, $cf_name, $cf_value);
             }
         }

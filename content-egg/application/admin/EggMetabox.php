@@ -18,7 +18,7 @@ use ContentEgg\application\Plugin;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class EggMetabox
 {
@@ -102,6 +102,23 @@ class EggMetabox
             $module->enqueueScripts();
             $module->renderMetaboxModule();
         }
+
+        // scroll to #module-product_id
+        echo '
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        setTimeout(function() {
+            if (window.location.hash) {
+                var element = document.getElementById(window.location.hash.substring(1));
+                console.log(element);
+                if (element) {
+                    element.scrollIntoView();
+                }
+            }
+        }, 500);
+    });
+</script>
+';
         echo '</div>';
         echo '</div>';
     }
@@ -204,7 +221,7 @@ class EggMetabox
         \wp_enqueue_script('angularjs-sanitize', \ContentEgg\PLUGIN_RES . '/app/vendor/angular-sanitize.js', array('angularjs'), null, false);
 
         // ContentEgg angular application
-        \wp_enqueue_style('contentegg-admin', \ContentEgg\PLUGIN_RES . '/css/admin.css', null, '' . Plugin::version() . 'ab');
+        \wp_enqueue_style('contentegg-admin', \ContentEgg\PLUGIN_RES . '/css/admin.css', null, '' . Plugin::version());
         // \wp_enqueue_script('angular-ui-bootstrap', \ContentEgg\PLUGIN_RES . '/app/vendor/angular-ui-bootstrap/ui-bootstrap-tpls-2.5.0.min.js', array('angularjs'), Plugin::version);
         \wp_enqueue_script('angular-sortable', \ContentEgg\PLUGIN_RES . '/app/vendor/angular-sortable.js', array('angularjs', 'jquery-ui-core', 'jquery-ui-widget', 'jquery-ui-mouse', 'jquery-ui-sortable'), Plugin::version);
         \wp_enqueue_script('angular-ui-tinymce', \ContentEgg\PLUGIN_RES . '/app/vendor/angular-tinymce.js', array('angularjs', 'wp-tinymce'), Plugin::version);
@@ -215,7 +232,7 @@ class EggMetabox
         // Bootstrap
         \wp_enqueue_style('cegg-bootstrap-admin', \ContentEgg\PLUGIN_RES . '/admin/bootstrap/css/bootstrap.css', array(), Plugin::version());
         \wp_enqueue_style('cegg-bootstrap-icons', \ContentEgg\PLUGIN_RES . '/admin/bootstrap/css/bootstrap-icons.min.css', array(), Plugin::version());
-        \wp_enqueue_script('cegg-bootstrap-admin', \ContentEgg\PLUGIN_RES . '/admin/bootstrap/js/bootstrap.bundle.min.js', array('jquery'), Plugin::version());
+        \wp_enqueue_script('cegg-bootstrap-admin', \ContentEgg\PLUGIN_RES . '/admin/bootstrap/js/bootstrap.bundle.min.js', array(), Plugin::version());
 
         // ContentEgg application params
         $this->addAppParam('active_modules', ModuleManager::getInstance()->getModulesIdList(true));

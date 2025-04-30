@@ -10,13 +10,14 @@ use ContentEgg\application\admin\PluginAdmin;
 use ContentEgg\application\Plugin;
 
 use function ContentEgg\prn;
+use function ContentEgg\prnx;
 
 /**
  * Module abstract class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 abstract class Module
 {
@@ -43,6 +44,7 @@ abstract class Module
 		}
 
 		$info = $this->info();
+
 		if (!empty($info['name']))
 		{
 			$this->name = $info['name'];
@@ -51,6 +53,21 @@ abstract class Module
 		{
 			$this->name = $this->id;
 		}
+
+		if ($this->isClone())
+		{
+			if ($name = ModuleName::getInstance()->getName($this->getId()))
+			{
+				$this->name = $name;
+			}
+			else
+			{
+				$this->name .= ' ' . $this->getCloneNum();
+			}
+
+			$this->name .= ' [Clone]';
+		}
+
 		if (!empty($info['api_agreement']))
 		{
 			$this->api_agreement = $info['api_agreement'];
@@ -330,5 +347,30 @@ abstract class Module
 		{
 			return 'inactive';
 		}
+	}
+
+	public function isClone()
+	{
+		if (strpos($this->getId(), '__clone') !== false)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	public function getCloneNum()
+	{
+		if (!$this->isClone())
+			return '';
+
+		$parts = explode('__', $this->getId());
+		$clone_num = end($parts);
+		$clone_num = str_replace('clone', '', $clone_num);
+		$clone_num = intval($clone_num);
+
+		return $clone_num;
 	}
 }

@@ -18,7 +18,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class ModuleManager
 {
@@ -88,10 +88,10 @@ class ModuleManager
             $modules_ids = array_merge($modules_ids, $this->scanForCustomModules());
 
         $feed_modules_ids = $this->getFeedModules();
-
         $ae_modules_ids = $this->getAffEggModules();
+        $cloned_modules_ids = $this->getClonedModules();
 
-        $modules_ids = array_merge($modules_ids, $feed_modules_ids, $ae_modules_ids);
+        $modules_ids = array_merge($modules_ids, $feed_modules_ids, $ae_modules_ids, $cloned_modules_ids);
         $modules_ids = \apply_filters('content_egg_modules', $modules_ids);
         $d = \get_option(base64_decode('Y2VnZ19zeXNfZGVhZGxpbmU='), 0);
 
@@ -235,6 +235,18 @@ class ModuleManager
         return $result;
     }
 
+    public function getClonedModules()
+    {
+        $clones = ModuleCloneManager::getClonedModules();
+        $result = array();
+        foreach ($clones as $clone)
+        {
+            $result[] = $clone['clone_id'];
+        }
+
+        return $result;
+    }
+
     public static function isCustomModule($module_id)
     {
         if (in_array($module_id, self::$custom_modules))
@@ -344,6 +356,37 @@ class ModuleManager
     public function getModulesIdList($only_active = false)
     {
         return array_keys($this->getModules($only_active));
+    }
+
+    public function getAffiliateParsersList($only_active = true, $no_coupons = true, $sort_by_priority = false)
+    {
+        $modules = $this->getAffiliateParsers($only_active);
+        $list = [];
+
+        foreach ($modules as $module)
+        {
+            $module_id = $module->getId();
+
+            if ($no_coupons && stripos($module_id, 'coupon') !== false)
+            {
+                continue;
+            }
+
+            $list[$module_id] = [
+                'name'     => $module->getName(),
+                'priority' => $sort_by_priority ? (int) $module->getConfigInstance()->option('priority') : 0
+            ];
+        }
+
+        if ($sort_by_priority)
+        {
+            uasort($list, function ($a, $b)
+            {
+                return $a['priority'] <=> $b['priority'];
+            });
+        }
+
+        return array_map(fn($item) => $item['name'], $list);
     }
 
     public function getParserModules($only_active = false)
@@ -528,5 +571,72 @@ class ModuleManager
         }
 
         return $results;
+    }
+
+    public function destroyModule($module_id)
+    {
+        $module = ModuleManager::factory($module_id);
+
+        if (!$module)
+            return false;
+
+        if (!$module->isClone() && !$module->isFeedModule())
+            return false;
+
+        ContentManager::deleteAllDataForModule($module_id);
+        ModuleName::getInstance()->deleteName($module_id);
+        \delete_option($module->getConfigInstance()->option_name());
+
+        if ($module->isClone())
+        {
+            ModuleCloneManager::deleteClone($module_id);
+        }
+
+        if ($module->isFeedModule())
+        {
+            $module->setLastImportDate(0);
+            $module->setLastImportError('');
+
+            $model = $module->getProductModel();
+            if ($model->isTableExists())
+            {
+                $model->dropTable();
+            }
+        }
+
+        if (isset(self::$modules[$module_id]))
+            unset(self::$modules[$module_id]);
+
+        if (isset(self::$active_modules[$module_id]))
+            unset(self::$active_modules[$module_id]);
+
+        if (isset(self::$configs[$module_id]))
+            unset(self::$configs[$module_id]);
+
+        return true;
+    }
+
+    public function getModuleNamesByIds(array $module_ids)
+    {
+        $result = array();
+        foreach ($module_ids as $id)
+        {
+            if ($name = $this->getModuleNameById($id))
+            {
+                $result[$id] = $name;
+            }
+        }
+
+        return $result;
+    }
+
+    public function getModuleNameById($module_id)
+    {
+        if (isset(self::$modules[$module_id]))
+        {
+            return self::$modules[$module_id]->getName();
+        }
+
+        return '';
     }
 }

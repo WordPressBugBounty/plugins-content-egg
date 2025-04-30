@@ -16,7 +16,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 abstract class AffiliateFeedParserModule extends AffiliateParserModule
 {
@@ -304,7 +304,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
             $data = array_map(function ($item)
             {
-                return trim($item, ' \'"');
+                return trim((string)$item, ' \'');
             }, $data);
 
             if (!$fields)
@@ -729,5 +729,33 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         {
             return false;
         }
+    }
+
+    public static function extractShippingCost($shipping_cost)
+    {
+        $shipping_cost = \apply_filters('cegg_shipping_cost_value', $shipping_cost);
+
+        if (strstr($shipping_cost, ':') && strstr($shipping_cost, ','))
+        {
+            $parts = explode(',', $shipping_cost);
+            $shipping_cost = reset($parts);
+        }
+        elseif (strstr($shipping_cost, ':'))
+        {
+            $parts = explode(':', $shipping_cost);
+            foreach ($parts as $p)
+            {
+                if (strstr($p, 'EUR') || strstr($p, 'USD'))
+                {
+                    $shipping_cost = $p;
+                    break;
+                }
+            }
+        }
+
+        if ($shipping_cost == '')
+            return '';
+
+        return (float) TextHelper::parsePriceAmount($shipping_cost);
     }
 }

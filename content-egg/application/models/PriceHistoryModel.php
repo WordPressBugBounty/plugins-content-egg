@@ -5,13 +5,14 @@ namespace ContentEgg\application\models;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\admin\GeneralConfig;
+use ContentEgg\application\components\ContentProduct;
 
 /**
  * PriceHistoryModel class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class PriceHistoryModel extends Model
 {
@@ -195,7 +196,7 @@ class PriceHistoryModel extends Model
 		$saved = 0;
 		foreach ($data as $key => $d)
 		{
-			if (empty($d['unique_id']) || empty($d['price']))
+			if (empty($d['unique_id']) || empty($d['price']) || $d['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
 			{
 				continue;
 			}

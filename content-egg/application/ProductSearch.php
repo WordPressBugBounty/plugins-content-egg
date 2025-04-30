@@ -19,7 +19,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class ProductSearch extends VirtualPage
 {
@@ -68,7 +68,6 @@ class ProductSearch extends VirtualPage
 
     public function getBody()
     {
-        // search & add data to ModuleViewer
         $total = $this->addSearchData();
         if ($total)
             return GeneralConfig::getInstance()->option('search_page_tpl');
@@ -104,18 +103,17 @@ class ProductSearch extends VirtualPage
             }
             catch (\Exception $e)
             {
-                // error
                 continue;
             }
 
-            // nodata!
             if (!$data)
                 continue;
 
             $data = ContentManager::dataPresavePrepare($data, $module_id, $post_id);
             $data = ContentManager::dataPreviewPrepare($data, $module_id, $post_id);
             $total += count($data);
-            ModuleViewer::getInstance()->setData($module_id, $post_id, $data);
+            ContentManager::setViewData($module_id, $post_id, $data);
+            //ModuleViewer::getInstance()->setData($module_id, $post_id, $data);
         }
         return $total;
     }

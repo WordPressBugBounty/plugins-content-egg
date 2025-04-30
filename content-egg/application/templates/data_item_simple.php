@@ -1,21 +1,9 @@
-<?php
-defined('\ABSPATH') || exit;
+<?php defined('\ABSPATH') || exit; ?>
 
-use ContentEgg\application\helpers\TemplateHelper;
-
-if (TemplateHelper::isModuleDataExist($items, array('Amazon', 'AmazonNoApi')))
-{
-    \wp_enqueue_script('cegg-frontend', \ContentEgg\PLUGIN_RES . '/js/frontend.js', array('jquery'));
-}
-?>
-
-<?php foreach ($items as $item) : ?>
-
-    <div class="egg-container egg-item">
-        <div class="products">
-
-            <?php $this->renderBlock('item_row', array('item' => $item)); ?>
-
-        </div>
+<?php foreach ($items as $i => $item): ?>
+    <div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>
+        <?php $this->setItem($item, $i); ?>
+        <?php $this->renderBlock('item_row', array('item' => $item)); ?>
+        <?php $this->renderBlock('disclaimer'); ?>
     </div>
 <?php endforeach; ?>

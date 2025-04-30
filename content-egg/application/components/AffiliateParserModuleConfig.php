@@ -9,32 +9,20 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 abstract class AffiliateParserModuleConfig extends ParserModuleConfig
 {
 
 	public function options()
 	{
-		$options = array(
-			'ttl' => array(
-				'title'       => __('Update by keyword', 'content-egg'),
-				'description' => __('Lifetime of cache in seconds, after this period products will be updated if you set keyword for updating. 0 - never update', 'content-egg'),
-				'callback'    => array($this, 'render_input'),
-				'default'     => 604800,
-				'validator'   => array(
-					'trim',
-					'absint',
-				),
-				'section'     => 'default',
-			),
-		);
+		$options = array();
 
 		if ($this->getModuleInstance()->isItemsUpdateAvailable())
 		{
 			$options['ttl_items'] = array(
-				'title'       => __('Price update', 'content-egg'),
-				'description' => __("Set the time in seconds for updating prices. Use '0' for never updating.", 'content-egg'),
+				'title'       => __('Price Update', 'content-egg'),
+				'description' => __("Set the interval in seconds for updating prices. Use '0' to disable price updates.", 'content-egg'),
 				'callback'    => array($this, 'render_input'),
 				'default'     => 259200,
 				'validator'   => array(
@@ -44,14 +32,27 @@ abstract class AffiliateParserModuleConfig extends ParserModuleConfig
 				'section'     => 'default',
 			);
 		}
+
+		$options['ttl'] = array(
+			'title'       => __('Update by Keyword', 'content-egg'),
+			'description' => __('Cache lifetime in seconds. After this period, products will be updated if a keyword is set for updating. Set to \'0\' to disable updates.', 'content-egg'),
+			'callback'    => array($this, 'render_input'),
+			'default'     => 604800, // 7 days in seconds
+			'validator'   => array(
+				'trim',
+				'absint',
+			),
+			'section'     => 'default',
+		);
+
 		$options['update_mode'] = array(
-			'title'            => __('Update mode', 'content-egg'),
-			'description'      => '',
+			'title'            => __('Update Mode', 'content-egg'),
+			'description'      => __('Choose how product updates are triggered.', 'content-egg'),
 			'callback'         => array($this, 'render_dropdown'),
 			'dropdown_options' => array(
-				'visit'      => __('Page view', 'content-egg'),
-				'cron'       => __('Cron', 'content-egg'),
-				'visit_cron' => __('Page view + Cron', 'content-egg'),
+				'visit'      => __('Page View', 'content-egg'),
+				'cron'       => __('Cron Job', 'content-egg'),
+				'visit_cron' => __('Page View + Cron Job', 'content-egg'),
 			),
 			'default'          => 'visit',
 		);

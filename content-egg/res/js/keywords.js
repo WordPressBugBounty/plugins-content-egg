@@ -6,7 +6,6 @@ jQuery(document).ready(function ($) {
     //jQuery("#trend_google, #trend_goods").button();
     keywords_count();
 
-
     /** Suggestion tool */
     var sug_parser = 'sug_google';
     //sug parser source
@@ -19,7 +18,6 @@ jQuery(document).ready(function ($) {
         suggest(jQuery(this).val(), sug_parser);
     });
     //--------------------------------------
-
 
     //add buttons
     jQuery('#add_selected').on('click', function () {
@@ -75,7 +73,6 @@ jQuery(document).ready(function ($) {
         jQuery('#keywords').val(upperFirst(keywords));
     });
 
-
     /**
      * Hot Trends
      */
@@ -91,7 +88,6 @@ jQuery(document).ready(function ($) {
         jQuery('#trend_goods').removeAttr('disabled').removeClass('ui-state-disabled');
     });
 
-
     jQuery("#trend_keywords,#sug_keywords,#goods_keywords").on('change', function () {
         var opt = jQuery(this).children(":selected");
         add_keyword(opt.val());
@@ -101,33 +97,6 @@ jQuery(document).ready(function ($) {
 
 function suggest(query, sug_parser) {
     window[sug_parser](query);
-}
-
-function sug_yandex(query) {
-    var url = 'https://suggest.yandex.ru/suggest-ya.cgi?callback=?&v=4&part=' + encodeURIComponent(query);
-    jQuery.getJSON(url, function () {
-    })
-            .done(function (data) {
-                var keywords = '';
-                jQuery.each(data[1], function (i, keyword) {
-                    keywords = keywords + '<option>' + keyword + '</option>';
-                });
-                jQuery('#sug_keywords').html(keywords);
-            });
-}
-
-function sug_market(query) {
-
-    var url = 'http://suggest.market.yandex.ru/suggest-market?callback=?&part=' + encodeURIComponent(query);
-    jQuery.getJSON(url, function () {
-    })
-            .done(function (data) {
-                var keywords = '';
-                jQuery.each(data[1], function (i, keyword) {
-                    keywords = keywords + '<option>' + keyword + '</option>';
-                });
-                jQuery('#sug_keywords').html(keywords);
-            });
 }
 
 function sug_amazon(query) {
@@ -214,7 +183,6 @@ function sug_google(query) {
     });
 }
 
-
 // ebay hardcoded callback
 jQuery.namespace = function () {
     var a = arguments, o = null, i, j, d;
@@ -232,7 +200,6 @@ vjoObj = jQuery.namespace("vjo.darwin.domain.finding.autofill.AutoFill");
 vjoObj._do = function (data) {
     sug_ebay_callback(data);
 };
-
 
 function sug_ebay(query) {
     request = jQuery.ajax({
@@ -302,7 +269,6 @@ function upperFirst(words) {
         return m.toUpperCase();
     });
 }
-
 
 /**
  * Hot Trends

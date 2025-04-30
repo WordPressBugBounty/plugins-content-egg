@@ -12,6 +12,7 @@ use ContentEgg\application\helpers\ArrayHelper;
 use ContentEgg\application\components\BlockTemplateManager;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ContentProduct;
+use ContentEgg\application\components\ShortcodeAtts;
 use ContentEgg\application\helpers\TemplateHelper;
 
 use function ContentEgg\prn;
@@ -22,7 +23,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class ModuleViewer
 {
@@ -132,6 +133,9 @@ class ModuleViewer
             $post_id = $post->ID;
         }
 
+        if (!$params)
+            $params = ShortcodeAtts::prepare(array());
+
         $data = $this->getData($module_id, $post_id, $params);
         if (!$data)
             return '';
@@ -139,6 +143,9 @@ class ModuleViewer
         //groups
         if (!empty($params['groups']))
         {
+            if (!is_array($params['groups']))
+                $params['groups'] = array($params['groups']);
+
             foreach ($data as $key => $d)
             {
                 if (!$d['group'] || !in_array($d['group'], $params['groups']))
@@ -239,7 +246,10 @@ class ModuleViewer
         else
             $btn_text = '';
 
-        return $tpl_manager->render($template, array('items' => $data, 'title' => $title, 'keyword' => $keyword, 'post_id' => $post_id, 'module_id' => $module_id, 'cols' => $cols, 'disable_features' => $disable_features, 'btn_text' => $btn_text, 'atts' => $params, 'content' => $content));
+        $tpl_manager->setParams($params);
+        $tpl_manager->setItems(array_values($data));
+
+        return $tpl_manager->render($template, array('items' => array_values($data), 'title' => $title, 'keyword' => $keyword, 'post_id' => $post_id, 'module_id' => $module_id, 'cols' => $cols, 'disable_features' => $disable_features, 'btn_text' => $btn_text, 'atts' => $params, 'params' => $params, 'content' => $content));
     }
 
     public function viewBlockData(array $module_ids, $post_id = null, $params = array(), $content = '', $only_return_data = false)
@@ -302,7 +312,7 @@ class ModuleViewer
         // remove duplicates
         if (!empty($params['remove_duplicates_by']))
         {
-            if ($duplicate_ids = ContentManager::findDuplicateIds($data, $params['remove_duplicates_by']))
+            if ($duplicate_ids = ContentManager::findDuplicatesByField($data, $params['remove_duplicates_by']))
             {
                 foreach ($data as $module_id => $module_data)
                 {
@@ -329,6 +339,15 @@ class ModuleViewer
                 return;
         }
         $template = $params['template'];
+
+        $sorted_templates = array('block_offers_logo', 'block_offers_list', 'block_price_comparison', 'block_offers_logo_shipping', 'block_price_alert', 'block_popup_button', 'block_popup_compare', 'block_price_comparison_card', 'block_price_statistics', 'block_offers_logo_groups', 'block_offers_logo_shipping_groups', 'block_offers_logo_btn', 'block_review_box');
+        if (in_array($params['template'], $sorted_templates))
+        {
+            if (empty($params['order']))
+                $params['order'] = 'asc';
+            if (empty($params['sort']))
+                $params['sort'] = 'price';
+        }
 
         // next, limit, offset
         if (!isset($this->block_data_pointer[$post_id]))
@@ -372,51 +391,17 @@ class ModuleViewer
         if ($only_return_data)
             return $data;
 
-        return $tpl_manager->render($params['template'], array('data' => $data, 'post_id' => $post_id, 'params' => $params, 'title' => $title, 'cols' => $cols, 'sort' => $params['sort'], 'order' => $params['order'], 'groups' => $params['groups'], 'btn_text' => $params['btn_text'], 'atts' => $params, 'content' => $content));
+        $items = TemplateHelper::mergeAndSort($data, $params['order'], $params['sort']);
+
+        $tpl_manager->setParams($params);
+        $tpl_manager->setItems($items);
+
+        return $tpl_manager->render($params['template'], array('data' => $data, 'items' => $items, 'post_id' => $post_id, 'params' => $params, 'title' => $title, 'cols' => $cols, 'sort' => $params['sort'], 'order' => $params['order'], 'groups' => $params['groups'], 'btn_text' => $params['btn_text'], 'atts' => $params, 'content' => $content));
     }
 
     private function spliceBlockData($data, $offset, $length, $order = null, $sort = null)
     {
-        if ($order || $sort)
-        {
-            if (!$sort)
-                $sort = 'price';
-
-            if (!$order)
-                $order = 'ask';
-
-            if ($sort == 'price' || $sort == 'discount')
-                return $this->spliceBlockDataSorted($data, $offset, $length, $order, $sort);
-        }
-
-        $results = array();
-        $count = 0;
-        $results_count = 0;
-        foreach ($data as $module_id => $module_data)
-        {
-            $results[$module_id] = array();
-            foreach ($module_data as $key => $data)
-            {
-                if ($count < $offset)
-                {
-                    $count++;
-                    continue;
-                }
-
-                $results[$module_id][$key] = $data;
-                $count++;
-                $results_count++;
-
-                if ($results_count >= $length)
-                    return $results;
-            }
-        }
-        return $results;
-    }
-
-    private function spliceBlockDataSorted($data, $offset, $length, $order = 'ask', $sort = 'price')
-    {
-        $all_items = TemplateHelper::sortAllByPrice($data, $order, $sort);
+        $all_items = TemplateHelper::mergeAndSort($data, $order, $sort);
         $all_items = array_splice($all_items, $offset, $length);
 
         $results = array();

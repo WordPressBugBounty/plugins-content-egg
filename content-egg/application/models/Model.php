@@ -2,6 +2,8 @@
 
 namespace ContentEgg\application\models;
 
+use function ContentEgg\prnx;
+
 defined('\ABSPATH') || exit;
 
 /**
@@ -9,7 +11,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 abstract class Model
 {
@@ -313,6 +315,7 @@ abstract class Model
     public function multipleInsert(array $items, $per_request = 200)
     {
         $fields = array_keys(reset($items));
+
         $sql = 'INSERT INTO ' . $this->tableName() . ' (' . join(',', $fields) . ') VALUES ';
         $placeholder = str_repeat('%s, ', count($fields));
         $placeholder = '(' . rtrim($placeholder, " ,") . ')';
@@ -336,5 +339,10 @@ abstract class Model
 
             $this->getDb()->query($query);
         }
+    }
+
+    public function dropTable()
+    {
+        $this->getDb()->query('DROP TABLE IF EXISTS ' . $this->tableName());
     }
 }

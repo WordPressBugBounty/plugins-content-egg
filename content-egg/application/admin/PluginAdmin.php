@@ -20,7 +20,7 @@ use ContentEgg\application\SystemScheduler;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class PluginAdmin
 {
@@ -104,7 +104,7 @@ class PluginAdmin
             'sitelang' => GeneralConfig::getInstance()->option('lang'),
         ));
 
-        \wp_enqueue_style('contentegg-admin', \ContentEgg\PLUGIN_RES . '/css/admin.css', null, '' . Plugin::version() . 'a');
+        \wp_enqueue_style('contentegg-admin', \ContentEgg\PLUGIN_RES . '/css/admin.css', null, '' . Plugin::version());
     }
 
     public function add_plugin_row_meta(array $links, $file)

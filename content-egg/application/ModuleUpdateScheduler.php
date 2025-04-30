@@ -14,7 +14,7 @@ use ContentEgg\application\components\stopwatch\Stopwatch;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class ModuleUpdateScheduler extends Scheduler
 {
@@ -176,7 +176,7 @@ class ModuleUpdateScheduler extends Scheduler
     {
         $schedules['ten_min'] = array(
             'interval' => 60 * 10,
-            'display' => __('Every 10 minutes'),
+            'display' => __('Every 10 minutes', 'content-egg'),
         );
         return $schedules;
     }

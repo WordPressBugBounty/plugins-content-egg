@@ -1,4 +1,8 @@
-<?php defined('\ABSPATH') || exit; ?>
+<?php
+
+use ContentEgg\application\components\ModuleCloneManager;
+
+defined('\ABSPATH') || exit; ?>
 <?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
     <div class="cegg-maincol">
     <?php endif; ?>
@@ -7,7 +11,7 @@
             <?php esc_html_e('Module Settings', 'content-egg'); ?>
             <span class="egg-label egg-label-pro"><?php if (\ContentEgg\application\Plugin::isPro()) : ?>pro <?php else : ?>free <?php endif; ?> <small>v<?php echo esc_html(\ContentEgg\application\Plugin::version()); ?></small></span>
             <?php if (!\ContentEgg\application\Plugin::isTooMuchNicheActive()) : ?>
-                <a class="egg-label-tmniche" style="color: #479f76;" href="https://www.keywordrush.com/toomuchniche?utm_source=cegg&utm_medium=referral&utm_campaign=plugin">Unlock AI Power</a>
+                <a class="egg-label-tmniche" style="color: #479f76;" href="https://www.keywordrush.com/toomuchniche?utm_source=cegg&utm_medium=referral&utm_campaign=unlockaipower">Unlock AI Power</a>
             <?php endif; ?>
         </h2>
 
@@ -28,14 +32,15 @@
 
         <div class="cegg-wrap">
             <div class="cegg-maincol">
-
                 <h3>
                     <?php if ($module->isFeedParser() && !$module->isActive()) : ?>
                         <?php esc_html_e('Add new feed module', 'content-egg'); ?>
                     <?php else : ?>
                         <?php echo \esc_html(sprintf(__('%s Settings', 'content-egg'), $module->getName())); ?>
                     <?php endif; ?>
+
                     <?php if ($docs_uri = $module->getDocsUri()) echo sprintf('<a target="_blank" class="page-title-action" href="%s">' . esc_html(__('Documentation', 'content-egg')) . '</a>', esc_url_raw($docs_uri)); ?>
+
                 </h3>
 
                 <?php if ($module->isDeprecated()) : ?>
@@ -93,27 +98,58 @@
             </div>
 
             <div class="cegg-rightcol">
+
+                <pre><?php echo esc_html(__('Module ID:', 'content-egg')); ?> <?php echo esc_html($module->getId()); ?></pre>
+
                 <div>
-                    <?php
-                    /*
-                    if (!empty($module) && $description = $module->getDescription())
-                        echo '<p>' . wp_kses_post($description) . '</p>';
-                    */
-                    ?>
+
+                    <?php if (ModuleCloneManager::isCloningAllowed($module->getId())): ?>
+                        <hr style="margin-bottom: 20px;">
+
+                        <a class="page-title-action" href="<?php echo esc_url_raw(
+                                                                wp_nonce_url(
+                                                                    get_admin_url(
+                                                                        get_current_blog_id(),
+                                                                        'admin.php?page=content-egg-modules&action=clone&module=' . urlencode($module->getId())
+                                                                    ),
+                                                                    'ce_clone_module_action'
+                                                                )
+                                                            ); ?>">
+                            <?php esc_html_e('Clone This Module', 'content-egg'); ?>
+                        </a>
+                    <?php endif; ?>
+                    <?php if ($module->isFeedParser() || $module->isClone()): ?>
+                        <hr style="margin-bottom: 20px;">
+                        <a class="button-link-delete"
+                            href="<?php echo esc_url_raw(
+                                        wp_nonce_url(
+                                            get_admin_url(
+                                                get_current_blog_id(),
+                                                'admin.php?page=content-egg-modules&action=delete_clone&module=' . urlencode($module->getId())
+                                            ),
+                                            'ce_remove_module_action'
+                                        )
+                                    ); ?>"
+                            onclick="return confirm('Are you sure you want to delete this module? This action will PERMANENTLY REMOVE all module settings and associated products!');">
+                            <?php esc_html_e('Delete This Module', 'content-egg'); ?>
+                        </a>
+
+                    <?php endif; ?>
 
                     <?php if (!empty($module) && $module->isFeedModule()) : ?>
-                        <?php if ($last_date = $module->getLastImportDateReadable()) : ?>
-                            <?php $prod_count = $module->getProductCount(); ?>
-                            <li><?php echo esc_html(sprintf(__('Last feed import: %s.', 'content-egg'), $last_date)); ?></li>
-                            <li><?php echo esc_html(sprintf(__('Total products: %d.', 'content-egg'), $prod_count)); ?></li>
-                        <?php endif; ?>
-                        <li title="<?php echo \esc_attr(__('Your unzipped feed must be smaller than this.', 'content-egg')); ?>"><?php echo esc_html(sprintf(__('WordPress memory limit: %s', 'content-egg'), \WP_MAX_MEMORY_LIMIT)); ?>
-                            (<a href="https://wordpress.org/support/article/editing-wp-config-php/#increasing-memory-allocated-to-php" target="_blank">?</a>)
-                        </li>
-                        <?php if ($last_error = $module->getLastImportError()) : ?>
-                            <li style="color: red;"><?php echo esc_html(sprintf(__('Last error: %s', 'content-egg'), $last_error)); ?></li>
-                        <?php endif; ?>
-
+                        <ul style="margin-top: 20px;">
+                            <?php if ($last_date = $module->getLastImportDateReadable()) : ?>
+                                <?php $prod_count = $module->getProductCount(); ?>
+                                <li><?php echo esc_html(sprintf(__('Last feed import: %s.', 'content-egg'), $last_date)); ?></li>
+                                <li><?php echo esc_html(sprintf(__('Total products: %d.', 'content-egg'), $prod_count)); ?></li>
+                            <?php endif; ?>
+                            <li title="<?php echo \esc_attr(__('Your unzipped feed must be smaller than this.', 'content-egg')); ?>"><?php echo esc_html(sprintf(__('WordPress memory limit: %s', 'content-egg'), \WP_MAX_MEMORY_LIMIT)); ?>
+                                (<a href="https://wordpress.org/support/article/editing-wp-config-php/#increasing-memory-allocated-to-php" target="_blank">?</a>)
+                            </li>
+                            <?php if ($last_error = $module->getLastImportError()) : ?>
+                                <li style="color: red;"><?php echo esc_html(sprintf(__('Last error: %s', 'content-egg'), $last_error)); ?></li>
+                            <?php endif; ?>
+                        </ul>
                         <?php if ($last_date && $prod_count) : ?>
                             <hr /><br />
                             <div><a target="_blank" class="page-title-action" href="<?php echo esc_url_raw(\get_admin_url(\get_current_blog_id(), 'admin.php?page=content-egg-tools&action=feed-export&field=url&module=' . urlencode($module->getId()))); ?>"><?php esc_html_e('Export product URLs', 'content-egg') ?></a></div>

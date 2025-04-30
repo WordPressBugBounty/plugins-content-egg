@@ -1,26 +1,16 @@
 <?php
 /*
- * Name: Price history for lowest price product
- * Modules:
+ * Name: Price history
  * Module Types: PRODUCT
- * 
  */
 
-__('Price history for lowest price product', 'content-egg-tpl');
+__('Price history', 'content-egg-tpl');
 
-use ContentEgg\application\helpers\TemplateHelper;
-use ContentEgg\application\helpers\TextHelper;
+defined('\ABSPATH') || exit;
+
+
 ?>
 
-<?php
-$all_items = TemplateHelper::sortAllByPrice($data);
-$item = $all_items[0];
-$module_id = $item['module_id'];
-if (!$title)
-    $title = TemplateHelper::__('Price History for') . ' ' . TextHelper::truncate($item['title'], 100);
-?>
-
-<div class="egg-container">
-    <?php $this->renderBlock('price_history', array('item' => $item, 'module_id' => $module_id, 'title' => $title)); ?>
-
+<div class="container py-3 mb-4 mt-1 text-body" <?php $this->colorMode(); ?>>
+    <?php $this->renderBlock('price_history'); ?>
 </div>

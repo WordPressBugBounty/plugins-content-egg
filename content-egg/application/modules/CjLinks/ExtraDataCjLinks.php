@@ -11,7 +11,7 @@ use ContentEgg\application\components\ExtraData;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class ExtraDataCjLinks extends ExtraData
 {
@@ -20,7 +20,7 @@ class ExtraDataCjLinks extends ExtraData
 	public $advertiserName;
 	public $advertiserSite;
 	public $creativeHeight;
-	public $creativeWidtht;
+	public $creativeWidth;
 	public $language;
 	public $linkHtml;
 	public $destination;

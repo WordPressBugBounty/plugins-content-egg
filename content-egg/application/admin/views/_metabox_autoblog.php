@@ -83,11 +83,9 @@ use ContentEgg\application\helpers\AdminHelper;
 
                                         <div id="sug_btn_group" class="btn-group" data-toggle="buttons-radio" style="margin-bottom: 10px;">
                                             <input id="sug_google" name="sug_radio" value="sug_google" type="radio" checked="checked"><label for="sug_google">Google</label>
+                                            <?php /*
                                             <input id="sug_amazon" name="sug_radio" value="sug_amazon" type="radio"><label for="sug_amazon">Amazon</label>
-                                            <?php if (\ContentEgg\application\admin\GeneralConfig::getInstance()->option('lang') == 'ru') : ?>
-                                                <input id="sug_yandex" name="sug_radio" value="sug_yandex" type="radio"><label for="sug_yandex"><?php esc_html_e('Yandex', 'content-egg'); ?></label>
-                                                <input id="sug_market" name="sug_radio" value="sug_market" type="radio"><label for="sug_market"><?php esc_html_e('Yandex.Market', 'content-egg'); ?></label>
-                                            <?php endif; ?>
+                                            */ ?>
                                         </div>
                                         <input type="text" id="sug_query" placeholder="<?php esc_html_e('Start enter keyword', 'content-egg'); ?>" />
                                         <select multiple="multiple" id="sug_keywords" style="width: 98%" size="23"></select>
@@ -338,7 +336,9 @@ use ContentEgg\application\helpers\AdminHelper;
                 <?php
                 \wp_dropdown_users(array(
                     'name' => 'item[user_id]',
-                    'capability' => array('edit_posts'), 'id' => 'user_id', 'selected' => $item['user_id']
+                    'capability' => array('edit_posts'),
+                    'id' => 'user_id',
+                    'selected' => $item['user_id']
                 ));
                 ?>
                 <p class="description"><?php esc_html_e('This user will be author of posts.', 'content-egg'); ?></p>

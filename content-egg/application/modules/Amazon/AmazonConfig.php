@@ -12,7 +12,7 @@ use ContentEgg\application\admin\GeneralConfig;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class AmazonConfig extends AffiliateParserModuleConfig
 {
@@ -81,10 +81,9 @@ class AmazonConfig extends AffiliateParserModuleConfig
 				'default'          => self::getDefaultLocale(),
 				'section'          => 'default',
 			),
-			'entries_per_page'        => array(
+			'entries_per_page' => array(
 				'title'       => __('Results', 'content-egg'),
-				'description' => __('Specify the number of results to display for one search query.', 'content-egg') . ' ' .
-					__('It needs a bit more time to get more than 10 results in one request', 'content-egg'),
+				'description' => __('Specify the number of results to display for a single search query. It may take additional time to retrieve more than 10 results in one request.', 'content-egg'),
 				'callback'    => array($this, 'render_input'),
 				'default'     => 10,
 				'validator'   => array(
@@ -93,16 +92,15 @@ class AmazonConfig extends AffiliateParserModuleConfig
 					array(
 						'call'    => array('\ContentEgg\application\helpers\FormValidator', 'less_than_equal_to'),
 						'arg'     => 50,
-						// The value you specified for ItemPage is invalid. Valid values must be between 1 and 5.
-						'message' => __('The field "Results" can not be more than 50.', 'content-egg'),
+						'message' => __('The field "Results" cannot exceed 50.', 'content-egg'),
 					),
 				),
 				'section'     => 'default',
 			),
+
 			'entries_per_page_update' => array(
-				'title'       => __('Results for updates and autoblogging', 'content-egg'),
-				'description' => __('Set the number of results for automatic updates and autoblogging.', 'content-egg') . ' ' .
-					__('It needs a bit more time to get more than 10 results in one request', 'content-egg'),
+				'title'       => __('Results for Updates and Autoblogging', 'content-egg'),
+				'description' => __('Specify the number of results for automatic updates and autoblogging. It may take additional time to retrieve more than 10 results in one request.', 'content-egg'),
 				'callback'    => array($this, 'render_input'),
 				'default'     => 3,
 				'validator'   => array(
@@ -111,22 +109,24 @@ class AmazonConfig extends AffiliateParserModuleConfig
 					array(
 						'call'    => array('\ContentEgg\application\helpers\FormValidator', 'less_than_equal_to'),
 						'arg'     => 50,
-						'message' => __('The field "Results" can not be more than 50.', 'content-egg'),
+						'message' => __('The field "Results" cannot exceed 50.', 'content-egg'),
 					),
 				),
 				'section'     => 'default',
 			),
-			'link_type'               => array(
-				'title'            => __('Link type', 'content-egg'),
-				'description'      => __('Type of partner links. Know more about amazon <a target="_blank" href="https://affiliate-program.amazon.com/gp/associates/help/t2/a11">90 day cookie</a>.', 'content-egg'),
+
+			'link_type' => array(
+				'title'            => __('Link Type', 'content-egg'),
+				'description'      => __('Select the type of partner links. Learn more about the Amazon <a target="_blank" href="https://affiliate-program.amazon.com/gp/associates/help/t2/a11">90-day cookie</a>.', 'content-egg'),
 				'callback'         => array($this, 'render_dropdown'),
 				'dropdown_options' => array(
-					'product'     => 'Product page',
-					'add_to_cart' => 'Add to cart',
+					'product'     => __('Product Page', 'content-egg'),
+					'add_to_cart' => __('Add to Cart', 'content-egg'),
 				),
 				'default'          => 'product',
 				'section'          => 'default',
 			),
+
 			'search_index'            => array(
 				'title'            => __('Categories for search', 'content-egg'),
 				'description'      => __('The list of categories for US Amazon. For local branches some of categories may be not available. If you do not set category for searching, no other filtering options in addition to searching for the keyword (for example, the minimal price or sorting) will not working. ', 'content-egg')

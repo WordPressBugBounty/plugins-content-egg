@@ -1,22 +1,20 @@
 <?php
-defined( '\ABSPATH' ) || exit;
+
+use ContentEgg\application\helpers\TemplateHelper;
+
+defined('\ABSPATH') || exit;
 /*
   Name: Image
  */
-__( 'Image', 'content-egg-tpl' );
+__('Image', 'content-egg-tpl');
 ?>
-<?php \wp_enqueue_style( 'egg-bootstrap' ); ?>
 
-<div class="egg-container egg-image">
-	<?php if ( $title ): ?>
-        <h3><?php echo esc_html( $title ); ?></h3>
-	<?php endif; ?>
-    <div class="row">
-		<?php foreach ( $items as $item ): ?>
-            <div class="col-md-12" style="padding-bottom: 20px;">
-                <img src="<?php echo esc_url($item['img']); ?>" alt="<?php echo esc_attr( $item['title'] ); ?>"
-                     class="img-thumbnail"/>
-            </div>
-		<?php endforeach; ?>
-    </div>
+<div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>
+  <div class="row">
+    <?php foreach ($items as $item): ?>
+      <div class="col-md-12 mb-4">
+        <?php TemplateHelper::displayImage($item, 0, 0, array('class' => 'img-thumbnail')); ?>
+      </div>
+    <?php endforeach; ?>
+  </div>
 </div>

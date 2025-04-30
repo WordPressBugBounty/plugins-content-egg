@@ -11,14 +11,14 @@ use ContentEgg\application\components\ParserModuleConfig;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class GoogleImagesConfig extends ParserModuleConfig
 {
 
 	public function options()
 	{
-		$optiosn = array(
+		$options = array(
 			'cx'                      => array(
 				'title'       => 'Search engine ID <span class="cegg_required">*</span>',
 				'description' => __('The custom <a target="_blank" href="https://support.google.com/customsearch/answer/2649143">search engine ID</a>. Don\'t forget to <a target="_blank" href="https://support.google.com/customsearch/answer/2630972">enable image search</a>.', 'content-egg'),
@@ -192,6 +192,7 @@ class GoogleImagesConfig extends ParserModuleConfig
 			),
 		);
 
-		return array_merge(parent::options(), $optiosn);
+		$options = array_merge(parent::options(), $options);
+		return self::moveRequiredUp($options);
 	}
 }

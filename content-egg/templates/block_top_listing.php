@@ -1,108 +1,148 @@
 <?php
 /*
- * Name: Top listing
- * Modules:
+ * Name: Top listings
  * Module Types: PRODUCT
- *
  */
 
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\ArrayHelper;
 
 use function ContentEgg\prn;
+use function ContentEgg\prnx;
 
-$all_items = TemplateHelper::mergeAll($data, $order);
-if (TemplateHelper::isNumbered($all_items))
-    $all_items = TemplateHelper::sortByNumber($all_items, $order);
-$ratings = TemplateHelper::generateStaticRatings(count($all_items));
+defined('\ABSPATH') || exit;
 
-foreach ($all_items as $i => $item)
+TemplateHelper::addShopInfoOffcanvases($items, $params);
+
+$ratings = TemplateHelper::generateStaticRatings(count($items));
+
+foreach ($items as $i => $item)
 {
     if (empty($item['ratingDecimal']) && isset($item['extra']['data']['ratingDecimal']))
-        $all_items[$i]['ratingDecimal'] = $item['ratingDecimal'] = round(TemplateHelper::convertRatingScale($item['extra']['data']['ratingDecimal']), 1);
+        $items[$i]['ratingDecimal'] = $item['ratingDecimal'] = TemplateHelper::convertRatingScale10($item['extra']['data']['ratingDecimal']);
 
     if (empty($item['ratingDecimal']))
-        $all_items[$i]['ratingDecimal'] = $ratings[$i];
-    elseif ($item['ratingDecimal'] && $item['group'] !== 'Roundup')
-        $all_items[$i]['ratingDecimal'] = round(TemplateHelper::convertRatingScale($item['ratingDecimal']), 1);
+        $items[$i]['ratingDecimal'] = $ratings[$i];
+    elseif ($item['ratingDecimal'] && ($item['group'] !== 'Roundup' || $item['ratingDecimal'] < 5))
+        $items[$i]['ratingDecimal'] = TemplateHelper::convertRatingScale10($item['ratingDecimal']);
+
+    $items[$i]['rating'] = $items[$i]['ratingDecimal'];
 }
-if ($item['group'] !== 'Roundup')
-    $all_items = ArrayHelper::sortByField($all_items, 'ratingDecimal', 'desc');
+
+if (TemplateHelper::isNumbered($items))
+    $items = TemplateHelper::sortByNumber($items, $order);
+elseif ($item['group'] !== 'Roundup')
+    $items = ArrayHelper::sortByField($items, 'ratingDecimal', 'desc');
 
 ?>
 
-<div class="egg-container cegg-top-listing">
-    <?php if ($title) : ?>
-        <h3><?php echo \esc_html($title); ?></h3>
-    <?php endif; ?>
+<div <?php if (!empty($_container_id)) echo 'id="cegg-top-listing-' . esc_html($_container_id) . '"'; ?> class="container px-0 mb-5 mt-1 cegg-list" <?php $this->colorMode(); ?>>
+    <?php foreach ($items as $i => $item): ?>
+        <?php $this->setItem($item, $i); ?>
 
-    <div class="egg-listcontainer">
+        <div class="cegg-list-card cegg-card <?php echo $i < count($items) - 1 ? ' mb-3' : ''; ?><?php TemplateHelper::border($params); ?>" cegg-listing-position="<?php echo esc_attr($i + 1); ?>">
 
-        <?php foreach ($all_items as $i => $item) : ?>
+            <?php if ($this->isVisible('number', true)): ?>
+                <div class="position-absolute top-50 z-3 start-0 translate-middle">
+                    <?php TemplateHelper::number($item, $params, $i, 'danger'); ?>
+                </div>
+            <?php endif; ?>
 
-            <div class="row-products row">
-                <div class="col-md-2 col-sm-2 col-xs-3 cegg-image-cell">
-
-                    <div class="cegg-position-container2">
-                        <span class="cegg-position-text2"><?php echo (int) $i + 1; ?></span>
+            <div class="row p-2 p-md-3">
+                <?php if ($this->isVisible('img')): ?>
+                    <div class="cegg-list-card-img-col col-3 col-md-2 align-self-center" style="max-width: 150px;">
+                        <div class="position-relative">
+                            <div class="ratio<?php TemplateHelper::imgRatio($params, 'ratio-1x1'); ?>">
+                                <?php TemplateHelper::displayImage($item, 190, 170, array('class' => 'object-fit-scale rounded')); ?>
+                            </div>
+                        </div>
                     </div>
+                <?php endif; ?>
 
-                    <?php if ($item['img']) : ?>
-                        <a<?php TemplateHelper::printRel(); ?> target="_blank" href="<?php echo esc_url_raw($item['url']); ?>">
-                            <?php TemplateHelper::displayImage($item, 130, 100); ?>
-                            </a>
+                <div class="col align-self-center">
+                    <div class="cegg-list-card-body">
+
+                        <?php if ($this->isVisible('badge')): ?>
+                            <?php TemplateHelper::badge3($item); ?>
                         <?php endif; ?>
-                </div>
-                <div class="col-md-6 col-sm-6 col-xs-6 cegg-desc-cell">
 
-                    <?php if (strstr($item['description'], 'class="label')) : ?>
-                        <?php echo wp_kses_post($item['description']); ?>
-                    <?php else : ?>
-                        <?php if ($i == 0 && TemplateHelper::getChance($i)) : ?>
-                            <span class="label label-success">&check; <?php esc_html_e('Best choice', 'content-egg-tpl'); ?></span>
-                        <?php elseif ($i == 1 && TemplateHelper::getChance($i)) : ?>
-                            <span class="label label-success"><?php esc_html_e('Recommended', 'content-egg-tpl'); ?></span>
-                        <?php elseif ($i == 2 && TemplateHelper::getChance($i)) : ?>
-                            <span class="label label-success"><?php esc_html_e('High quality', 'content-egg-tpl'); ?></span>
+                        <?php if ($this->isVisible('title')): ?>
+                            <?php TemplateHelper::title($item, 'card-title fs-6 fw-normal cegg-text-truncate-2', 'div', $params); ?>
                         <?php endif; ?>
-                    <?php endif; ?>
 
-                    <div class="cegg-no-top-margin cegg-list-logo-title">
-                        <a<?php TemplateHelper::printRel(); ?> target="_blank" href="<?php echo esc_url_raw($item['url']); ?>"><?php echo \esc_html(TemplateHelper::truncate($item['title'], 100)); ?></a>
-                    </div>
-                    <div class="text-center cegg-mt10 visible-xs">
-                        <a<?php TemplateHelper::printRel(); ?> target="_blank" href="<?php echo esc_url_raw($item['url']); ?>" class="btn btn-danger btn-block"><span><?php TemplateHelper::buyNowBtnText(true, $item, $btn_text); ?></span></a>
-                            <?php if ($merchant = TemplateHelper::getMerhantName($item)) : ?>
-                                <small class="text-muted title-case"><?php echo \esc_html($merchant); ?></small>
-                            <?php endif; ?>
+                        <?php if ($this->isVisible('subtitle')): ?>
+                            <div class="card-subtitle fs-6 text-body-secondary cegg-text-truncate-2"><?php TemplateHelper::subtitle($item); ?></div>
+                        <?php endif; ?>
+
+                        <?php if ($this->isVisible('promo', false)): ?>
+                            <div class="cegg-card-promo text-success small pt-1">
+                                <?php TemplateHelper::promo($item); ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ($this->isVisible('description', false)): ?>
+                            <div class="cegg-desc-small card-text small lh-sm  pt-3"><?php echo \wp_kses_post($item['description']); ?></div>
+                        <?php endif; ?>
                     </div>
                 </div>
-
-                <div class="col-md-2 col-sm-2 col-xs-3">
-
-                    <?php
-
-                    if (!empty($item['ratingDecimal']))
-                        TemplateHelper::printProgressRing($item['ratingDecimal']);
-                    else
-                        TemplateHelper::printProgressRing($ratings[$i]);
-                    ?>
-                </div>
-
-                <div class="col-md-2 col-sm-2 col-xs-12 cegg-btn-cell hidden-xs">
-                    <div class="cegg-btn-row">
-                        <a<?php TemplateHelper::printRel(); ?> target="_blank" href="<?php echo esc_url_raw($item['url']); ?>" class="btn btn-danger btn-block"><span><?php TemplateHelper::buyNowBtnText(true, $item, $btn_text); ?></span></a>
+                <?php if ($this->isVisible('rating', true)): ?>
+                    <div class="col-auto px-md-3 align-self-center">
+                        <?php TemplateHelper::ratingRing($item); ?>
                     </div>
-                    <?php if ($merchant = TemplateHelper::getMerhantName($item)) : ?>
-                        <div class="text-center">
-                            <small class="text-muted title-case"><?php echo \esc_html($merchant); ?></small>
+                <?php endif; ?>
+                <div class="col-6 col-md-auto align-self-center offset-3 offset-md-0 pe-3 text-center">
+
+                    <?php if ($this->isVisible('price', false)): ?>
+                        <div class="cegg-card-price lh-1 mt-1 ">
+
+                            <div class="hstack justify-content-md-center gap-2">
+                                <?php if ($this->isVisible('priceOld')): ?>
+                                    <del class="cegg-old-price fs-6 text-body-tertiary fw-normal"><?php TemplateHelper::oldPrice($item); ?></del>
+
+                                <?php endif; ?>
+                                <div class="cegg-price fs-5 lh-1 mb-0<?php TemplateHelper::priceClass($item); ?>">
+                                    <?php TemplateHelper::price($item); ?>
+                                </div>
+                            </div>
+                            <div class="hstack justify-content-md-center gap-2">
+
+                                <?php if ($this->isVisible('prime', false)): ?>
+                                    <div class="pt-2 small">
+                                        <?php TemplateHelper::prime($item); ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if ($this->isVisible('stock_status', false)): ?>
+                                    <div class="cegg-stock-status pt-2 small">
+                                        <?php TemplateHelper::stockStatus($item); ?>
+                                    </div>
+                                <?php endif; ?>
+
+                            </div>
+
                         </div>
                     <?php endif; ?>
 
+                    <?php if ($this->isVisible('button')): ?>
+                        <div class="cegg-card-button pt-3">
+                            <div class="d-grid"> <?php TemplateHelper::button($item, $params, array('class' => 'stretched-link')); ?></div>
+                        </div>
+                    <?php else: ?>
+                        <?php TemplateHelper::link(' ', $item, $params, array('class' => 'stretched-link')); ?>
+                    <?php endif; ?>
+                    <?php if ($this->isVisible('shop_info')) : ?>
+                        <div class="position-relative fs-6 z-3 small text-truncate">
+                            <small><?php TemplateHelper::shopInfo($item); ?></small>
+                        </div>
+                    <?php elseif ($this->isVisible('merchant')): ?>
+                        <div class="cegg-merchant small fs-6 text-body-secondary text-truncate">
+                            <small><?php TemplateHelper::merchant($item); ?></small>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
+        </div>
+    <?php endforeach; ?>
 
-        <?php endforeach; ?>
-
-    </div>
+    <?php $this->renderBlock('disclaimer'); ?>
 </div>

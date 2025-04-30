@@ -10,13 +10,17 @@ use ContentEgg\application\models\PriceHistoryModel;
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\admin\GeneralConfig;
+use ContentEgg\application\components\ContentProduct;
+
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
 
 /**
  * PriceAlert class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class PriceAlert
 {
@@ -49,17 +53,11 @@ class PriceAlert
             // logged in users
             \add_action('wp_ajax_start_tracking', array($this, 'ajaxTrackProduct'));
         }
-        \add_action('init', array($this, 'registerJs'));
-        \add_action('template_redirect', array($this, 'subscriptionManager'));
-    }
 
-    public function registerJs()
-    {
-        \wp_enqueue_script('cegg-price-alert', \ContentEgg\PLUGIN_RES . '/js/price_alert.js', array('jquery'), Plugin::version());
-        \wp_localize_script('cegg-price-alert', 'ceggPriceAlert', array(
-            'ajaxurl' => \admin_url('admin-ajax.php'),
-            'nonce' => \wp_create_nonce('cegg-price-alert')
-        ));
+        if (self::isRehubTheme())
+            \add_action('init', array($this, 'registerJs'));
+
+        \add_action('template_redirect', array($this, 'subscriptionManager'));
     }
 
     public function ajaxTrackProduct()
@@ -286,18 +284,12 @@ class PriceAlert
     {
         $this->tickbox_message = strip_tags($message);
         $this->tickbox_subject = strip_tags($subject);
-        \add_thickbox();
         \add_action('wp_footer', array($this, 'tickboxInlineScript'));
     }
 
     public function tickboxInlineScript()
     {
-        echo '<script>
-            jQuery(window).on("load", function()
-            {
-                jQuery("body").append("<div style=\"display:none;\" id=\"cegg-price-alert-tickbox\"><p>' . \esc_js($this->tickbox_message) . '<div style=\"text-align:center; padding-top: 30px;padding-right: 20px;\"><input value=\"' . \esc_js(__('  Ok  ', 'content-egg-tpl')) . '\" type=\"button\" onclick=\"javascript:tb_remove()\"></div></p></div>");
-                tb_show("' . \esc_js($this->tickbox_subject) . '", "/?TB_inline&amp;height=200&amp;width=300&amp;inlineId=cegg-price-alert-tickbox", false);
-            });</script>';
+        echo '<script>window.onload = function() {alert("' . esc_js($this->tickbox_message) . '");};</script>';
     }
 
     public static function mail($to, $subject, $message, $headers = '', $attachments = array())
@@ -335,7 +327,7 @@ class PriceAlert
         $total = 0;
         foreach ($data as $key => $d)
         {
-            if (empty($d['unique_id']) || empty($d['price']))
+            if (empty($d['unique_id']) || empty($d['price']) || $d['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
                 continue;
 
             // Price drops?
@@ -451,5 +443,20 @@ class PriceAlert
     public static function buildTemplate($template, array $tags)
     {
         return str_ireplace(array_keys($tags), array_values($tags), $template);
+    }
+
+    // for backward compatibility with Rehub
+    public function registerJs()
+    {
+        \wp_enqueue_script('cegg-price-alert', \ContentEgg\PLUGIN_RES . '/js/price_alert.js', array('jquery'), Plugin::version());
+        \wp_localize_script('cegg-price-alert', 'ceggPriceAlert', array(
+            'ajaxurl' => \admin_url('admin-ajax.php'),
+            'nonce' => \wp_create_nonce('cegg-price-alert')
+        ));
+    }
+
+    public static function isRehubTheme()
+    {
+        return (in_array(basename(\get_template_directory()), array('rehub', 'rehub-theme', 'rehub-theme-new'))) ? true : false;
     }
 }

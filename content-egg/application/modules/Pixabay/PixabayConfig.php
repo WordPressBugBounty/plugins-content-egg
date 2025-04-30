@@ -11,18 +11,18 @@ use ContentEgg\application\components\ParserModuleConfig;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class PixabayConfig extends ParserModuleConfig
 {
 
 	public function options()
 	{
-		$optiosn = array(
+		$options = array(
 			'key'                     => array(
 				'title'       => 'API Key <span class="cegg_required">*</span>',
 				'description' => __('Key access to Pixabay API. You can get <a href="https://pixabay.com/api/docs/">here</a> (you need to have account).', 'content-egg'),
-				'callback'    => array($this, 'render_input'),
+				'callback'    => array($this, 'render_password'),
 				'default'     => '',
 				'validator'   => array(
 					'trim',
@@ -168,6 +168,7 @@ class PixabayConfig extends ParserModuleConfig
 			),
 		);
 
-		return array_merge(parent::options(), $optiosn);
+		$options = array_merge(parent::options(), $options);
+		return self::moveRequiredUp($options);
 	}
 }

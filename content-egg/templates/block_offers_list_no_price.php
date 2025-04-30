@@ -1,29 +1,28 @@
 <?php
 /*
  * Name: Sorted offers list with no prices
- * Modules:
  * Module Types: PRODUCT
- * 
+ *
  */
-
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-$all_items = TemplateHelper::sortAllByPrice($data, $order);
+defined('\ABSPATH') || exit;
+
+
+$params['hide'][] = 'price';
+$this->setParams($params);
+
+TemplateHelper::addShopInfoOffcanvases($items, $params);
+TemplateHelper::addCouponOffcanvases($items, $params);
+
 ?>
 
-<div class="egg-container cegg-list-no-prices">
-    <?php if ($title): ?>
-        <h3><?php echo \esc_html($title); ?></h3>
-    <?php endif; ?>
-        
-    <div class="egg-listcontainer">
+<div class="container px-0 mb-5 mt-1 cegg-list" <?php $this->colorMode(); ?>>
+    <?php foreach ($items as $i => $item): ?>
+        <?php $this->setItem($item, $i); ?>
+        <?php $this->renderBlock('list_row'); ?>
+    <?php endforeach; ?>
 
-        <?php foreach ($all_items as $i => $item): ?>    
-            <?php $this->renderBlock('list_row_no_price', array('i' => $i, 'item' => $item));?>
-        <?php endforeach; ?>
-        
-    </div>
+    <?php $this->renderBlock('disclaimer'); ?>
 </div>
-
-

@@ -12,13 +12,16 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ContentProduct;
+use ContentEgg\application\components\ShortcodeAtts;
+
+use function ContentEgg\prnx;
 
 /**
  * PriceMoversWidget class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class PriceMoversWidget extends CEWidget
 {
@@ -53,12 +56,6 @@ class PriceMoversWidget extends CEWidget
 
     public function settings($force = false)
     {
-        /*
-        if (!$force && (empty($GLOBALS['pagenow']) || ($GLOBALS['pagenow'] != 'widgets.php' && $GLOBALS['pagenow'] != 'admin-ajax.php')))
-            return array();
-         *
-         */
-
         return
             array(
                 'title' => array(
@@ -117,9 +114,6 @@ class PriceMoversWidget extends CEWidget
             );
     }
 
-    /**
-     * Front-end display of widget.
-     */
     public function widget($args, $instance)
     {
         $items = $this->getItems($instance);
@@ -131,14 +125,17 @@ class PriceMoversWidget extends CEWidget
         if (!$tpl_manager->isTemplateExists($instance['template']))
             return;
 
-        echo $tpl_manager->render($instance['template'], array('items' => $items, 'is_shortcode' => false, 'btn_text' => '')); // phpcs:ignore
+        $params = $this->prepareAttr($args);
+        $tpl_manager->setParams($params);
+        $tpl_manager->setItems($items);
+
+        echo $tpl_manager->render($instance['template'], array('items' => $items, 'params' => $params, 'is_shortcode' => false, 'btn_text' => '')); // phpcs:ignore
 
         $this->afterWidget($args, $instance);
     }
 
     private function getItems(array $instance)
     {
-
         $cache_key = $this->getCacheKey($instance);
         $items = $this->getCache($cache_key);
         if ($items === null)
@@ -201,11 +198,17 @@ class PriceMoversWidget extends CEWidget
         if (empty($a['template']) || !$tpl_manager->isTemplateExists($a['template']))
             return;
 
-        return $tpl_manager->render($a['template'], array('items' => $items, 'is_shortcode' => true, 'cols' => $a['cols'], 'btn_text' => ''));
+        $params = $a;
+        $tpl_manager->setParams($params);
+        $tpl_manager->setItems($items);
+
+        return $tpl_manager->render($a['template'], array('items' => $items, 'is_shortcode' => true, 'cols' => $a['cols'], 'btn_text' => '', 'params' => $params));
     }
 
     private function prepareAttr($atts)
     {
+        $general = ShortcodeAtts::prepare($atts);
+
         $settings = $this->settings(true);
 
         $defaults = array();
@@ -226,6 +229,7 @@ class PriceMoversWidget extends CEWidget
         $a['last_update'] = (int) $a['last_update'];
         $a['template'] = \sanitize_text_field($a['template']);
         $a['currency'] = strtoupper(TextHelper::clear($a['currency']));
+        $a = array_merge($general, $a);
 
         return $a;
     }

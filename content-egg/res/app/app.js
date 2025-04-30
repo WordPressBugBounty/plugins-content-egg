@@ -1,6 +1,6 @@
 var contentEgg = angular.module('contentEgg', ['ui.sortable', 'ngSanitize', 'ui.tinymce']);
 
-contentEgg.controller('ContentEggController', function ($scope, $element, ModuleService, $rootScope, $timeout) {
+contentEgg.controller('ContentEggController', function ($scope, $element, $http, ModuleService, $rootScope, $timeout) {
 
     $scope.models = {};
     $scope.query_params = {};
@@ -15,6 +15,8 @@ contentEgg.controller('ContentEggController', function ($scope, $element, Module
     $scope.newProductGroup = '';
     $scope.aiProcessingTitle = {};
     $scope.aiProcessingDescription = [];
+    $scope.smartGroupsError = '';
+    $scope.aiProcessingSmartGroups = false;
 
     $scope.blockShortcodeBuillder = {
         'template': '',
@@ -46,6 +48,8 @@ contentEgg.controller('ContentEggController', function ($scope, $element, Module
     $scope.blockShortcode = '[content-egg-block]';
     $scope.active_modules = contentegg_params.active_modules;
     $scope.productGroups = contentegg_params.initProductGroups;
+
+    window.ceggProductGroups = $scope.productGroups;
 
     $scope.sortableOptions = {
         handle: '.cegg-item-handle',
@@ -120,17 +124,88 @@ contentEgg.controller('ContentEggController', function ($scope, $element, Module
         ai_params.title_method = title_method;
         ai_params.description_method = description_method;
         $scope.models[module_id].ai(ai_params).then(function (response) {
+
             if (moduleElement) {
                 angular.element(moduleElement).removeClass('cegg_wait');
             }
             ai_tools_links.each(function(index, el) {
-            angular.element(el).removeClass('disabled');
+                angular.element(el).removeClass('disabled');
             });
 
             $scope.aiProcessingTitle[module_id] = false;
             $scope.aiProcessingDescription[module_id] = false;
         });
     };
+
+    $scope.smartGroups = function (method) {
+
+        var ai_tools_links = angular.element(document.querySelectorAll('.cegg-ai-tools a'));
+        ai_tools_links.each(function(index, el) {
+          angular.element(el).addClass('disabled');
+        });
+
+        var ai_params = {};
+        ai_params.data = {};
+        ai_params.method = method;
+        angular.forEach($scope.active_modules, function (module_id, key) {
+            ai_params.data[module_id] = $scope.models[module_id].added;
+        });
+
+        var params = {
+            'action': 'content-egg-smart-groups-api',
+            'params':  JSON.stringify(ai_params),
+            '_contentegg_nonce': contentegg_params.nonce,
+        };
+
+        $scope.aiProcessingSmartGroups = true;
+        $scope.smartGroupsError = '';
+        document.body.classList.add('cegg_wait');
+
+        $http({
+            method: 'post',
+            url: ajaxurl,
+            data: params,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            timeout: 180000,
+            transformRequest: function (obj) {
+                var str = [];
+                for (var p in obj)
+                    str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+                return str.join("&");
+            }
+        })
+        .then(function (response) {
+            document.body.classList.remove('cegg_wait');
+            $scope.aiProcessingSmartGroups = false;
+            ai_tools_links.each(function(index, el) {
+                angular.element(el).removeClass('disabled');
+            });
+            var data = response.data;
+            if (!data.error && data.results)
+            {
+                angular.forEach($scope.active_modules, function (module_id, key) {
+                    if (data.results.hasOwnProperty(module_id)) {
+                        angular.forEach(data.results[module_id], function(item, index) {
+                            $scope.addProductGroup(item.group);
+                        });
+                        $scope.models[module_id].added = data.results[module_id];
+                    }
+                });
+
+            } else {
+                $scope.smartGroupsError = data.error;
+            }
+        })
+        .catch(function (error) {
+            document.body.classList.remove('cegg_wait');
+            $scope.smartGroupsError = error;
+            $scope.aiProcessingSmartGroups = false;
+            ai_tools_links.each(function(index, el) {
+                angular.element(el).removeClass('disabled');
+            });
+        });
+
+    }
 
     $scope.selectedCount = function (module_id) {
         var count = 0;
@@ -238,16 +313,11 @@ contentEgg.controller('ContentEggController', function ($scope, $element, Module
                 product_ids.push(parts[1]);
             else
                 product_ids.push(parts[0]);
-
         });
 
-        let res = keyword;
-        if (res)
-            res = res + ' ';
-        res = res + JSON.stringify(product_ids);
+        var res = product_ids.join("\n");
 
         navigator.clipboard.writeText(res);
-
     };
 
     $scope.copyDescriptionShortcode = function (module_id, unique_id, event) {
@@ -352,12 +422,36 @@ contentEgg.controller('ContentEggController', function ($scope, $element, Module
         $scope.blockShortcode += ']';
     };
 
-    $scope.addProductGroup = function () {
-        var group = $scope.newProductGroup.replace(/(<([^>]+)>)/ig, '-');
+    $scope.addProductGroup = function (group) {
+        if (!group)
+            group = $scope.newProductGroup.replace(/(<([^>]+)>)/ig, '-');
+        group = group.trim();
+        if (!group || group === '')
+            return;
         if (group === '-' || $scope.productGroups.includes(group))
             return;
         $scope.productGroups.unshift(group);
         $scope.newProductGroup = '';
+
+        window.ceggProductGroups = $scope.productGroups;
+        const event = new Event('ceggProductGroupsUpdated');
+        window.dispatchEvent(event);
+    };
+
+    $scope.removeProductGroups = function () {
+        $scope.productGroups = [];
+
+        angular.forEach($scope.active_modules, function (module_id, key) {
+            if ($scope.models.hasOwnProperty(module_id)) {
+                angular.forEach($scope.models[module_id], function(item, index) {
+                    $scope.models[module_id][index].group = '';
+                });
+            }
+        });
+
+        window.ceggProductGroups = $scope.productGroups;
+        const event = new Event('ceggProductGroupsUpdated');
+        window.dispatchEvent(event);
     };
 
     $scope.wooRadioChange = function (unique_id, param_name) {

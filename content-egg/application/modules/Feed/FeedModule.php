@@ -6,7 +6,7 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\admin\PluginAdmin;
 use ContentEgg\application\components\AffiliateFeedParserModule;
-use ContentEgg\application\modules\Feed\FeedName;
+use ContentEgg\application\components\ModuleName;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\components\LinkHandler;
@@ -19,14 +19,14 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class FeedModule extends AffiliateFeedParserModule
 {
 
     public function info()
     {
-        if (!$name = FeedName::getInstance()->getName($this->getId()))
+        if (!$name = ModuleName::getInstance()->getName($this->getId()))
         {
             $name = '+ ' . __('Add new', 'content-egg');
         }
@@ -241,6 +241,7 @@ class FeedModule extends AffiliateFeedParserModule
             }
 
             $product = $this->product_model->searchById($item['unique_id']);
+
             if (!$product)
             {
                 if ($this->product_model->count())
@@ -301,12 +302,10 @@ class FeedModule extends AffiliateFeedParserModule
 
         foreach ($results as $product)
         {
-            if (!$r = unserialize($product['product']))
-            {
+            if (!$pdata = unserialize($product['product']))
                 continue;
-            }
 
-            $r = $this->mapProduct($r);
+            $r = $this->mapProduct($pdata);
 
             $content = new ContentProduct;
 
@@ -394,6 +393,7 @@ class FeedModule extends AffiliateFeedParserModule
 
             $content->orig_url = $product['orig_url'];
             $content->stock_status = $product['stock_status'];
+
             $content->ean = $product['ean'];
 
             if ($content->orig_url != $content->url)
@@ -406,6 +406,8 @@ class FeedModule extends AffiliateFeedParserModule
             }
 
             $content->merchant = \apply_filters('cegg_feed_merchant_name', '', $content->domain);
+
+            $content->features = $this->mapAttributes($pdata);
 
             if ($deeplink)
             {
@@ -460,6 +462,37 @@ class FeedModule extends AffiliateFeedParserModule
 
         foreach ($mapping as $field => $feed_field)
         {
+
+            // regex syntax: [regex][pattern][feed_field]
+            if (strpos($feed_field, '[regex]') === 0)
+            {
+                $parts = explode('][', $feed_field);
+                if (count($parts) == 3)
+                {
+                    $pattern = trim($parts[1], '[]');
+                    $feed_field = trim($parts[2], '[]');
+
+                    if (!isset($data[$feed_field]))
+                        continue;
+
+                    if (strpos($pattern, chr(0)) !== false || !trim($pattern))
+                        continue;
+
+                    if (@preg_match($pattern, $data[$feed_field], $matches))
+                    {
+                        if (count($matches) > 1)
+                            $mapped_data[$field] = $matches[1];
+                        else
+                            $mapped_data[$field] = $matches[0];
+                    }
+                    else
+                    {
+                        $mapped_data[$field] = '';
+                    }
+                }
+                continue;
+            }
+
             if (isset($data[$feed_field]))
             {
                 $mapped_data[$field] = $data[$feed_field];
@@ -469,31 +502,40 @@ class FeedModule extends AffiliateFeedParserModule
         return $mapped_data;
     }
 
-    public static function extractShippingCost($shipping_cost)
+    protected function mapAttributes(array $data)
     {
-        $shipping_cost = \apply_filters('cegg_shipping_cost_value', $shipping_cost);
+        $mapping = $this->config('mapping');
+        if (!isset($mapping['attributes']) || !$mapping['attributes'])
+            return array();
 
-        if (strstr($shipping_cost, ':') && strstr($shipping_cost, ','))
+        $fieldsToExtract = TextHelper::getArrayFromCommaList($mapping['attributes']);
+
+        $attributes = array();
+        foreach ($fieldsToExtract as $field)
         {
-            $parts = explode(',', $shipping_cost);
-            $shipping_cost = reset($parts);
-        }
-        elseif (strstr($shipping_cost, ':'))
-        {
-            $parts = explode(':', $shipping_cost);
-            foreach ($parts as $p)
+            $parts = explode('->', $field);
+            if (count($parts) == 2)
             {
-                if (strstr($p, 'EUR') || strstr($p, 'USD'))
-                {
-                    $shipping_cost = $p;
-                    break;
-                }
+                $field = $parts[0];
+                $name = $parts[1];
+            }
+            else
+            {
+                $name = $field;
+            }
+
+            $value = $data[$field];
+            $value = preg_replace('/,\s*/', ', ', $value);
+
+            if (isset($data[$field]))
+            {
+                $attributes[] = array(
+                    'name' => $name,
+                    'value' => $value
+                );
             }
         }
 
-        if ($shipping_cost == '')
-            return '';
-
-        return (float) TextHelper::parsePriceAmount($shipping_cost);
+        return $attributes;
     }
 }

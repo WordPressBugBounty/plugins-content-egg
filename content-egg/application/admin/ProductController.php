@@ -13,7 +13,7 @@ use ContentEgg\application\helpers\TemplateHelper;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class ProductController
 {
@@ -40,7 +40,7 @@ class ProductController
 
     public function add_admin_menu()
     {
-        \add_submenu_page(Plugin::slug, __('Products', 'content-egg') . ' &lsaquo; Content Egg', __('Products', 'content-egg'), 'publish_posts', self::slug, array($this, 'actionIndex'));
+        \add_submenu_page(Plugin::slug, __('All Products', 'content-egg') . ' &lsaquo; Content Egg', __('All Products', 'content-egg'), 'publish_posts', self::slug, array($this, 'actionIndex'));
     }
 
     public function actionIndex()

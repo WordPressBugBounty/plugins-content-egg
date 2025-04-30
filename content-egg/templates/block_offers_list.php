@@ -1,44 +1,26 @@
 <?php
 /*
  * Name: Sorted offers list with product images
- * Modules:
  * Module Types: PRODUCT
- *
  */
-
-__('Sorted offers list with product images', 'content-egg-tpl');
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-if (isset($data['Amazon']) || isset($data['AmazonNoApi']))
-    \wp_enqueue_script('cegg-frontend', \ContentEgg\PLUGIN_RES . '/js/frontend.js', array('jquery'));
+defined('\ABSPATH') || exit;
 
-$all_items = TemplateHelper::sortAllByPrice($data, $order, $sort);
-$amazon_last_updated = TemplateHelper::getLastUpdateFormattedAmazon($data);
-$is_price = TemplateHelper::isPriceAvailable($all_items);
+__('Sorted offers list with product images', 'content-egg-tpl');
 
-if ($is_price)
-{
-    $col_title = 5;
-    $col_price = 3;
-}
-else
-{
-    $col_title = 8;
-    $col_price = 0;
-}
+TemplateHelper::addShopInfoOffcanvases($items, $params);
+TemplateHelper::addCouponOffcanvases($items, $params);
+
 ?>
-
-<div class="egg-container cegg-list-withlogos">
-    <?php if ($title) : ?>
-        <h3><?php echo \esc_html($title); ?></h3>
-    <?php endif; ?>
-
-    <div class="egg-listcontainer my-custom-class">
-
-        <?php foreach ($all_items as $key => $item) : ?>
-            <?php $this->renderBlock('list_row', array('item' => $item, 'amazon_last_updated' => $amazon_last_updated, 'col_title' => $col_title, 'col_price' => $col_price)); ?>
+<div class="cegg5-container cegg-offers_list">
+    <div class="container px-0 mb-5 mt-1 cegg-list" <?php $this->colorMode(); ?>>
+        <?php foreach ($items as $i => $item): ?>
+            <?php $this->setItem($item, $i); ?>
+            <?php $this->renderBlock('list_row'); ?>
         <?php endforeach; ?>
 
+        <?php $this->renderBlock('disclaimer'); ?>
     </div>
 </div>

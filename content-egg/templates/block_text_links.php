@@ -7,37 +7,37 @@
  */
 
 use ContentEgg\application\helpers\TemplateHelper;
+use ContentEgg\application\helpers\TextHelper;
 
-if (!$all_items = TemplateHelper::sortAllByPrice($data, $order))
-    return;
+defined('\ABSPATH') || exit;
 
-if (TemplateHelper::isModuleDataExist($all_items, array('Amazon', 'AmazonNoApi')))
-    \wp_enqueue_script('cegg-frontend', \ContentEgg\PLUGIN_RES . '/js/frontend.js', array('jquery'));
 
-$amazon_last_updated = TemplateHelper::getLastUpdateFormattedAmazon($data);
 ?>
 
-<div class="egg-container egg-price-text-links">
+<div class="container px-0 mb-5 pt-2 text-body" <?php $this->colorMode(); ?>>
     <ul>
-        <?php foreach ($all_items as $key => $item) : ?>
+        <?php
+        foreach ($items as $i => $item) : ?>
+            <?php $this->setItem($item, $i); ?>
+            <?php $item['title'] = TextHelper::truncate($item['title'], 80); ?>
             <li>
-                <a<?php TemplateHelper::printRel(); ?> target="_blank" href="<?php echo esc_url_raw($item['url']); ?>"><?php echo \esc_html(TemplateHelper::truncate($item['title'], 80)); ?></a>
-                    <?php if ($item['price']) : ?>
-                        &mdash;
-                        <b><?php echo esc_html(TemplateHelper::formatPriceCurrency($item['price'], $item['currencyCode'])); ?></b>
+                <?php TemplateHelper::openATag($item); ?>
+                <?php TemplateHelper::title($item, '', 'span', $params); ?>
+                <?php TemplateHelper::closeATag(); ?>
+
+                <?php if ($this->isVisible('price')): ?>
+                    <strong class="c<?php TemplateHelper::priceClass($item); ?>">
+                        &mdash; <?php TemplateHelper::price($item); ?>
+                    </strong>
+
+                    <?php if ($this->isVisible('priceOld')): ?>
+                        <del class="cegg-old-price text-body-tertiary"><?php TemplateHelper::oldPrice($item); ?></del>
                     <?php endif; ?>
-                    <?php if ($item['priceOld']) : ?>
-                        <strike class="text-muted"><?php echo esc_html(TemplateHelper::formatPriceCurrency($item['priceOld'], $item['currencyCode'])); ?></strike>
-                    <?php endif; ?>
+                <?php endif; ?>
+
             </li>
         <?php endforeach; ?>
     </ul>
-
-    <?php if ($amazon_last_updated) : ?>
-        <div class="cegg-font60 cegg-lineheight15 text-right">
-            <?php echo esc_html(sprintf(TemplateHelper::__('Last Amazon price update was: %s'), $amazon_last_updated)); ?>
-            <?php TemplateHelper::printAmazonDisclaimer(); ?>
-        </div>
-    <?php endif; ?>
+    <?php $this->renderBlock('disclaimer'); ?>
 
 </div>

@@ -13,18 +13,19 @@ use ContentEgg\application\components\command\CommandFactory;
 use ContentEgg\application\components\Pattern;
 use ContentEgg\application\admin\SysNotice;
 use ContentEgg\application\admin\GeneralConfig;
+use ContentEgg\application\blocks\productblock\ProductBlock;
 
 /**
  * Plugin class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class Plugin
 {
-    const version = '7.0.0';
-    const db_version = 57;
+    const version = '8.0.0';
+    const db_version = 62;
     const wp_requires = '4.6.1';
     const slug = 'content-egg';
     const short_slug = 'cegg';
@@ -48,19 +49,33 @@ class Plugin
         return self::$instance;
     }
 
+    public static function registerComponents()
+    {
+        // Register widgets early
+        \add_action('widgets_init', function ()
+        {
+            \register_widget(\ContentEgg\application\PriceMoversWidget::class);
+            \register_widget(\ContentEgg\application\ProductSearchWidget::class);
+        });
+    }
+
     private function __construct()
     {
-        $this->loadTextdomain();
+        add_action('init', array($this, 'loadTextdomain'));
+
         if (self::isFree() || (self::isPro() && self::isActivated()) || self::isEnvato())
         {
             EggShortcode::getInstance();
             BlockShortcode::getInstance();
             ShortcodePreprocessor::initAction();
+
             Pattern::initAction();
+            ProductBlock::initAction();
+
+            \add_action('wp_loaded', array($this, 'registerScripts'));
 
             if (!\is_admin())
             {
-                \add_action('wp_loaded', array($this, 'registerScripts'));
                 \add_action('amp_post_template_css', array($this, 'registerAmpStyles'));
                 ModuleViewer::getInstance()->init();
                 ModuleUpdateVisit::getInstance()->init();
@@ -69,40 +84,45 @@ class Plugin
                 ProductSearch::initAction();
                 StructuredData::initAction();
             }
+            ImageProxy::getInstance()->init();
             PriceAlert::getInstance()->init();
             AutoblogScheduler::initAction();
             ModuleUpdateScheduler::initAction();
+            ProductPrefillScheduler::initAction();
             WooIntegrator::initAction();
             ExternalFeaturedImage::initAction();
             AggregateOffer::initAction();
+            AffiliateDisclaimer::initAction();
             if (!self::isFree())
             {
                 DataRestController::getInstance()->init();
                 SystemScheduler::initAction();
             }
 
-            new ProductSearchWidget;
-            new PriceMoversWidget;
-
             CommandFactory::initAction();
         }
+
         if (!Plugin::isFree())
             new SysNotice;
     }
 
     public function registerScripts()
     {
-        \wp_register_style('egg-bootstrap', \ContentEgg\PLUGIN_RES . '/bootstrap/css/egg-bootstrap.min.css', array(), '' . Plugin::version() . '');
+        \wp_register_style('cegg-bootstrap5', \ContentEgg\PLUGIN_RES . '/site/bootstrap/css/cegg-bootstrap.min.css', array(), Plugin::version());
+        \wp_register_style('cegg-bootstrap5-full', \ContentEgg\PLUGIN_RES . '/site/bootstrap/css/cegg-bootstrap.full.min.css', array(), Plugin::version());
+        \wp_register_style('cegg-products', \ContentEgg\PLUGIN_RES . '/site/css/cegg-products.min.css', array(), Plugin::version());
+        \wp_register_script('cegg-bootstrap5', \ContentEgg\PLUGIN_RES . '/site/bootstrap/js/bootstrap.min.js');
+        \wp_register_script('cegg-chartjs', \ContentEgg\PLUGIN_RES . '/vendor/chartjs/chart.js');
+        \wp_register_script('cegg-chartjs-adapter-date-fns', \ContentEgg\PLUGIN_RES . '/vendor/chartjs/chartjs-adapter-date-fns.js', array('cegg-chartjs'));
+
+        //deprecated
+        \wp_register_style('egg-bootstrap', \ContentEgg\PLUGIN_RES . '/bootstrap/css/egg-bootstrap.min.css', array(), Plugin::version());
         \wp_register_script('bootstrap', \ContentEgg\PLUGIN_RES . '/bootstrap/js/bootstrap.min.js', array('jquery'), null, false);
         \wp_register_script('bootstrap-tab', \ContentEgg\PLUGIN_RES . '/bootstrap/js/tab.js', array('jquery'), null, false);
         \wp_register_script('bootstrap-tooltip', \ContentEgg\PLUGIN_RES . '/bootstrap/js/tooltip.js', array('jquery'), null, false);
         \wp_register_script('bootstrap-modal', \ContentEgg\PLUGIN_RES . '/bootstrap/js/modal.js', array('jquery'), null, false);
         \wp_register_script('bootstrap-popover', \ContentEgg\PLUGIN_RES . '/bootstrap/js/popover.js', array('bootstrap-tooltip'), null, false);
-        if (self::isDevEnvironment())
-            $r = rand(1, 9999);
-        else
-            $r = Plugin::version();
-        \wp_register_style('egg-products', \ContentEgg\PLUGIN_RES . '/css/products.css', array(), $r);
+        \wp_register_style('egg-products', \ContentEgg\PLUGIN_RES . '/css/products.css', array(), Plugin::version());
         \wp_register_script('raphaeljs', \ContentEgg\PLUGIN_RES . '/js/morrisjs/raphael.min.js', array('jquery'));
         \wp_register_script('morrisjs', \ContentEgg\PLUGIN_RES . '/js/morrisjs/morris.min.js', array('raphaeljs'));
         \wp_register_style('morrisjs', \ContentEgg\PLUGIN_RES . '/js/morrisjs/morris.min.css');
@@ -214,7 +234,7 @@ class Plugin
         return false;
     }
 
-    private function loadTextdomain()
+    public function loadTextdomain()
     {
         // plugin admin
         \load_plugin_textdomain('content-egg', false, dirname(\plugin_basename(\ContentEgg\PLUGIN_FILE)) . '/languages/');

@@ -6,6 +6,8 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\FeaturedImage;
+use ContentEgg\application\helpers\ImageHelper;
+use ContentEgg\application\ImageProxy;
 
 use function ContentEgg\prn;
 use function ContentEgg\prnx;
@@ -15,7 +17,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class ExternalFeaturedImage
 {
@@ -209,9 +211,17 @@ class ExternalFeaturedImage
             return $image;
 
         $external_url = $external_img['url'];
+        if (GeneralConfig::getInstance()->option('image_proxy') == 'enabled')
+        {
+            $proxied = ImageProxy::maybeGenerateProxyImageUrl($external_url);
+        }
+        else
+        {
+            $proxied = $external_url;
+        }
 
         if ($image_size = self::getImageSize($size))
-            return array($external_url, $image_size['width'], $image_size['height'], $image_size['crop']);
+            return array($proxied, $image_size['width'], $image_size['height'], $image_size['crop']);
         else
         {
             if (!empty($external_img['width']))
@@ -224,7 +234,7 @@ class ExternalFeaturedImage
             else
                 $height = 600;
 
-            return array($external_url, $width, $height, false);
+            return array($proxied, $width, $height, false);
         }
     }
 
@@ -258,7 +268,7 @@ class ExternalFeaturedImage
         return array();
     }
 
-    public static function replaceThumbnail($html, $post_id, $post_thumbnail_id, $size, $attr)
+    public static function replaceThumbnail($html, $post_id, $post_thumbnail_id, $size, $attr = array())
     {
         if (!$external_img = \get_post_meta($post_id, self::EXTERNAL_URL_META, true))
             return $html;
@@ -270,6 +280,12 @@ class ExternalFeaturedImage
             return $html;
 
         $url = $external_img['url'];
+
+        if (GeneralConfig::getInstance()->option('image_proxy') == 'enabled')
+        {
+            $url = ImageProxy::maybeGenerateProxyImageUrl($url);
+        }
+
         $alt = \get_post_field('post_title', $post_id);
         $class = 'cegg-external-img wp-post-image';
         $attr = array('alt' => $alt, 'class' => $class);

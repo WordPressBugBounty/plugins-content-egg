@@ -13,7 +13,7 @@ use ContentEgg\application\helpers\TextHelper;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class FeedConfig extends AffiliateFeedParserModuleConfig
 {
@@ -36,7 +36,7 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                         'message' => sprintf(__('The field "%s" can not be empty.', 'content-egg'), __('Feed name', 'content-egg')),
                     ),
                     array(
-                        'call' => array($this, 'saveFeedName'),
+                        'call' => array($this, 'saveModuleName'),
                         'type' => 'filter',
                     ),
                 ),
@@ -225,7 +225,8 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
             'short description' => false,
             'isbn' => false,
             'gtin' => false,
-            'shipping cost' => false
+            'shipping cost' => false,
+            'attributes' => false,
         );
     }
 
@@ -263,13 +264,6 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
         }
 
         return true;
-    }
-
-    public function saveFeedName($value)
-    {
-        FeedName::getInstance()->saveName($this->getModuleId(), $value);
-
-        return $value;
     }
 
     public function sanitizeDomain($value)

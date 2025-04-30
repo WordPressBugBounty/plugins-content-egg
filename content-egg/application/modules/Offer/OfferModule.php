@@ -10,6 +10,7 @@ use ContentEgg\application\components\LinkHandler;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ContentProduct;
 
+use function ContentEgg\prn;
 use function ContentEgg\prnx;
 
 /**
@@ -17,7 +18,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class OfferModule extends AffiliateParserModule
 {
@@ -136,42 +137,42 @@ class OfferModule extends AffiliateParserModule
         foreach ($data as $key => $item)
         {
             $item['title'] = trim(\sanitize_text_field($item['title']));
+            if (!$item['title'])
+                continue;
+
+            $item['subtitle'] = trim(\sanitize_text_field($item['subtitle']));
+            $item['badge'] = trim(\sanitize_text_field($item['badge']));
+            $item['badge_color'] = trim(\sanitize_text_field($item['badge_color']));
+            $item['merchant'] = trim(\sanitize_text_field($item['merchant']));
+            $item['domain'] = trim(\sanitize_text_field($item['domain']));
             $item['description'] = trim(\wp_kses_post($item['description']));
+
             $item['orig_url'] = trim(strip_tags($item['orig_url']));
+            if (!filter_var($item['orig_url'], FILTER_VALIDATE_URL))
+                continue;
+
             $item['img'] = trim(strip_tags($item['img']));
+            if ($item['img'] && !filter_var($item['img'], FILTER_VALIDATE_URL))
+                $item['img'] = '';
+
             $item['logo'] = trim(strip_tags($item['logo']));
             $item['extra']['deeplink'] = isset($item['extra']['deeplink']) ? trim(strip_tags($item['extra']['deeplink'])) : '';
-            $item['price'] = (float) TextHelper::parsePriceAmount($item['price']);
-            $item['priceOld'] = (float) TextHelper::parsePriceAmount($item['priceOld']);
-            $item['rating'] = TextHelper::ratingPrepare($item['rating']);
+            $item['price'] = $item['price'] ?  (float) TextHelper::parsePriceAmount($item['price']) : '';
+            $item['priceOld'] = $item['priceOld'] ? (float) TextHelper::parsePriceAmount($item['priceOld']) : '';
+            $item['ratingDecimal'] = $item['ratingDecimal'] ? round((float)$item['ratingDecimal'], 1) : '';
+            $item['order'] = $item['order'] ? (int) $item['order'] : '';
 
             if (!$item['domain'])
             {
                 if (!$item['extra']['deeplink'] && $original_domain = TextHelper::findOriginalDomain($item['orig_url']))
-                {
                     $item['domain'] = $original_domain;
-                }
                 else
-                {
                     $item['domain'] = TextHelper::getHostName($item['orig_url']);
-                }
-            }
-
-            if (!$item['title'])
-            {
-                continue;
-            }
-            if (!filter_var($item['orig_url'], FILTER_VALIDATE_URL))
-            {
-                continue;
-            }
-            if ($item['img'] && !filter_var($item['img'], FILTER_VALIDATE_URL))
-            {
-                continue;
             }
 
             $deeplink = $this->getDeeplink($item['domain'], $item['extra']['deeplink']);
             $item['url'] = LinkHandler::createAffUrl($item['orig_url'], $deeplink, $item);
+
             $return[$key] = $item;
         }
 

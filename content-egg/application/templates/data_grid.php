@@ -1,57 +1,21 @@
 <?php
-defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-if (TemplateHelper::isModuleDataExist($items, array('Amazon', 'AmazonNoApi')))
-{
-	\wp_enqueue_script('cegg-frontend', \ContentEgg\PLUGIN_RES . '/js/frontend.js', array('jquery'));
-}
+defined('\ABSPATH') || exit;
 
-if (empty($cols) || $cols > 12)
-{
-	$cols = 4;
-}
-$col_size = ceil(12 / $cols);
+TemplateHelper::addShopInfoOffcanvases($items, $params);
+
 ?>
 
-<div class="egg-container egg-grid">
-	<?php if ($title) : ?>
-		<h3><?php echo \esc_html($title); ?></h3>
-	<?php endif; ?>
+<div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>
+	<div class="row g-3<?php TemplateHelper::rowCols($params, 'row-cols-2 row-cols-md-3'); ?>">
+		<?php foreach ($items as $i => $item): ?>
 
-	<div class="container-fluid">
-		<div class="row">
+			<?php $this->setItem($item, $i); ?>
+			<?php $this->renderBlock('grid_row'); ?>
 
-			<?php
-
-			$i = 0;
-			foreach ($items as $item)
-			{
-				$this->renderBlock('grid_row', array('item' => $item, 'col_size' => $col_size, 'i' => $i));
-				$i++;
-				if ($i % $cols == 0)
-				{
-					echo '<div class="clearfix hidden-xs"></div>';
-				}
-				if ($i % 2 == 0)
-				{
-					echo '<div class="clearfix visible-xs-block"></div>';
-				}
-			}
-			?>
-
-		</div>
+		<?php endforeach; ?>
 	</div>
-
-	<?php if ($item['price'] && ($module_id == 'Amazon' || $module_id == 'AmazonNoApi')) : ?>
-		<div class="row cegg-no-top-margin">
-			<div class="col-md-12 text-right text-muted">
-				<small>
-					<?php echo esc_html(sprintf(TemplateHelper::__('Last updated on %s'), TemplateHelper::getLastUpdateFormatted($module_id, $post_id))); ?>
-					<?php TemplateHelper::printAmazonDisclaimer(); ?>
-				</small>
-			</div>
-		</div>
-	<?php endif; ?>
+	<?php $this->renderBlock('disclaimer'); ?>
 </div>

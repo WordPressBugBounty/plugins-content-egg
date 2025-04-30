@@ -1,4 +1,7 @@
 <?php
+
+use ContentEgg\application\helpers\TemplateHelper;
+
 defined('\ABSPATH') || exit;
 /*
   Name: Tile
@@ -6,22 +9,26 @@ defined('\ABSPATH') || exit;
 __('Tile', 'content-egg-tpl');
 ?>
 
-<?php \wp_enqueue_style('egg-bootstrap'); ?>
+<div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>
+    <div class="row g-3">
 
-<div class="egg-container egg-video">
-    <?php if ($title): ?>
-        <h3><?php echo esc_html($title); ?></h3>
-    <?php endif; ?>
+        <?php foreach ($items as $i => $item): ?>
+            <?php $this->setItem($item, $i); ?>
 
-    <div class="row">
-        <?php foreach ($items as $item): ?>
-            <div class="col-md-6">
-                <div class="embed-responsive embed-responsive-16by9">
-                    <iframe loading="lazy" width="560" height="315"
-                            src="https://www.youtube.com/embed/<?php echo esc_attr($item['extra']['guid']); ?>" frameborder="0"
-                            allowfullscreen></iframe>
+            <div class="col-12 col-md-6 text-body">
+                <?php if ($this->isVisible('title', false)): ?>
+                    <?php TemplateHelper::title($item, 'card-title h6 fw-normal mb-3', 'div', $params); ?>
+                <?php endif; ?>
+
+                <div class="ratio ratio-16x9">
+                    <iframe loading="lazy" width="560" height="315" src="https://www.youtube.com/embed/<?php echo esc_attr($item['extra']['guid']); ?>?rel=0" frameborder="0" allowfullscreen></iframe>
                 </div>
+
+                <?php if ($this->isVisible('description', false)): ?>
+                    <div class="cegg-desc-small small lh-sm mt-3"><?php TemplateHelper::description($item); ?></div>
+                <?php endif; ?>
             </div>
         <?php endforeach; ?>
     </div>
+
 </div>

@@ -1,5 +1,5 @@
 <?php
-defined( '\ABSPATH' ) || exit;
+defined('\ABSPATH') || exit;
 
 /*
   Name: Add all to cart button
@@ -7,25 +7,22 @@ defined( '\ABSPATH' ) || exit;
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-if ( ! $btn_text ) {
-	$btn_text = __( 'ADD ALL TO CART', 'content-egg-tpl' );
-}
+if (!$params['btn_text'])
+	$params['btn_text'] = __('ADD ALL TO CART', 'content-egg-tpl');
 
-$url     = '';
-$item    = reset( $items );
-$locales = TemplateHelper::findAmazonLocales( $items );
+$url = '';
+$item = reset($items);
+$locales = TemplateHelper::findAmazonLocales($items);
 
 ?>
 
-<div class="egg-container cegg-add-to-cart">
+<?php foreach ($locales as $locale): ?>
+	<div class="container px-0 mb-3 mt-1" <?php $this->colorMode(); ?>>
+		<?php
+		$url = TemplateHelper::generateAddAllToCartUrl($items, $locale);
+		$item['url'] = $url;
+		?>
+		<?php TemplateHelper::button($item, $params); ?>
 
-	<?php foreach ( $locales as $locale ): ?>
-
-		<?php $url = TemplateHelper::generateAddAllToCartUrl( $items, $locale ); ?>
-        <a<?php TemplateHelper::printRel(); ?> target="_blank" href="<?php echo esc_url_raw($url); ?>"
-                                               class="btn btn-danger"><?php TemplateHelper::buyNowBtnText( true, $item, $btn_text ); ?></a>
-
-	<?php endforeach; ?>
-</div>
-
-
+	</div>
+<?php endforeach; ?>

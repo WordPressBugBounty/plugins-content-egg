@@ -9,7 +9,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 class AdminNotice
 {
@@ -28,6 +28,9 @@ class AdminNotice
             'autoblog_batch_created' => __('Tasks for autoblogging are saved.', 'content-egg') . ' %%ID%%.',
             'license_reset_error' => __('License can\'t be deactivated. Write to support of plugin.', 'content-egg'),
             'license_reset_success' => __('The license has been deactivated.', 'content-egg') . ' ' . __('You must deactivate and delete Content Egg from your current domain to use plugin on a new domain.', 'content-egg'),
+            'module_deleted' => __('The module has been successfully deleted.', 'content-egg'),
+            'prefill_stopped' => __('Prefill process was stopped.', 'content-egg'),
+            'prefill_started' => __('Prefill has started and is running in the background using WP-Cron. You can safely close this page and return later to check the progress.', 'content-egg'),
         );
     }
 

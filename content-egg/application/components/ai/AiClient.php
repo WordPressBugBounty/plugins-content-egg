@@ -13,24 +13,29 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2024 keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
 
 abstract class AiClient
 {
-	const TIMEOUT = 30;
-	const MAX_RETRIES = 3;
-	const INITIAL_WAIT = 10;
+	const TIMEOUT = 60;
+	const MAX_RETRIES = 0;
+	const INITIAL_WAIT = 5;
 	const DEBUG_CACHE_TTL = 2592000;
 
 	protected $api_key;
 	protected $model;
+	protected $openrouter_models = array();
 	protected $curl_info;
 	protected $last_usage = array();
 
 	public static function models()
 	{
 		$models = array(
+			'openrouter/auto' => array(
+				'name' => 'OpenRouter' . ' ' . __('(unified interface)', 'content-egg'),
+				'class' => OpenRouterClient::class,
+			),
 			'gpt-4o-mini' => array(
 				'name' => 'OpenAI: gpt-4o-mini' . ' ' . __('(recommended)', 'content-egg'),
 				'class' => OpenAiClient::class,
@@ -43,30 +48,49 @@ abstract class AiClient
 				'name' => 'OpenAI: gpt-3.5-turbo',
 				'class' => OpenAiClient::class,
 			),
+			'gpt-4-turbo-preview' => array(
+				'name' => 'OpenAI: gpt-4-turbo-preview',
+				'class' => OpenAiClient::class,
+			),
 			'gpt-4' => array(
 				'name' => 'OpenAI: gpt-4',
 				'class' => OpenAiClient::class,
 			),
+			'gpt-4.5-preview-2025-02-27' => array(
+				'name' => 'OpenAI: gpt-4.5-preview',
+				'class' => OpenAiClient::class,
+			),
 			'claude-3-haiku-20240307' => array(
-				'name' => 'Claude 3: haiku',
+				'name' => 'Anthropic: claude-3-haiku-20240307',
+				'class' => ClaudeClient::class,
+			),
+			'claude-3-5-haiku-latest' => array(
+				'name' => 'Anthropic: claude-3-5-haiku-latest',
 				'class' => ClaudeClient::class,
 			),
 			'claude-3-sonnet-20240229' => array(
-				'name' => 'Claude 3: sonnet',
+				'name' => 'Anthropic: claude-3-sonnet-20240229',
 				'class' => ClaudeClient::class,
 			),
 			'claude-3-5-sonnet-20240620' => array(
-				'name' => 'Claude 3.5: sonnet',
+				'name' => 'Anthropic: claude-3-5-sonnet-20240620',
+				'class' => ClaudeClient::class,
+			),
+			'claude-3-5-sonnet-latest' => array(
+				'name' => 'Anthropic: claude-3-5-sonnet-latest',
 				'class' => ClaudeClient::class,
 			),
 			'claude-3-opus-20240229' => array(
-				'name' => 'Claude 3: opus',
+				'name' => 'Anthropic: claude-3-opus-20240229',
 				'class' => ClaudeClient::class,
 			),
-
+			'claude-3-7-sonnet-latest' => array(
+				'name' => 'Anthropic: claude-3-7-sonnet-latest',
+				'class' => ClaudeClient::class,
+			),
 		);
 
-		$models = \apply_filters('cegg_ai_models', $models);
+		$models = \apply_filters('ei_ai_models', $models);
 		return $models;
 	}
 
@@ -74,16 +98,17 @@ abstract class AiClient
 	abstract public function getPayload($prompt, $system = '', $params = array());
 	abstract public function getContent($response);
 
-	public function __construct($api_key, $model)
+	public function __construct($api_key, $model, $openrouter_models = array())
 	{
 		if (is_array($api_key))
 			$api_key = $api_key[array_rand($api_key)];
 
 		$this->api_key = $api_key;
 		$this->model = $model;
+		$this->openrouter_models = $openrouter_models;
 	}
 
-	public static function createClient($api_key, $model)
+	public static function createClient($api_key, $model, $openrouter_models = array())
 	{
 		$models = self::models();
 		if (!isset($models[$model]))
@@ -91,7 +116,7 @@ abstract class AiClient
 
 		$class = $models[$model]['class'];
 
-		return new $class($api_key, $model);
+		return new $class($api_key, $model, $openrouter_models);
 	}
 
 	public function getHeaders()
@@ -126,13 +151,17 @@ abstract class AiClient
 				throw new \Exception('No response from AI API.');
 
 			$info = $this->curl_info;
-			if ($info['http_code'] != 200)
+			if ($info['http_code'] !== 200)
 			{
-				$err = sprintf('AI API error code: %d.', $info['http_code']);
-				if ($data = json_decode($response, true) && isset($data['error']['message']))
-					$err .= ' Error message: ' . $data['error']['message'];
+				$data = json_decode($response, true) ?? array();
+				$errorMessage = sprintf('AI API error code: %d.', $info['http_code']);
 
-				throw new \Exception($err, $info['http_code']);
+				if (!empty($data['error']['message']))
+				{
+					$errorMessage .= ' Error message: ' . $data['error']['message'];
+				}
+
+				throw new \Exception($errorMessage, $info['http_code']);
 			}
 
 			$this->saveToCache($payload, $response);
@@ -149,6 +178,11 @@ abstract class AiClient
 		}
 		catch (\Exception $e)
 		{
+			/*
+			if ($e->getCode() != 429)
+				throw $e;
+			*/
+
 			if ($max_retries > 0)
 			{
 				usleep($initial_wait * 1E6);
@@ -226,7 +260,7 @@ abstract class AiClient
 	protected function getTemporaryDirectory()
 	{
 		$upload_dir = \wp_upload_dir();
-		$dir = $upload_dir['basedir'] . '/cegg-debug-ai';
+		$dir = $upload_dir['basedir'] . '/ce-debug-ai';
 
 		if (is_dir($dir))
 			return $dir;
@@ -262,6 +296,18 @@ abstract class AiClient
 
 	public function chat(array $payload = array())
 	{
+		if ($this->openrouter_models && $this instanceof OpenRouterClient)
+		{
+			$openrouter_models = $this->openrouter_models;
+			$openrouter_model = array_shift($openrouter_models);
+
+			if ($openrouter_model && !isset($payload['model']))
+				$payload['model'] = $openrouter_model;
+
+			if ($openrouter_models && !isset($payload['models']))
+				$payload['models'] = $openrouter_models;
+		}
+
 		if (!isset($payload['model']))
 			$payload['model'] = $this->model;
 
