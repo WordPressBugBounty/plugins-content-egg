@@ -88,7 +88,7 @@ TemplateHelper::addShopInfoOffcanvases($items, $params);
 
                     <?php if ($item['_price_movers']['discount_percent'] > 0): ?>
                         <div class="text-danger fw-bolder">
-                            <span class="fs-5"><?php echo esc_html($item['_price_movers']['discount_percent']); ?></span>%</span>
+                            <span class="fs-5"><?php echo esc_html($item['_price_movers']['discount_percent']); ?>%</span>
                             <span class="fs-6">
                                 <?php TemplateHelper::esc_html_e('OFF'); ?>
                             </span>

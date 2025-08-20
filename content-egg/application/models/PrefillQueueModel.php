@@ -2,16 +2,16 @@
 
 namespace ContentEgg\application\models;
 
-use function ContentEgg\prnx;
-
 defined('\ABSPATH') || exit;
 
 /**
  * PrefillQueueModel handles background product prefill queue entries.
  *
- * @author keywordrush.com
+ * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
+ * @copyright Copyright &copy; 2025 keywordrush.com
  */
+
 class PrefillQueueModel extends Model
 {
     public function tableName()
@@ -31,9 +31,9 @@ class PrefillQueueModel extends Model
             processing_time FLOAT DEFAULT NULL,
             prompt_tokens INT UNSIGNED DEFAULT NULL,
             completion_tokens INT UNSIGNED DEFAULT NULL,
-            ai_cost DECIMAL(10,6) DEFAULT NULL,
+            ai_cost DECIMAL(16,10) DEFAULT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             UNIQUE KEY uq_post_id (post_id)
         ) %s;",
@@ -78,19 +78,20 @@ class PrefillQueueModel extends Model
         }
     }
 
-    public function addToQueue(int $post_id, string $config_key)
+    public function addToQueue($post_id, $config_key)
     {
         $data = [
             'post_id'    => $post_id,
             'config_key' => $config_key,
             'status'     => 'pending',
             'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql'),
         ];
 
         return $this->getDb()->replace($this->tableName(), $data) !== false;
     }
 
-    public function getNextBatch(int $limit = 3): array
+    public function getNextBatch($limit = 3)
     {
         $db = $this->getDb();
         $table = $this->tableName();
@@ -103,32 +104,17 @@ class PrefillQueueModel extends Model
         ) ?: [];
     }
 
-    public function markAsDone(int $post_id, string $log = '', ?float $processing_time = null, ?int $prompt_tokens = null, ?int $completion_tokens = null, ?float $ai_cost = null): bool
+    public function markAsDone($post_id, $log = '', $processing_time = null, $prompt_tokens = null, $completion_tokens = null, $ai_cost = null)
     {
         return $this->updateStatus($post_id, 'done', $log, $processing_time, $prompt_tokens, $completion_tokens, $ai_cost);
     }
 
-    public function markAsFailed(
-        int $post_id,
-        string $log = '',
-        ?float $processing_time = null,
-        ?int $prompt_tokens = null,
-        ?int $completion_tokens = null,
-        ?float $ai_cost = null
-    ): bool
+    public function markAsFailed($post_id, $log = '', $processing_time = null, $prompt_tokens = null, $completion_tokens = null, $ai_cost = null)
     {
         return $this->updateStatus($post_id, 'failed', $log, $processing_time, $prompt_tokens, $completion_tokens, $ai_cost);
     }
 
-    protected function updateStatus(
-        int $post_id,
-        string $status,
-        string $log = '',
-        ?float $processing_time = null,
-        ?int $prompt_tokens = null,
-        ?int $completion_tokens = null,
-        ?float $ai_cost = null
-    ): bool
+    protected function updateStatus($post_id, $status, $log = '', $processing_time = null)
     {
         $data = [
             'status'     => $status,
@@ -139,21 +125,6 @@ class PrefillQueueModel extends Model
         if ($processing_time !== null)
         {
             $data['processing_time'] = round($processing_time, 3);
-        }
-
-        if ($prompt_tokens !== null)
-        {
-            $data['prompt_tokens'] = $prompt_tokens;
-        }
-
-        if ($completion_tokens !== null)
-        {
-            $data['completion_tokens'] = $completion_tokens;
-        }
-
-        if ($ai_cost !== null)
-        {
-            $data['ai_cost'] = $ai_cost;
         }
 
         return $this->getDb()->update(
@@ -175,7 +146,7 @@ class PrefillQueueModel extends Model
         return $this->countByStatus('failed');
     }
 
-    public function countByStatus(string $status)
+    public function countByStatus($status)
     {
         return (int) $this->getDb()->get_var(
             $this->getDb()->prepare(
@@ -190,14 +161,14 @@ class PrefillQueueModel extends Model
         return $this->countPending() > 0;
     }
 
-    public function getLastUpdatedAt(): ?string
+    public function getLastUpdatedAt()
     {
         return $this->getDb()->get_var(
             "SELECT MAX(updated_at) FROM {$this->tableName()}"
         );
     }
 
-    public function countAll(): int
+    public function countAll()
     {
         return (int) $this->getDb()->get_var("SELECT COUNT(*) FROM {$this->tableName()}");
     }
@@ -212,7 +183,7 @@ class PrefillQueueModel extends Model
         $this->getDb()->delete($this->tableName(), ['status' => 'pending']);
     }
 
-    public function findByPostId(int $post_id): ?array
+    public function findByPostId($post_id)
     {
         $table = $this->tableName();
         return $this->getDb()->get_row(
@@ -221,7 +192,7 @@ class PrefillQueueModel extends Model
         );
     }
 
-    public function restartFailed(): int
+    public function restartFailed()
     {
         $db = $this->getDb();
         $table = $this->tableName();
@@ -231,6 +202,10 @@ class PrefillQueueModel extends Model
             [
                 'status' => 'pending',
                 'updated_at' => current_time('mysql'),
+                'processing_time' => 0,
+                'prompt_tokens' => 0,
+                'completion_tokens' => 0,
+                'ai_cost' => 0,
             ],
             ['status' => 'failed'],
             ['%s', '%s'],
@@ -238,5 +213,89 @@ class PrefillQueueModel extends Model
         );
 
         return (int) ($updated !== false ? $updated : 0);
+    }
+
+    /**
+     * Summarise and accumulate AI usage stats for a given post.
+     *
+     * @param int   $post_id
+     * @param array $stats    ['prompt_tokens'=>int, 'completion_tokens'=>int, 'ai_cost'=>float]
+     * @return bool
+     */
+    public function updateAiStat($post_id, array $stats)
+    {
+        if (!$stats)
+        {
+            return false;
+        }
+
+        $db    = $this->getDb();
+        $table = $this->tableName();
+
+        // Fetch existing values
+        $row = $db->get_row(
+            $db->prepare(
+                "SELECT prompt_tokens, completion_tokens, ai_cost FROM {$table} WHERE post_id = %d",
+                $post_id
+            ),
+            ARRAY_A
+        );
+        if (!$row)
+        {
+            return false;
+        }
+
+        // Compute new totals
+        $data   = [];
+        $formats = [];
+
+        $fields = [
+            'prompt_tokens'    => '%d',
+            'completion_tokens' => '%d',
+            'ai_cost'          => '%f',
+        ];
+
+        foreach ($fields as $key => $format)
+        {
+            if (! isset($stats[$key]))
+            {
+                continue;
+            }
+
+            // old value or zero
+            $old = isset($row[$key]) ? $row[$key] : 0;
+
+            // sum + cast
+            if ($key === 'ai_cost')
+            {
+                $sum = (float) $old + (float) $stats[$key];
+                $data[$key] = round($sum, 10);
+            }
+            else
+            {
+                $data[$key] = (int) $old + (int) $stats[$key];
+            }
+
+            $formats[] = $format;
+        }
+
+        if (empty($data))
+        {
+            return false;
+        }
+
+        $data['updated_at'] = current_time('mysql');
+        $formats[] = '%s';
+
+        $where   = ['post_id' => $post_id];
+        $where_formats = ['%d'];
+
+        return $db->update(
+            $table,
+            $data,
+            $where,
+            $formats,
+            $where_formats
+        ) !== false;
     }
 }

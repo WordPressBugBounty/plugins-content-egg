@@ -10,6 +10,7 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\FeaturedImage;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\admin\GeneralConfig;
+use ContentEgg\application\helpers\ProductHelper;
 
 use function ContentEgg\prn;
 use function ContentEgg\prnx;
@@ -394,14 +395,13 @@ class AutoblogModel extends Model
         else
             $slug = '';
 
-        if ((bool) $autoblog['post_status'])
-        {
-            $post_status = 'publish';
-        }
-        else
-        {
-            $post_status = 'pending';
-        }
+        // post status
+        $code = isset($autoblog['post_status'])
+            ? (int) $autoblog['post_status']
+            : 1;
+
+        $map = static::getPostStatusMap();
+        $post_status = $map[$code] ?? 'publish';
 
         // custom fields
         $meta_input = array();
@@ -536,144 +536,7 @@ class AutoblogModel extends Model
 
     public static function buildTemplate($template, array $modules_data, $keyword, $module_keywords = array(), $main_product = null)
     {
-        if (!$template)
-        {
-            return $template;
-        }
-
-        $template = TextHelper::spin($template);
-        if (!preg_match_all('/%[a-zA-Z0-9_\.\,\(\)]+%/', $template, $matches))
-        {
-            return $template;
-        }
-
-        $replace = array();
-
-        foreach ($matches[0] as $pattern)
-        {
-            // random
-            if (stristr($pattern, '%RANDOM'))
-            {
-                preg_match('/%RANDOM\((\d+),(\d+)\)%/', $pattern, $rmatches);
-                if ($rmatches)
-                {
-                    $replace[$pattern] = rand((int) $rmatches[1], (int) $rmatches[2]);
-                }
-                else
-                {
-                    $replace[$pattern] = rand(0, 9999999);
-                }
-                continue;
-            }
-
-            // keyword
-            if (stristr($pattern, '%KEYWORD%'))
-            {
-                $replace[$pattern] = $keyword;
-                continue;
-            }
-
-            // module keyword
-            if (stristr($pattern, '%KEYWORD.'))
-            {
-                $pattern_parts = explode('.', $pattern);
-                $module_id = rtrim($pattern_parts[1], '%');
-                $module_id = str_replace(' ', '', $module_id); // name -> id
-                if (isset($module_keywords[$module_id]))
-                {
-                    $replace[$pattern] = $module_keywords[$module_id];
-                }
-                else
-                {
-                    $replace[$pattern] = '';
-                }
-                continue;
-            }
-
-            // main product
-            if (stristr($pattern, '%PRODUCT.'))
-            {
-                if (!$main_product)
-                {
-                    $replace[$pattern] = '';
-                    continue;
-                }
-
-                $extra = false;
-                if (strstr($pattern, '.extra.'))
-                {
-                    $tpattern = str_replace('.extra.', '.', $pattern);
-                    $extra = true;
-                }
-                else
-                    $tpattern = $pattern;
-
-                $pattern_parts = explode('.', $tpattern);
-                $var_name = $pattern_parts[1];
-                $var_name = rtrim($var_name, '%');
-
-                if (!$extra && isset($main_product[$var_name]))
-                    $replace[$pattern] = $main_product[$var_name];
-                elseif ($extra && isset($main_product['extra'][$var_name]))
-                    $replace[$pattern] = $main_product['extra'][$var_name];
-                elseif ($extra && isset($main_product['extra']['data'][$var_name]))
-                    $replace[$pattern] = $main_product['extra']['data'][$var_name];
-            }
-
-            // module data
-            if (!stristr($pattern, '%PRODUCT.'))
-            {
-                $extra = false;
-                if (strstr($pattern, '.extra.'))
-                {
-                    $tpattern = str_replace('.extra.', '.', $pattern);
-                    $extra = true;
-                }
-                else
-                    $tpattern = $pattern;
-
-                $pattern_parts = explode('.', $tpattern);
-
-                if (count($pattern_parts) == 3 && is_numeric($pattern_parts[1]))
-                {
-                    $index = (int) $pattern_parts[1]; // Amazon.0.title
-                    $var_name = $pattern_parts[2];
-                }
-                elseif (count($pattern_parts) == 2)
-                {
-                    $index = 0; // Amazon.title
-                    $var_name = $pattern_parts[1];
-                }
-                else
-                {
-                    $replace[$pattern] = '';
-                    continue;
-                }
-                $module_id = ltrim($pattern_parts[0], '%');
-                $var_name = rtrim($var_name, '%');
-
-                if (array_key_exists($module_id, $modules_data) && isset($modules_data[$module_id][$index]))
-                {
-                    if (!$extra && property_exists($modules_data[$module_id][$index], $var_name))
-                        $replace[$pattern] = $modules_data[$module_id][$index]->$var_name;
-                    elseif ($extra && property_exists($modules_data[$module_id][$index]->extra, $var_name))
-                        $replace[$pattern] = $modules_data[$module_id][$index]->extra->$var_name;
-                    elseif ($extra && isset($modules_data[$module_id][$index]->extra->data[$var_name]))
-                        $replace[$pattern] = $modules_data[$module_id][$index]->extra->data[$var_name];
-                }
-            }
-
-            if (!isset($replace[$pattern]))
-                $replace[$pattern] = '';
-
-            if (!is_scalar($replace[$pattern]))
-                $replace[$pattern] = '';
-
-            if ($replace[$pattern] === null)
-                $replace[$pattern] = '';
-        }
-
-        return str_ireplace(array_keys($replace), array_values($replace), $template);
+        return ProductHelper::replacePatterns($template, $modules_data, $keyword, $module_keywords, $main_product);
     }
 
     public static function getNextKeywordId(array $keywords)
@@ -828,5 +691,25 @@ class AutoblogModel extends Model
             return true;
         else
             return false;
+    }
+
+    public static function getPostStatusOptions()
+    {
+        return [
+            1 => __('Published', 'content-egg'),
+            0 => __('Pending',   'content-egg'),
+            2 => __('Draft',     'content-egg'),
+            3 => __('Private',   'content-egg'),
+        ];
+    }
+
+    public static function getPostStatusMap()
+    {
+        return [
+            1 => 'publish',
+            0 => 'pending',
+            2 => 'draft',
+            3 => 'private',
+        ];
     }
 }

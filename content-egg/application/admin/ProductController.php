@@ -51,7 +51,16 @@ class ProductController
             $forced = true;
         else
             $forced = false;
+
         ProductModel::model()->maybeScanProducts($forced);
+
+        if ($forced)
+        {
+            $redirect_url = \admin_url('admin.php?page=' . self::slug);
+            \wp_safe_redirect($redirect_url);
+            exit;
+        }
+
         $table = new ProductTable(ProductModel::model());
         $table->prepare_items();
 
@@ -60,6 +69,8 @@ class ProductController
             $last_scaned_str = sprintf(__('%s ago', '%s = human-readable time difference', 'content-egg'), \human_time_diff($last_scaned, time()));
         else
             $last_scaned_str = TemplateHelper::dateFormatFromGmt($last_scaned, true);
+
+        \wp_enqueue_style('cegg-bootstrap5-full');
 
         PluginAdmin::getInstance()->render('product_index', array('table' => $table, 'last_scaned_str' => $last_scaned_str));
     }

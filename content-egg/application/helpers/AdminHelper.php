@@ -6,6 +6,7 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\Plugin;
 
 use function ContentEgg\prnx;
 
@@ -188,5 +189,166 @@ class AdminHelper
 			return true;
 		else
 			return false;
+	}
+
+	public static function getPostCategoryList()
+	{
+		$terms = \get_terms(array(
+			'taxonomy' => 'category',
+			'hide_empty' => false,
+		));
+
+		if (!$terms || \is_wp_error($terms))
+		{
+			return array();
+		}
+
+		$categories = array();
+
+		foreach ($terms as $term)
+		{
+			$categories[$term->term_id . '.'] = $term->name . ' [' . $term->term_id . ']';
+		}
+
+		return $categories;
+	}
+
+	public static function getSysAiWarning()
+	{
+		$has_ai_api_key = (bool) GeneralConfig::getInstance()->option('system_ai_key');
+
+		if (! $has_ai_api_key)
+		{
+			$openai_url = 'https://platform.openai.com/api-keys';
+			$settings_url = admin_url('admin.php?page=content-egg');
+
+			$ai_warning = sprintf(
+				'<div class="cegg-warning-box" role="alert">'
+					.   '<strong>%s</strong> %s '
+					.   '<a href="%s" target="_blank" rel="noopener noreferrer" class="cegg-link">%s</a>. '
+					.   '<a href="%s" class="cegg-link">%s</a>'
+					. '</div>',
+				esc_html__('Warning:',           'content-egg'),
+				esc_html__('You need to set up an', 'content-egg'),
+				esc_url($openai_url),
+				esc_html__('OpenAI API key',     'content-egg'),
+				esc_url($settings_url),
+				esc_html__('Go to Settings',     'content-egg')
+			);
+		}
+		else
+		{
+			$ai_warning = '';
+		}
+
+		return $ai_warning;
+	}
+
+	public static function getAiWarning()
+	{
+		$has_ai_api_key = (bool) GeneralConfig::getInstance()->option('ai_key');
+
+		if (! $has_ai_api_key)
+		{
+			$settings_url = admin_url('admin.php?page=content-egg');
+
+			$ai_warning = sprintf(
+				'<div class="cegg-warning-box" role="alert">'
+					. '<strong>%s</strong> %s <i>%s</i>. '
+					. '<a href="%s" class="cegg-link">%s</a>'
+					. '</div>',
+				esc_html__('Warning:', 'content-egg'),
+				esc_html__('You need to set up an', 'content-egg'),
+				esc_html__('AI API key', 'content-egg'),
+				esc_url($settings_url),
+				esc_html__('Go to Settings', 'content-egg')
+			);
+		}
+		else
+		{
+			$ai_warning = '';
+		}
+
+		return $ai_warning;
+	}
+
+	public static function echoPlaceholderDescription(): void
+	{
+		$text = esc_html__('Available placeholders:', 'content-egg');
+
+		$placeholders = [
+			'<code>%AI.title%</code>',
+			'<code>%AI.content%</code>',
+			'<code>%PRODUCT.title%</code>',
+			'<code>%PRODUCT.price%</code>',
+			'<code>%PRODUCT.domain%</code>',
+			'<code>%PRODUCT.url%</code>',
+			'<code>%PRODUCT.keyword%</code>',
+			'<code>%PRODUCT.ATTRIBUTE.attribute-name%</code>',
+			'<code>%RANDOM(1,10)%</code>',
+		];
+
+		$html = sprintf(
+			'<p class="description" style="margin-top: 0.8em;">%s %s</p>',
+			$text,
+			implode(', ', $placeholders)
+		);
+
+		echo wp_kses($html, [
+			'p'    => ['class' => true, 'style' => true],
+			'code' => [],
+		]);
+	}
+
+	public static function getProFeatureWarning(): string
+	{
+		if (Plugin::isPro())
+		{
+			return '';
+		}
+
+		$url = Plugin::pluginPricingUrl('ce_pro_badge', 'badge_click');
+		return sprintf(
+			'<a href="%s" target="_blank" class="cegg-pro-link">
+            <span class="cegg-badge cegg-badge-pro">PRO Feature</span>
+        </a>',
+			esc_url($url)
+		);
+	}
+
+	public static function redirect($url, $status = 302, $fallback = '')
+	{
+		$default = $fallback ?: home_url('/');
+
+		$location = wp_validate_redirect($url, $default);
+
+		if (! $location)
+		{
+			wp_die('Invalid redirect URL.');
+		}
+
+		if (! headers_sent())
+		{
+			wp_safe_redirect($location, $status);
+			exit;
+		}
+
+		// Fallback: headers already sent
+		nocache_headers();
+
+		$js_url = wp_json_encode($location);
+
+		echo '<!doctype html><html><head>';
+		printf(
+			'<meta http-equiv="refresh" content="%s">',
+			esc_attr('0;url=' . $location)
+		);
+		echo '</head><body>';
+		printf(
+			'<script>window.location.href=%s;</script>',
+			$js_url
+		);
+		echo '</body></html>';
+		exit;
 	}
 }

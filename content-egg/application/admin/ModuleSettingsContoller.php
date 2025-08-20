@@ -37,7 +37,7 @@ class ModuleSettingsContoller
 
     public function actionIndex()
     {
-        \wp_enqueue_style('egg-bootstrap', \ContentEgg\PLUGIN_RES . '/bootstrap/css/egg-bootstrap.min.css', array(), Plugin::version());
+        \wp_enqueue_style('cegg-bootstrap5-full', '', Plugin::version());
         PluginAdmin::getInstance()->render('module_index', array('modules' => ModuleManager::getInstance()->getConfigurableModules()));
     }
 

@@ -464,3 +464,82 @@ body .cegg_nomargin_components .components-range-control .components-base-contro
     box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
     border-color: #3083d5;
 }
+
+.egg-badge-pro {
+  display: inline-block;
+  padding: 0.35em 0.65em;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: #fff;
+  background-color: #ffc107;
+  border-radius: 0.375rem;
+  line-height: 1;
+  vertical-align: baseline;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 5px;
+}
+
+.cegg-warning-box {
+  background-color: #fff8e1;
+  border-left: 4px solid #ffecb3;
+  padding: 0.8em;
+  margin-bottom: 1em;
+  margin-top: 1em;
+  font-family: sans-serif;
+  font-size: 0.8em;
+}
+.cegg-warning-box strong {
+  color: #cc7a00;
+}
+.cegg-link {
+  color: #cc7a00 !important;
+  text-decoration: underline;
+}
+
+.cegg-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 10px;
+    border-radius: 3px;
+    color: #fff;
+    background-color: #999;
+}
+.cegg-badge-pro {
+    background-color: #00a32a;
+}
+
+.cegg-go-pro-link {
+    font-weight: bold;
+    color: #75b798;
+}
+
+.cegg-go-pro-link .dashicons {
+    font-size: 14px;
+    line-height: 1;
+    vertical-align: middle;
+    margin-left: 2px;
+}
+
+.cegg-queue-keyword {
+    color: #157347;
+}
+
+.cegg-log {
+  font-size: 0.9em;
+  color: #444;
+}
+.cegg-log-line + .cegg-log-line {
+  border-top: 1px dashed #ddd;
+  padding-top: 0.5em;
+  margin-top: 0;
+}
+
+.cegg-text-danger {
+    color: #d63638;
+}
+
+.cegg5-container .wp-list-table a {
+  text-decoration: none;
+  color: #0073aa;
+}

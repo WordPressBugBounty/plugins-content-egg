@@ -20,9 +20,9 @@ defined('\ABSPATH') || exit;
 class ImageHelper
 {
 
-	const DOWNLOAD_TIMEOUT = 5;
+	const DOWNLOAD_TIMEOUT = 10;
 	const USERAGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15';
-	const USERAGENT2 = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/110.0';
+	const USERAGENT2 = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:139.0) Gecko/20100101 Firefox/139.0';
 
 	public static function saveImgLocaly($img_uri, $title = '', $check_image_type = true)
 	{

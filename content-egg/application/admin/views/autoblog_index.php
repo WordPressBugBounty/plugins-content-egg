@@ -29,31 +29,41 @@ if ($table->current_action() == 'run')
     $message = '<div class="updated below-h2" id="message"><p>' . __('Autoblogging finished tasks', 'content-egg') . '</p></div>';
 ?>
 
-<?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
+<?php if (\ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
     <div class="cegg-maincol">
     <?php endif; ?>
 
-
     <div class="wrap">
+        <div class="cegg5-container">
+            <h2 class="h4 mb-2 mt-4" style="height: 30px;">
+                <?php esc_html_e('Autoblogging', 'content-egg'); ?>
+                <a class="add-new-h2" href="<?php echo esc_url_raw(get_admin_url(get_current_blog_id(), 'admin.php?page=content-egg-autoblog-edit')); ?>"><?php esc_html_e('Add autoblogging', 'content-egg'); ?></a>
+            </h2>
 
-        <h2>
-            <?php esc_html_e('Autoblogging', 'content-egg'); ?>
-            <a class="add-new-h2" href="<?php echo esc_url_raw(get_admin_url(get_current_blog_id(), 'admin.php?page=content-egg-autoblog-edit')); ?>"><?php esc_html_e('Add autoblogging', 'content-egg'); ?></a>
-        </h2>
-        <?php echo \wp_kses_post($message); ?>
+            <div class="alert alert-warning mt-3" role="alert">
+                <?php
+                printf(
+                    esc_html__('While the Autoblogging feature is now deprecated, it will remain available in the plugin for as long as needed. We recommend using the new %1$sAuto Import%2$s feature.', 'content-egg'),
+                    '<a href="' . esc_url(admin_url('admin.php?page=content-egg-product-import')) . '">',
+                    '</a>'
+                );
+                ?>
+            </div>
 
-        <div id="poststuff">
-            <p>
-            </p>
+            <?php echo \wp_kses_post($message); ?>
+
+            <div id="poststuff">
+                <p>
+                </p>
+            </div>
+
+            <form id="eggs-table" method="GET">
+                <input type="hidden" name="page" value="content-egg-autoblog" />
+                <?php $table->display() ?>
+            </form>
         </div>
 
-        <form id="eggs-table" method="GET">
-            <input type="hidden" name="page" value="content-egg-autoblog" />
-            <?php $table->display() ?>
-        </form>
-    </div>
-
-    <?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
+        <?php if (\ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
     </div>
     <?php include('_promo_box.php'); ?>
 <?php endif; ?>

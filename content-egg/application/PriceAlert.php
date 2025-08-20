@@ -327,7 +327,8 @@ class PriceAlert
         $total = 0;
         foreach ($data as $key => $d)
         {
-            if (empty($d['unique_id']) || empty($d['price']) || $d['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+            $stock_status = isset($d['stock_status']) ? $d['stock_status'] : ContentProduct::STOCK_STATUS_UNKNOWN;
+            if (empty($d['unique_id']) || empty($d['price']) || $stock_status == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
                 continue;
 
             // Price drops?

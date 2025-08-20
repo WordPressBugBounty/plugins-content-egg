@@ -170,11 +170,27 @@ class GeneralConfig extends Config
         return $options;
     }
 
-    private function getGeneralOptions()
+    public function getPostTypeList()
     {
         $post_types = get_post_types(array('public' => true), 'names');
-        if (isset($post_types['attachment']))
-            unset($post_types['attachment']);
+        $post_types = array_diff($post_types, array('attachment', 'revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache'));
+
+        foreach ($post_types as $k => $post_type)
+        {
+            $post_types[$k] = get_post_type_object($post_type)->labels->name;
+        }
+
+        return $post_types;
+    }
+
+    private function getGeneralOptions()
+    {
+        $post_types = self::getPostTypeList();
+
+        $clear_cache_url  = wp_nonce_url(
+            get_admin_url(get_current_blog_id(), 'admin.php?page=content-egg-tools&action=clear-logo-cache'),
+            'cegg_clear-logo-cache'
+        );
 
         return array(
             'post_types' => array(
@@ -255,21 +271,69 @@ class GeneralConfig extends Config
                 'default' => true,
                 'section' => __('General settings', 'content-egg'),
             ),
+            'logo_source' => [
+                'title'       => esc_html__('Logo Source', 'content-egg'),
+                'description' => sprintf(
+                    __('Choose the service for retrieving logos. Some providers may require attribution—please consult their documentation. %s', 'content-egg'),
+                    '<a href="' . esc_url($clear_cache_url) . '" title="' . esc_attr__('Clear all cached logos', 'content-egg') . '">'
+                        . esc_html__('Click here to purge cached logos', 'content-egg')
+                        . '</a>'
+                ),
+                'callback'         => [$this, 'render_dropdown'],
+                'dropdown_options' => [
+                    'clearbit'   => esc_html__('Clearbit', 'content-egg'),
+                    'brandfetch' => esc_html__('Brandfetch', 'content-egg'),
+                    'logodev'    => esc_html__('Logo.dev', 'content-egg'),
+                ],
+                'default'          => 'clearbit',
+                'section'          => esc_html__('General settings', 'content-egg'),
+            ],
+            'brandfetch_client_id' => array(
+                'title'       => __('Brandfetch Client ID', 'content-egg'),
+                'description' => sprintf(
+                    __('Enter your Client ID from <a href="%s" target="_blank" rel="noopener noreferrer">Brandfetch Developer Portal</a>.', 'content-egg'),
+                    'https://developers.brandfetch.com/dashboard/logo-link'
+                ),
+                'callback'    => array($this, 'render_input'),
+                'default'     => '',
+                'section'     => __('General settings', 'content-egg'),
+            ),
+            'logodev_key' => array(
+                'title'       => __('Logo.dev Token', 'content-egg'),
+                'description' => sprintf(
+                    __('Enter your API Token from <a href="%s" target="_blank" rel="noopener noreferrer">Logo.de Developer Portal</a>.', 'content-egg'),
+                    'https://www.logo.dev/dashboard'
+                ),
+                'callback'    => array($this, 'render_input'),
+                'default'     => '',
+                'section'     => __('General settings', 'content-egg'),
+            ),
+            'logo_hotlinking' => array(
+                'title'            => __('Enable Logo Hotlinking', 'content-egg'),
+                'description'      => __('Choose whether to hotlink logos directly from the provider’s servers or download and save them locally on your site.', 'content-egg'),
+                'callback'         => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'enabled'  => __('Hotlink (serve from provider)', 'content-egg'),
+                    'disabled' => __('Save locally', 'content-egg'),
+                ),
+                'default'          => 'disabled',
+                'section'          => __('General settings', 'content-egg'),
+            ),
+
         );
     }
 
     private function getAiOptions()
     {
         return array(
-            /*
             'system_ai_key' => array(
                 'title' => __('OpenAI API Key', 'content-egg') . ' <span style="color:red;">*</span>',
                 'description' => sprintf(
                     __('Paste your <a target="_blank" href="%1$s">OpenAI API key</a>.', 'content-egg'),
                     esc_url('https://platform.openai.com/api-keys')
                 ) .
-                    '<br>' . __('The key unlocks system AI-powered features such as the Product Prefill Tool.', 'content-egg') .
-                    '<br>' . __('The plugin uses the <code>gpt-4o-mini</code> model for the best balance of performance and cost.', 'content-egg') .
+                    '<br>' . __('The key enables system AI-powered features, including the Product Prefill Tool and Product Import Tools.', 'content-egg') .
+                    '<br>' . sprintf(__('The plugin uses the <code>%s</code> model for the best balance of performance and cost.', 'content-egg'), '<code>gpt-4o-mini</code>') .
                     '<br>' . __('Be sure your OpenAI account has sufficient credit.', 'content-egg'),
 
                 'callback' => array($this, 'render_password'),
@@ -282,9 +346,7 @@ class GeneralConfig extends Config
                 'description' => '<hr>',
                 'callback' => array($this, 'render_text'),
                 'section' => __('AI', 'content-egg'),
-
             ),
-            */
             'ai_language' => array(
                 'title' => __('Language', 'content-egg'),
                 'callback' => array($this, 'render_dropdown'),
@@ -300,9 +362,11 @@ class GeneralConfig extends Config
                 'dropdown_options' => self::getAiModelList(),
                 'default' => 'gpt-4o-mini',
                 'description' => __('Please be cautious with your model settings, as some AI models may be significantly more expensive than others.', 'content-egg') . '<br><br>' .
-                    __('Note: Our default prompts are optimized for OpenAI GPT and Claude models. Results may be unpredictable when using other models via OpenRouter.', 'content-egg'),
+                    __('Note: Our default prompts are optimized for OpenAI GPT and Claude models. Results may be unpredictable when using other models via OpenRouter.', 'content-egg') . '<br><br>' .
+                    __('For pricing details, please visit the <a href="https://platform.openai.com/docs/pricing" target="_blank">Pricing</a> page.', 'content-egg'),
                 'section' => __('AI', 'content-egg'),
             ),
+
             'ai_key' => array(
                 'title' => 'AI API key' . ' <span style="color:red;">*</span>',
                 'description' => sprintf(
@@ -341,6 +405,11 @@ class GeneralConfig extends Config
                 'default' => '0.75',
                 'section' => __('AI', 'content-egg'),
 
+            ),
+            'separator2' => array(
+                'description' => '<hr>',
+                'callback' => array($this, 'render_text'),
+                'section' => __('AI', 'content-egg'),
             ),
             'prompt1' => array(
                 'title' => sprintf(__('Custom prompt #%d', 'content-egg'), 1),
@@ -703,9 +772,33 @@ class GeneralConfig extends Config
                 'default' => '',
                 'section' => __('WooCommerce', 'content-egg'),
             ),
-            'sync_brand' => array(
+            'woocommerce_sync_gallery' => array(
+                'title' => __('Gallery Images', 'content-egg'),
+                'description' => __('Automatically sync product gallery images when available. Note: Gallery image support may vary by module.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    '' => __('Disabled', 'content-egg'),
+                    'external' => __('Use external URLs for additional images', 'content-egg'),
+                    'local' => __('Download images to the WP Media Library', 'content-egg'),
+                ),
+                'default' => 'external',
+                'section' => __('WooCommerce', 'content-egg'),
+            ),
+            'sync_woo_brand' => array(
                 'title' => __('Brand Taxonomy', 'content-egg'),
-                'description' => __('Sync manufacturer or store data with the Brand taxonomy in the ReHub theme.', 'content-egg'),
+                'description' => __('Sync manufacturer or store domain with the WooCommerce Brand taxonomy.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'brand' => __('Manufacturer', 'content-egg'),
+                    'store' => __('Store domain', 'content-egg'),
+                    'disabled' => __('Disabled', 'content-egg'),
+                ),
+                'default' => 'disabled',
+                'section' => __('WooCommerce', 'content-egg'),
+            ),
+            'sync_brand' => array(
+                'title' => __('ReHub Brand Mapping', 'content-egg'),
+                'description' => __('Sync manufacturer or store domain with the Brand taxonomy in the ReHub theme.', 'content-egg'),
                 'callback' => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
                     'brand' => __('Manufacturer', 'content-egg'),
@@ -796,7 +889,10 @@ class GeneralConfig extends Config
         $sent_price_alerts = PriceAlertModel::model()->count('status = ' . PriceAlertModel::STATUS_DELETED
             . ' AND TIMESTAMPDIFF( DAY, complet_date, "' . \current_time('mysql') . '") <= ' . PriceAlertModel::CLEAN_DELETED_DAYS);
 
-        $export_url = \get_admin_url(\get_current_blog_id(), 'admin.php?page=content-egg-tools&action=subscribers-export');
+        $export_url = wp_nonce_url(
+            get_admin_url(get_current_blog_id(), "admin.php?page=content-egg-tools&action=subscribers-export"),
+            "cegg_subscribers-export"
+        );
 
         return array(
             'price_history_days' => array(
@@ -816,8 +912,8 @@ class GeneralConfig extends Config
                 'section' => __('Price alerts', 'content-egg'),
             ),
             'price_drops_days' => array(
-                'title' => __('Price Drop Period', 'content-egg'),
-                'description' => __('Define the time period for tracking price drops, used in the Price Movers widget.', 'content-egg'),
+                'title' => __('Price Drop Tracking Window', 'content-egg'),
+                'description' => __('Set how far back to look when detecting price drops for the Price Movers widget. Products must have been updated within this timeframe.', 'content-egg'),
                 'callback' => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
                     '1.' => __('The last 1 day', 'content-egg'),
@@ -833,36 +929,41 @@ class GeneralConfig extends Config
                     '180.' => sprintf(__('The last %d days', 'content-egg'), 180),
                     '360.' => sprintf(__('The last %d days', 'content-egg'), 360),
                 ),
-                'default' => '30.',
+                'default' => '90.',
                 'section' => __('Price alerts', 'content-egg'),
             ),
             'price_alert_enabled' => array(
-                'title' => 'Price Alert',
-                'description' => __('Allow visitors to subscribe for email notifications on price drops.', 'content-egg') .
-                    '<p class="description">' . sprintf(__('Currently active subscriptions: <b>%d</b>.', 'content-egg'), $total_price_alerts) .
-                    ' ' . sprintf(__('Notifications are sent for the last %d days: <b>%d</b>', 'content-egg'), PriceAlertModel::CLEAN_DELETED_DAYS, $sent_price_alerts) . '.' .
-                    ' ' . sprintf(__('Export: [ <a href="%s">All</a> | <a href="%s">Active</a> ]', 'content-egg'), $export_url, $export_url . '&active_only=true') . '</p>' .
+                'title' => __('Enable Price Alerts', 'content-egg'),
+                'description' => __('Allow visitors to subscribe to email notifications when product prices drop.', 'content-egg') .
                     '<p class="description">' .
-                    __('"Price history" option must be enabled.', 'content-egg') . '<br>' .
-                    __('Recommendation: Go to Settings > Privacy and select a Privacy Policy page.', 'content-egg') .
+                    sprintf(__('Currently active subscriptions: <strong>%d</strong>.', 'content-egg'), $total_price_alerts) . '<br>' .
+                    sprintf(__('Notifications sent in the last %d days: <strong>%d</strong>.', 'content-egg'), PriceAlertModel::CLEAN_DELETED_DAYS, $sent_price_alerts) . '<br>' .
+                    sprintf(__('Export data: [<a href="%s">All</a> | <a href="%s">Active only</a>]', 'content-egg'), $export_url, $export_url . '&active_only=true') .
+                    '</p>' .
+                    '<p class="description">' .
+                    __('Note: The "Price history" option must be enabled for alerts to work.', 'content-egg') . '<br>' .
+                    __('Privacy recommendation: Go to Settings → Privacy and select a Privacy Policy page.', 'content-egg') .
                     '</p>',
                 'callback' => array($this, 'render_checkbox'),
-                'default' => true,
-                'section' => __('Price alerts', 'content-egg'),
+                'default'  => true,
+                'section'  => __('Price alerts', 'content-egg'),
             ),
+
             'price_alert_mode' => array(
-                'title' => __('Price Alert Mode', 'content-egg'),
+                'title' => __('Alert Trigger Scope', 'content-egg'),
+                'description' => __('Choose how price drop alerts should be triggered: per individual product or for any product within a post.', 'content-egg'),
                 'callback' => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
-                    'product' => __('Separate alerts for each product', 'content-egg'),
-                    'post' => __('General alert for all products within a post', 'content-egg'),
+                    'product' => __('Per product - alert for each product separately', 'content-egg'),
+                    'post'    => __('Per post - one alert for any product in the post', 'content-egg'),
                 ),
-                'default' => '',
+                'default' => 'product',
                 'section' => __('Price alerts', 'content-egg'),
             ),
+
             'from_name' => array(
-                'title' => __('From Name', 'content-egg'),
-                'description' => __('This name will appear in the From Name column of emails sent from CE plugin.', 'content-egg'),
+                'title' => __('Sender Name', 'content-egg'),
+                'description' => __('This name will be shown as the sender in the “From” field of all email alerts sent by the Content Egg plugin.', 'content-egg'),
                 'callback' => array($this, 'render_input'),
                 'default' => '',
                 'validator' => array(
@@ -872,8 +973,9 @@ class GeneralConfig extends Config
                 'section' => __('Price alerts', 'content-egg'),
             ),
             'from_email' => array(
-                'title' => __('From Email', 'content-egg'),
-                'description' => __('Customize the From Email address.', 'content-egg') . ' ' . __('To avoid your email being marked as spam, it is recommended your "from" match your website.', 'content-egg'),
+                'title' => __('Sender Email Address', 'content-egg'),
+                'description' => __('This email address will appear in the “From” field of all email alerts.', 'content-egg') . ' ' .
+                    __('To reduce the risk of emails being marked as spam, use an address that matches your website domain.', 'content-egg'),
                 'callback' => array($this, 'render_input'),
                 'default' => '',
                 'validator' => array(
@@ -881,45 +983,59 @@ class GeneralConfig extends Config
                     'allow_empty',
                     array(
                         'call' => array('\ContentEgg\application\helpers\FormValidator', 'valid_email'),
-                        'message' => sprintf(__('Field "%s" filled with wrong data.', 'content-egg'), 'Email'),
+                        'message' => __('The email address is not valid.', 'content-egg'),
                     ),
                 ),
                 'section' => __('Price alerts', 'content-egg'),
             ),
+
             'email_template_activation' => array(
-                'title' => __('Activation Email Template', 'content-egg'),
-                'description' => sprintf(__('Use the following tags: %s.', 'content-egg'), '%POST_ID%, %POST_URL%, %POST_TITLE%, %PRODUCT_TITLE%, %VALIDATE_URL%, %UNSUBSCRIBE_URL%') .
-                    '<br>' . sprintf(__('%s is required tag.', 'content-egg'), '%VALIDATE_URL%') . ' ' .
-                    sprintf(__('Use like %s.', 'content-egg'), \esc_html('<a href="%VALIDATE_URL%">%VALIDATE_URL%</a>')),
+                'title' => __('Activation Email Content Template', 'content-egg'),
+                'description' => sprintf(
+                    __('You can use the following tags in your email template: %s.', 'content-egg'),
+                    '%POST_ID%, %POST_URL%, %POST_TITLE%, %PRODUCT_TITLE%, %VALIDATE_URL%, %UNSUBSCRIBE_URL%'
+                ) .
+                    '<br>' .
+                    sprintf(__('%s is a required tag.', 'content-egg'), '%VALIDATE_URL%') . ' ' .
+                    sprintf(__('Example usage: %s', 'content-egg'), \esc_html('<a href="%VALIDATE_URL%">%VALIDATE_URL%</a>')),
                 'callback' => array($this, 'render_textarea'),
-                'default' => '',
-                'section' => __('Price alerts', 'content-egg'),
+                'default'  => '',
+                'section'  => __('Price alerts', 'content-egg'),
                 'validator' => array(
                     '\wp_kses_post',
                     'trim',
                 ),
             ),
+
             'email_template_alert' => array(
-                'title' => __('Price Alert Email Template', 'content-egg'),
-                'description' => sprintf(__('Use the following tags: %s.', 'content-egg'), '%POST_ID%, %POST_URL%, %POST_TITLE%, %PRODUCT_TITLE%, %START_PRICE%, %DESIRED_PRICE%, %CURRENT_PRICE%, %SAVED_AMOUNT%, %SAVED_PERCENTAGE%, %UPDATE_DATE%, %UNSUBSCRIBE_URL%'),
+                'title' => __('Price Alert Email Content Template', 'content-egg'),
+                'description' => sprintf(
+                    __('You can use the following tags in your email template: %s.', 'content-egg'),
+                    '%POST_ID%, %POST_URL%, %POST_TITLE%, %PRODUCT_TITLE%, %START_PRICE%, %DESIRED_PRICE%, %CURRENT_PRICE%, %SAVED_AMOUNT%, %SAVED_PERCENTAGE%, %UPDATE_DATE%, %UNSUBSCRIBE_URL%'
+                ) .
+                    '<br>' .
+                    __('Use these tags to personalize alert emails when a price drops below the user’s desired amount.', 'content-egg'),
                 'callback' => array($this, 'render_textarea'),
-                'default' => '',
-                'section' => __('Price alerts', 'content-egg'),
+                'default'  => '',
+                'section'  => __('Price alerts', 'content-egg'),
                 'validator' => array(
                     '\wp_kses_post',
                     'trim',
                 ),
             ),
+
             'email_signature' => array(
                 'title' => __('Email Signature', 'content-egg'),
+                'description' => __('Add a custom signature that will appear at the bottom of all price alert emails. You may include text, links, or basic HTML.', 'content-egg'),
                 'callback' => array($this, 'render_textarea'),
-                'default' => '',
-                'section' => __('Price alerts', 'content-egg'),
+                'default'  => '',
+                'section'  => __('Price alerts', 'content-egg'),
                 'validator' => array(
                     '\wp_kses_post',
                     'trim',
                 ),
             ),
+
         );
     }
 
@@ -1103,6 +1219,9 @@ class GeneralConfig extends Config
             $res[$key] = $model['name'];
         }
 
+        asort($res);
+        $res = array_reverse($res, true);
+
         return $res;
     }
 
@@ -1130,6 +1249,8 @@ class GeneralConfig extends Config
 
     public function settings_page()
     {
+
+        \wp_enqueue_style('cegg-bootstrap5-full', '', Plugin::version());
         \wp_enqueue_script('jquery-ui-tabs');
         \wp_enqueue_style('contentegg-admin-ui-css', \ContentEgg\PLUGIN_RES . '/css/jquery-ui.min.css', false, \ContentEgg\application\Plugin::version);
 
@@ -1350,5 +1471,28 @@ class GeneralConfig extends Config
     public function openRouterModelsFilter($value)
     {
         return TextHelper::commaList($value);
+    }
+
+    public function importOptions(array $options): array
+    {
+        $optionName = $this->option_name();
+
+        if (empty($options[$optionName]) || ! is_array($options[$optionName]))
+        {
+            return [];
+        }
+
+        $incoming = $options[$optionName];
+        $current  = $this->getOptionValues();
+
+        $filtered = array_intersect_key($incoming, $current);
+        $merged   = array_merge($current, $filtered);
+
+        if (update_option($optionName, $merged))
+        {
+            return [$optionName => $merged];
+        }
+
+        return [];
     }
 }

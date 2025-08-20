@@ -48,35 +48,16 @@ class AiProcessor
 
     public static function applayAiItem(array $item, $title_method = '', $description_method = '')
     {
-        if (!$api_key = GeneralConfig::getInstance()->option('ai_key'))
+        if (!GeneralConfig::getInstance()->option('ai_key'))
             return $item;
 
         if (!$title_method && !$description_method)
             return $item;
 
-        $lang = GeneralConfig::getInstance()->option('ai_language');
-        $temperature = GeneralConfig::getInstance()->option('ai_temperature');
-        $model = GeneralConfig::getInstance()->option('ai_model');
-
-        $api_key = explode(',', $api_key);
-        $api_key = trim($api_key[array_rand($api_key)]);
-
-        if ($model == 'openrouter/auto')
-        {
-            $openrouter_models_value = GeneralConfig::getInstance()->option('openrouter_models');
-            $openrouter_models = TextHelper::getArrayFromCommaList($openrouter_models_value);
-        }
-        else
-        {
-            $openrouter_models = array();
-        }
-
-        $prompt = new ProductPrompt($api_key, $model, $openrouter_models);
+        $prompt = self::createProductPrompt();
 
         $prompt->setProduct($item);
         $prompt->setProductNew($item);
-        $prompt->setLang($lang);
-        $prompt->setTemperature($temperature);
 
         if (\ContentEgg\application\Plugin::isDevEnvironment())
             mt_srand(12345678);
@@ -153,6 +134,35 @@ class AiProcessor
         }
 
         return $item;
+    }
+
+    public static function createProductPrompt(): ProductPrompt
+    {
+        $config    = GeneralConfig::getInstance();
+        $apiKeys   = explode(',', $config->option('ai_key'));
+        $api_key   = trim($apiKeys[array_rand($apiKeys)]);
+        $model     = $config->option('ai_model');
+        $lang      = $config->option('ai_language');
+        $temp      = $config->option('ai_temperature');
+        $extraOpts = [];
+
+        if ($model === 'openrouter/auto')
+        {
+            $openList   = $config->option('openrouter_models');
+            $extraOpts  = TextHelper::getArrayFromCommaList($openList);
+        }
+
+        // reproducible in dev
+        if (\ContentEgg\application\Plugin::isDevEnvironment())
+        {
+            mt_srand(12345678);
+        }
+
+        $prompt = new ProductPrompt($api_key, $model, $extraOpts);
+        $prompt->setLang($lang);
+        $prompt->setTemperature($temp);
+
+        return $prompt;
     }
 
     public static function applaySmartGroups(array $data, $method)

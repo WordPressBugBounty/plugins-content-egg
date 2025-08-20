@@ -7,13 +7,19 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\admin\GeneralConfig;
+use ContentEgg\application\admin\import\ImportQueueApi;
+use ContentEgg\application\admin\import\PresetRepository;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ModuleApi;
 use ContentEgg\application\components\LManager;
 use ContentEgg\application\components\ReviewNotice;
 use ContentEgg\application\components\FeaturedImage;
+use ContentEgg\application\Installer;
 use ContentEgg\application\ModuleUpdateScheduler;
 use ContentEgg\application\SystemScheduler;
+
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
 
 /**
  * PluginAdmin class file
@@ -62,18 +68,21 @@ class PluginAdmin
 
         if (Plugin::isFree() || (Plugin::isPro() && Plugin::isActivated()) || Plugin::isEnvato())
         {
+            PresetRepository::init();
             GeneralConfig::getInstance()->adminInit();
             ModuleManager::getInstance()->adminInit();
             new ModuleSettingsContoller;
+            new ProductImportController;
+            new ProductPrefillController;
             new ProductController;
             new EggMetabox;
             new ModuleApi;
             new FeaturedImage;
-            new PrefillController;
-            new AutoblogController;
             new ToolsController;
-            new ImportExportController;
+            ImportQueueApi::init();
             AeIntegrationConfig::getInstance()->adminInit();
+            new AutoblogController;
+            ProUpsellLinks::init();
             ModuleUpdateScheduler::addScheduleEvent('ten_min');
         }
 
@@ -84,7 +93,7 @@ class PluginAdmin
 
         if (Plugin::isPro() && Plugin::isActivated())
         {
-            new \ContentEgg\application\Autoupdate(Plugin::version(), plugin_basename(\ContentEgg\PLUGIN_FILE), Plugin::getApiBase(), Plugin::slug);
+            new \ContentEgg\application\Autoupdate(Plugin::version(), plugin_basename(\ContentEgg\PLUGIN_FILE), Installer::getApiUrl(), Plugin::slug);
         }
     }
 
@@ -160,5 +169,13 @@ class PluginAdmin
             $plugin_page = Plugin::slug();
 
         return $file;
+    }
+
+    public static function res(string $relativePath): string
+    {
+        $base = rtrim(\ContentEgg\PLUGIN_RES, '/');
+        $path = ltrim($relativePath, '/');
+
+        return "{$base}/{$path}";
     }
 }

@@ -344,9 +344,13 @@ abstract class TemplateManager
     public function enqueueCeggStyle($full = false)
     {
         if (!is_admin() && self::$product_style5_enqueued_full)
+        {
             return;
+        }
         elseif (!is_admin() && !$full && self::$product_style5_enqueued)
+        {
             return;
+        }
 
         if ($full)
         {
@@ -362,7 +366,9 @@ abstract class TemplateManager
         \wp_enqueue_style('cegg-products');
 
         if ($css = self::getVariantCss())
+        {
             \wp_add_inline_style('cegg-products', $css);
+        }
     }
 
     private static function getPrimaryColorBackwardCompatibility()

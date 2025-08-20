@@ -51,7 +51,6 @@ class ProductTable extends MyListTable
         $actions = array(
             'post_id' => sprintf(__('Post ID: %d', 'content-egg'), $item['post_id']),
             'view' => sprintf('<a href="%s">%s</a>', \get_post_permalink($item['post_id']), __('View', 'content-egg')),
-
             'edit' => sprintf('<a href="%s">%s</a>', \esc_url($edit_link), __('Edit', 'content-egg')),
         );
         if ($item['url'])

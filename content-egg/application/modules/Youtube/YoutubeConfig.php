@@ -35,7 +35,7 @@ class YoutubeConfig extends ParserModuleConfig
 			),
 			'entries_per_page'        => array(
 				'title'       => __('Results', 'content-egg'),
-				'description' => __('Number of results for a single query', 'content-egg'),
+				'description' => __('Specify the number of results to display for a single search query', 'content-egg'),
 				'callback'    => array($this, 'render_input'),
 				'default'     => '5',
 				'validator'   => array(
@@ -45,8 +45,8 @@ class YoutubeConfig extends ParserModuleConfig
 				'section'     => 'default',
 			),
 			'entries_per_page_update' => array(
-				'title'       => __('Results for autoblogging ', 'content-egg'),
-				'description' => __('Number of results for autoblogging.', 'content-egg'),
+				'title'       => __('Results for autoupdates ', 'content-egg'),
+				'description' => __('Maximum number of results returned for keyword autoupdates and other automatic searches.', 'content-egg'),
 				'callback'    => array($this, 'render_input'),
 				'default'     => 3,
 				'validator'   => array(

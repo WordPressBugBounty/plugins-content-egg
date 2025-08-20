@@ -20,19 +20,41 @@
 $message = '';
 ?>
 
-<?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
+<?php if (\ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
     <div class="cegg-maincol">
     <?php endif; ?>
 
     <div class="wrap">
-        <h1 class="wp-heading-inline">
-            <?php esc_html_e('Products', 'content-egg'); ?>
-        </h1>
-        <a id="btn_scan_products" href="<?php echo esc_url_raw(\get_admin_url(\get_current_blog_id(), 'admin.php?page=content-egg-product&action=scan')); ?>" class="page-title-action"><?php esc_html_e('Scan Products', 'content-egg'); ?></a>
-        &nbsp;<small><?php echo esc_html(sprintf(__('Last scanned: %s', 'content-egg'), $last_scaned_str)); ?></small>
 
+        <div class="cegg5-container">
+            <h1 class="wp-heading-inline h3">
+                <?php esc_html_e('Products', 'content-egg'); ?>
+            </h1>
+            <a
+                id="btn_scan_products"
+                href="<?php echo esc_url(admin_url('admin.php?page=content-egg-product&action=scan')); ?>"
+                class="page-title-action">
+                <?php esc_html_e('Scan Products', 'content-egg'); ?>
+            </a>
+
+            <p class="description">
+                <?php
+                /* translators: %s: date/time of last scan */
+                printf(
+                    esc_html__('Last scanned: %s', 'content-egg'),
+                    esc_html($last_scaned_str)
+                );
+                ?>
+            </p>
+
+            <p>
+                <?php esc_html_e(
+                    'This page displays all Content Egg products you’ve added across your posts.',
+                    'content-egg'
+                ); ?>
+            </p>
+        </div>
         <?php echo wp_kses_post($message); ?>
-
 
         <form id="cegg-products-table" method="GET">
             <input type="hidden" name="page" value="content-egg-product" />
@@ -45,7 +67,7 @@ $message = '';
         </form>
     </div>
 
-    <?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
+    <?php if (\ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
     </div>
     <?php include('_promo_box.php'); ?>
 <?php endif; ?>

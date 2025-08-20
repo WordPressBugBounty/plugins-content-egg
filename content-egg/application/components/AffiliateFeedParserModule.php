@@ -7,6 +7,10 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TextHelper;
+use ContentEgg\application\Plugin;
+use \ContentEgg\application\vendor\XmlStringStreamer\Parser\StringWalker;
+use \ContentEgg\application\vendor\XmlStringStreamer\Stream\File;
+use \ContentEgg\application\vendor\XmlStringStreamer\XmlStringStreamer;
 
 use function ContentEgg\prn;
 use function ContentEgg\prnx;
@@ -20,16 +24,16 @@ use function ContentEgg\prnx;
  */
 abstract class AffiliateFeedParserModule extends AffiliateParserModule
 {
-
     const TRANSIENT_LAST_IMPORT_DATE = 'cegg_products_last_import_';
     const PRODUCTS_TTL = 43200;
-    const MULTIPLE_INSERT_ROWS = 50;
+    const MULTIPLE_INSERT_ROWS = 100;
     const IMPORT_TIME_LIMT = 600;
     const DATAFEED_DIR_NAME = 'cegg-datafeeds';
     const TRANSIENT_LAST_IMPORT_ERROR = 'cegg_last_import_error_';
 
     protected $rmdir;
     protected $product_model;
+    protected $product_node;
 
     abstract public function getProductModel();
 
@@ -119,6 +123,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
     public function setLastImportError($error)
     {
+        $error = TextHelper::truncate($error, 500);
         \set_transient(self::TRANSIENT_LAST_IMPORT_ERROR . $this->getId(), $error);
     }
 
@@ -137,9 +142,15 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         if ($this->isImportTime())
         {
-            // set in progress flag
+            // remove shedule if exists
+            $hook = 'cegg_' . $this->getId() . '_init_products';
+            if (\wp_next_scheduled($hook, array('module_id' => $this->getId())))
+            {
+                \wp_unschedule_event(\wp_next_scheduled($hook, array('module_id' => $this->getId())), $hook, array('module_id' => $this->getId()));
+            }
+
             $this->deleteTemporaryFiles();
-            $this->setLastImportDate(time() * -1);
+            $this->setLastImportDate(time() * -1); // set in progress flag
             $this->maybeCreateProductTable();
 
             if (!$this->product_model->isTableExists())
@@ -155,8 +166,8 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
     public function getProductsTtl()
     {
-        $ttl = \apply_filters('cegg_feed_products_ttl', self::PRODUCTS_TTL);
-        $ttl = \apply_filters('cegg_feed_products_module_ttl', $ttl, $this->getId());
+        $ttl = (int) \apply_filters('cegg_feed_products_ttl', self::PRODUCTS_TTL);
+        $ttl = (int) \apply_filters('cegg_feed_products_module_ttl', $ttl, $this->getId());
         return $ttl;
     }
 
@@ -185,7 +196,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         $this->setLastImportError('');
         register_shutdown_function(array($this, 'fatalHandler'));
         $this->product_model->truncateTable();
-        $file = $this->downlodFeed($feed_url);
+        $file = $this->downloadFeed($feed_url);
 
         $this->processFeed($file);
         $this->setLastImportDate();
@@ -198,123 +209,271 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         }
     }
 
-    protected function downlodFeed($feed_url)
+    /**
+     * Download (and—if zipped—unzip) a feed in the most memory-efficient way.
+     *
+     * @param string $feed_url
+     * @return string Absolute path to the downloaded (or extracted) file.
+     * @throws Exception On failure to download or extract.
+     */
+    protected function downloadFeed(string $feed_url): string
     {
-        if (!function_exists('\download_url'))
+        if (! function_exists('download_url'))
         {
-            require_once(ABSPATH . "wp-admin" . '/includes/file.php');
+            require_once ABSPATH . 'wp-admin/includes/file.php';
         }
 
-        $tmp = \download_url($feed_url, 900);
-        if (\is_wp_error($tmp))
+        $tmp_file = \download_url($feed_url, 900);
+        if (\is_wp_error($tmp_file))
         {
             $this->setLastImportDate(0);
-            throw new \Exception(sprintf('Feed URL could not be downloaded: %s.', $tmp->get_error_message()));
+            throw new \Exception(sprintf(
+                'Failed to download feed URL: %s',
+                $tmp_file->get_error_message()
+            ));
         }
 
-        if (!$this->isZippedFeed())
+        // 3) If it’s not a ZIP, return the downloaded path
+        if (! $this->isZippedFeed())
         {
-            return $tmp;
+            return $tmp_file;
         }
-        else
+
+        // 4) ZIP → extract
+        $dest_dir = trailingslashit($this->getDatafeedDir())
+            . wp_unique_filename($this->getDatafeedDir(), basename($tmp_file) . '-unzipped-dir');
+
+        $result = $this->unzipSingleFeed($tmp_file, $dest_dir);
+        if (is_wp_error($result))
         {
-            return $this->unzipFeed($tmp);
+            @unlink($tmp_file);
+            $this->setLastImportDate(0);
+            throw new \Exception(sprintf(
+                'Unable to unzip feed archive: %s',
+                $result->get_error_message()
+            ));
         }
+
+        // 5) Cleanup the original downloaded ZIP
+        @unlink($tmp_file);
+
+        // 6) Store for later cleanup, return the extracted file path
+        $this->rmdir = $dest_dir;
+        return $result;
     }
 
-    protected function unzipFeed($file)
+    /**
+     * Safely and efficiently unzip a single feed file.
+     *
+     * @param string      $zip_path    Absolute path to the .zip file.
+     * @param string      $dest_dir    Absolute path to the directory that should receive the file.
+     * @param string|null $feed_inside Optional. Exact relative path (inside the ZIP) of the entry to extract.
+     *                                 Leave null to auto-detect the first regular file.
+     * @return string|\WP_Error Absolute path to the extracted feed file, or WP_Error on failure.
+     */
+    protected function unzipSingleFeed($zip_path, $dest_dir, $feed_inside = null)
     {
-        if (!function_exists('\unzip_file'))
+        if (! file_exists($zip_path) || ! is_readable($zip_path))
         {
-            require_once(ABSPATH . 'wp-admin/includes/file.php');
+            return new \WP_Error('zip_not_found', 'ZIP file does not exist or is not readable.');
+        }
+        if (! wp_mkdir_p($dest_dir))
+        {
+            return new \WP_Error('dest_dir_unwritable', 'Destination directory is not writable.', $dest_dir);
+        }
+
+        /** ------------------------------------------------------------------
+         *  FAST PATH – use ZipArchive if available (streams, no memory spike)
+         * ----------------------------------------------------------------- */
+        if (class_exists('\ZipArchive'))
+        {
+            $zip = new \ZipArchive();
+            $opened = $zip->open($zip_path, \ZipArchive::CHECKCONS);
+            if (true !== $opened)
+            {
+                return new \WP_Error('zip_open_failed', 'Could not open ZIP archive.', $opened);
+            }
+
+            // 1. Decide which entry we will extract.
+            if (empty($feed_inside))
+            {
+                for ($i = 0; $i < $zip->numFiles; $i++)
+                {
+                    $info = $zip->statIndex($i);
+                    if (! $info || str_ends_with($info['name'], '/') || str_starts_with($info['name'], '__MACOSX/'))
+                    {
+                        continue;               // skip directories & Mac resource forks
+                    }
+                    if (0 !== validate_file($info['name']))
+                    {
+                        continue;               // invalid path ­→ skip
+                    }
+                    $feed_inside = $info['name'];
+                    break;
+                }
+            }
+            elseif (false === $zip->locateName($feed_inside, \ZipArchive::FL_NOCASE))
+            {
+                $zip->close();
+                return new \WP_Error('entry_not_found', 'Requested file does not exist in the archive.', $feed_inside);
+            }
+
+            if (empty($feed_inside))
+            {
+                $zip->close();
+                return new \WP_Error('no_valid_entry', 'No valid feed file found inside the archive.');
+            }
+
+            // 2. Extract just that entry.
+            if (! $zip->extractTo($dest_dir, $feed_inside))
+            {
+                $zip->close();
+                return new \WP_Error('extract_failed', 'Could not extract file from archive.', $feed_inside);
+            }
+            $zip->close();
+
+            return trailingslashit($dest_dir) . basename($feed_inside);
+        }
+
+        /** ------------------------------------------------------------------
+         *  FALLBACK – ZipArchive missing → use WordPress unzip_file()
+         * ----------------------------------------------------------------- */
+
+        if (! function_exists('unzip_file'))
+        {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+
+        if (! function_exists('WP_Filesystem'))
+        {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
         }
 
         global $wp_filesystem;
-        if (!$wp_filesystem)
+        if (! $wp_filesystem || ! is_a($wp_filesystem, '\WP_Filesystem_Base'))
         {
-            require_once(ABSPATH . '/wp-admin/includes/file.php');
-            \WP_Filesystem();
+            WP_Filesystem();
         }
 
-        $to = trailingslashit($this->getDatafeedDir()) . basename($file) . '-unzipped-dir';
-        if (!$to)
+        $result  = unzip_file($zip_path, $dest_dir);
+        if (is_wp_error($result))
         {
-            throw new \Exception('Temporary directory does not exist.');
+            return $result; // propagate core error
         }
 
-        $result = \unzip_file($file, $to);
-        @unlink($file);
-        if (\is_wp_error($result))
+        // Locate the feed file we want inside the temporary extraction tree.
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dest_dir, \RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+        $found = null;
+        foreach ($iterator as $fileinfo)
         {
-            $this->setLastImportDate(0);
-            throw new \Exception(sprintf('Unable to unzip feed archive: %s.', $result->get_error_message()));
+            if ($fileinfo->isDir())
+            {
+                continue;
+            }
+            if (
+                empty($feed_inside) ||
+                $fileinfo->getFilename() === basename($feed_inside) ||
+                wp_normalize_path($fileinfo->getPathname()) === wp_normalize_path(trailingslashit($dest_dir) . $feed_inside)
+            )
+            {
+                $found = $fileinfo->getPathname();
+                break;
+            }
+        }
+        if (! $found)
+        {
+            return new \WP_Error('entry_not_found', 'Requested file does not exist in the archive.', $feed_inside);
         }
 
-        $scanned = array_values(array_diff(scandir($to), array('..', '.')));
-        if (!$scanned || !isset($scanned[0]))
+        $dest_file = trailingslashit($dest_dir) . basename($found);
+
+        if (! rename($found, $dest_file))
         {
-            $this->setLastImportDate(0);
-            throw new \Exception('Unable to find unziped feed.');
+            return new \WP_Error('move_failed', 'Could not move extracted file to destination.');
         }
 
-        $this->rmdir = $to;
-
-        return $to . DIRECTORY_SEPARATOR . $scanned[0];
+        return $dest_file;
     }
 
-    protected function processFeed($file)
+    protected function processFeed(string $file): void
     {
-        $format = $this->config('feed_format', 'csv');
-        if ($format == 'xml')
+        $format = strtolower(trim($this->config('feed_format', 'csv')));
+
+        switch ($format)
         {
-            $this->processFeedXml($file);
-        }
-        elseif ($format == 'json')
-        {
-            $this->processFeedJson($file);
-        }
-        else
-        {
-            $this->processFeedCsv($file);
+            case 'xml':
+                $this->processFeedXml($file);
+                break;
+
+            case 'json':
+                $this->processFeedJson($file);
+                break;
+
+            case 'csv':
+                $this->processFeedCsv($file);
+                break;
+
+            default:
+                throw new \InvalidArgumentException(sprintf(
+                    'Unsupported feed format: %s',
+                    esc_html($format)
+                ));
         }
     }
 
     protected function processFeedCsv($file)
     {
         $encoding = $this->config('encoding', 'UTF-8');
-
-        $handle = fopen($file, "r");
-        $fields = array();
-        $products = array();
-
-        $delimer = $this->detectCsvDelimiter($file);
+        $csv_settings = $this->detectCsvSettings($file);
+        $delimiter = $csv_settings['delimiter'];
+        $enclosure = $csv_settings['enclosure'];
         $in_stock_only = $this->config('in_stock', false);
-        $i = 0;
-        while (($data = fgetcsv($handle, 0, $delimer)) !== false)
+
+        $handle = fopen($file, 'r');
+
+        if (!$handle)
         {
-            if ($encoding == 'ISO-8859-1')
-            {
-                $data = array_map('utf8_encode', $data);
-            }
+            $this->setLastImportError('Cannot open CSV file.');
+            return;
+        }
+
+        $fields   = [];
+        $products = [];
+
+        $inserted = 0;
+
+        $skipped = [
+            'invalid_column_count' => 0,
+            'exception'            => 0,
+            'empty_product'        => 0,
+            'out_of_stock'         => 0,
+        ];
+
+        while (($data = fgetcsv($handle, 0, $delimiter, $enclosure)) !== false)
+        {
+            $data = self::convertEncoding($data, $encoding);
 
             if (!$fields)
             {
-                $data = str_replace("\xEF\xBB\xBF", '', $data);
-            }
-
-            $data = array_map(function ($item)
-            {
-                return trim((string)$item, ' \'');
-            }, $data);
-
-            if (!$fields)
-            {
-                $fields = $data;
+                // first row → header
+                $data   = str_replace("\xEF\xBB\xBF", '', $data);   // strip BOM
+                $fields = array_map('trim', $data);
                 continue;
             }
 
-            if (count($fields) != count($data))
+            $data = array_map(static fn($item) => trim((string)$item, " '"), $data);
+
+            // ignore unnamed columns
+            if (count($data) > count($fields))
             {
+                $data = array_slice($data, 0, count($fields));
+            }
+
+            if (count($fields) !== count($data))
+            {
+                ++$skipped['invalid_column_count'];
                 continue;
             }
 
@@ -326,18 +485,20 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             }
             catch (\Exception $e)
             {
-                if ($i > 0)
+                if ($inserted > 0)
                 {
+                    ++$skipped['exception'];
                     continue;
                 }
+
                 $this->setLastImportError($e->getMessage());
                 fclose($handle);
-
                 return;
             }
 
             if (!$product)
             {
+                ++$skipped['empty_product'];
                 continue;
             }
 
@@ -346,31 +507,53 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 $product['ean'] = TextHelper::fixEan($product['ean']);
             }
 
-            if ($in_stock_only && $product['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+            if (
+                $in_stock_only &&
+                $product['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK
+            )
             {
+                ++$skipped['out_of_stock'];
                 continue;
             }
 
             $products[] = $product;
-            $i++;
-            if ($i % static::MULTIPLE_INSERT_ROWS == 0)
+            ++$inserted;
+
+            if ($inserted % static::MULTIPLE_INSERT_ROWS === 0)
             {
                 $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
-                $products = array();
+                $products = [];
             }
         }
+
         if ($products)
         {
             $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
         }
+
+        // build warning about skipped products
+        $skipped = array_filter($skipped);
+        if (Plugin::isDevEnvironment() && $skipped)
+        {
+            $parts = [];
+            foreach ($skipped as $reason => $count)
+            {
+                $parts[] = sprintf('%d %s', $count, str_replace('_', ' ', $reason));
+            }
+            $warning_skipped_products = 'Skipped products: ' . implode(', ', $parts);
+            $this->setLastImportError($warning_skipped_products);
+        }
+
+        fclose($handle);
     }
 
     protected function processFeedXml($file)
     {
-        $uniqueNode = $this->getProductNode();
+        $uniqueNode = $this->getProductNode($file, 'xml');
+
         if (!$uniqueNode)
         {
-            $uniqueNode = 'offer';
+            $uniqueNode = 'product';
         }
 
         $streamer = \ContentEgg\application\vendor\XmlStringStreamer\XmlStringStreamer::createUniqueNodeParser($file, array('uniqueNode' => $uniqueNode));
@@ -393,8 +576,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             $node = simplexml_load_string($node_string);
             if ($node === false)
             {
-                $err_mess = 'Cannot load xml source.';
-
+                $err_mess = 'Unable to load XML source.';
                 if ($error = libxml_get_last_error())
                 {
                     $err_mess .= $error->message;
@@ -413,7 +595,6 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             }
             catch (\Exception $e)
             {
-
                 if ($i > 0)
                 {
                     continue;
@@ -450,7 +631,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         if ($i == 0)
         {
-            $this->setLastImportError('Product node not found.');
+            $this->setLastImportError('Product node not found in the feed.');
         }
 
         if ($products)
@@ -470,15 +651,14 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         if (!$json_arr)
         {
             $this->setLastImportError(trim('Cannot decode JSON source. ' . json_last_error_msg()));
-
             return;
         }
 
-        $node = $this->getProductNode();
+        $node = $this->getProductNode($file, 'json');
 
         if (!$node && is_array($json_arr))
         {
-            $node = 'offer';
+            $node = 'products';
             $json_arr = array($node => $json_arr);
         }
 
@@ -492,10 +672,12 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         $i = 0;
         foreach ($json_arr[$node] as $data)
         {
-            if ($encoding == 'ISO-8859-1')
+            if (!$data)
             {
-                $data = array_map('utf8_encode', $data);
+                continue;
             }
+
+            $data = self::convertEncoding($data, $encoding);
 
             try
             {
@@ -542,26 +724,93 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         }
     }
 
-    protected function mapXmlData($node)
+    protected function mapXmlData(\SimpleXMLElement $node): array
     {
-        $data = array();
-        $mapping = $this->config('mapping');
-        $fields = array_values($mapping);
+        $data       = [];
+        $mapping    = $this->config('mapping', []);
+        $fields     = array_values($mapping);
+
         $attributes = $node->attributes();
+        $children   = get_object_vars($node);
 
         foreach ($fields as $field)
         {
-            if (isset($attributes[$field]))
-                $data[$field] = (string) $attributes[$field];
-            elseif (isset($node->{$field}))
-                $data[$field] = (string) $node->{$field};
-            elseif ($res = $node->xpath($field))
-                $data[$field] = trim(\wp_strip_all_tags((string) $res[0]));
-            else
-                continue;
+            $value = $this->extractXmlField($node, $field, $attributes, $children);
+            if ($value !== null)
+            {
+                $data[$field] = $value;
+            }
         }
 
         return $data;
+    }
+
+    private function extractXmlField(
+        \SimpleXMLElement $node,
+        string $field,
+        ?\SimpleXMLElement $attributes = null,
+        array $children = []
+    ): ?string
+    {
+        // 1) XPath if it's a path
+        if (strpos($field, '/') !== false)
+        {
+            $result = $node->xpath($field);
+            return $this->sanitizeXPathResult($result);
+        }
+
+        // 2) Attribute of the current node
+        if ($attributes && isset($attributes[$field]))
+        {
+            return (string) $attributes[$field];
+        }
+
+        // 3) Direct child element
+        if (isset($children[$field]))
+        {
+            return $this->sanitizeString((string) $children[$field]);
+        }
+
+        // 4) Fallback: maybe someone slipped in a non‐XPath, non‐direct name?
+        $result = $node->xpath($field);
+        return $this->sanitizeXPathResult($result);
+    }
+
+    private function sanitizeXPathResult($result): ?string
+    {
+        if (empty($result) || !isset($result[0]))
+        {
+            return null;
+        }
+        return $this->sanitizeString((string) $result[0]);
+    }
+
+    private function sanitizeString(string $input): string
+    {
+        return trim(\wp_strip_all_tags($input));
+    }
+
+    public function isImportInProgress()
+    {
+        $last_import = $this->getLastImportDate();
+
+        if ($last_import && $last_import < 0)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function isImportScheduled()
+    {
+        $hook = 'cegg_' . $this->getId() . '_init_products';
+        if (\wp_next_scheduled($hook, array('module_id' => $this->getId())))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public function getLastImportDateReadable()
@@ -588,6 +837,11 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
     public function getProductCount()
     {
+        if (!$this->product_model->isTableExists())
+        {
+            return 0;
+        }
+
         return $this->product_model->count();
     }
 
@@ -631,25 +885,65 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         return $datafeed_dir;
     }
-
-    protected function detectCsvDelimiter($file)
+    protected function detectCsvSettings($file)
     {
-        $delimiters = array(
-            ';' => 0,
-            ',' => 0,
-            "\t" => 0,
-            "|" => 0
-        );
+        $delimiters = [';' => 0, ',' => 0, "\t" => 0, '|' => 0];
+        $enclosures = ['"' => 0, "'" => 0];
 
         $handle = fopen($file, "r");
-        $firstLine = fgets($handle);
-        fclose($handle);
-        foreach ($delimiters as $delimiter => &$count)
+        if (!$handle)
         {
-            $count = count(str_getcsv($firstLine, $delimiter));
+            return ['delimiter' => ',', 'enclosure' => '"']; // fallback
         }
 
-        return array_search(max($delimiters), $delimiters);
+        $sampleLines = [];
+        for ($i = 0; $i < 5 && !feof($handle); $i++)
+        {
+            $line = fgets($handle);
+            if ($line !== false)
+            {
+                $sampleLines[] = $line;
+            }
+        }
+        fclose($handle);
+
+        // Evaluate delimiters
+        foreach ($delimiters as $delimiter => &$count)
+        {
+            $totalFields = 0;
+            foreach ($sampleLines as $line)
+            {
+                $fields = str_getcsv($line, $delimiter);
+                $totalFields += count($fields);
+            }
+            $count = $totalFields;
+        }
+
+        $bestDelimiter = array_search(max($delimiters), $delimiters);
+
+        // Evaluate enclosures
+        foreach ($enclosures as $enclosure => &$count)
+        {
+            $totalMatches = 0;
+            foreach ($sampleLines as $line)
+            {
+                $matches = substr_count($line, $enclosure);
+                $totalMatches += $matches;
+            }
+            $count = $totalMatches;
+        }
+
+        // Prefer '"' if tied or not found
+        $bestEnclosure = array_search(max($enclosures), $enclosures);
+        if (!$bestEnclosure)
+        {
+            $bestEnclosure = '"';
+        }
+
+        return [
+            'delimiter' => $bestDelimiter,
+            'enclosure' => $bestEnclosure,
+        ];
     }
 
     public function fatalHandler()
@@ -711,24 +1005,26 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 continue;
             }
 
-            if ($wp_filesystem->exists($path) && time() - filemtime($path) > 3600)
+            if ($wp_filesystem->exists($path) && time() - filemtime($path) > 1200)
             {
                 $wp_filesystem->delete($path, true);
             }
         }
     }
 
-    public function getProductNode()
+    public function getProductNode($file, $format)
     {
         $mapping = $this->config('mapping');
         if (!empty($mapping['product node']))
         {
-            return $mapping['product node'];
+            $this->product_node = $mapping['product node'];
         }
-        else
+        elseif ($format == 'xml')
         {
-            return false;
+            $this->product_node = $this->detectLikelyProductNode($file, $format);
         }
+
+        return $this->product_node;
     }
 
     public static function extractShippingCost($shipping_cost)
@@ -757,5 +1053,84 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             return '';
 
         return (float) TextHelper::parsePriceAmount($shipping_cost);
+    }
+
+    public function refreshFeedData($is_active)
+    {
+        $this->setLastImportDate(0);
+        $this->setLastImportError('');
+
+        $hook = 'cegg_' . $this->getId() . '_init_products';
+
+        if ($is_active && !$this->isImportScheduled())
+        {
+            \wp_schedule_single_event(time() + 1, $hook, array('module_id' => $this->getId()));
+        }
+
+        if (!$is_active && $this->isImportScheduled())
+        {
+            \wp_clear_scheduled_hook($hook, array('module_id' => $this->getId()));
+        }
+    }
+
+    public static function convertEncoding(array $data, string $encoding): array
+    {
+        array_walk_recursive($data, function (&$value) use ($encoding)
+        {
+            if (!is_string($value))
+            {
+                return;
+            }
+            $value = mb_convert_encoding(
+                $value,
+                'UTF-8',
+                $encoding === 'ISO-8859-1' ? 'ISO-8859-1' : 'UTF-8'
+            );
+        });
+
+        return $data;
+    }
+
+    function detectLikelyProductNode(string $filePath, string $format, int $sampleCount = 100): ?string
+    {
+        $stream = new File($filePath);
+        $parser = new StringWalker();
+        $streamer = new XmlStringStreamer($parser, $stream);
+
+        $childNameCounts = [];
+
+        while ($node = $streamer->getNode())
+        {
+            $xml = @simplexml_load_string($node);
+            if (!$xml)
+            {
+                continue;
+            }
+
+            foreach ($xml->children() as $child)
+            {
+                $name = $child->getName();
+                if (!isset($childNameCounts[$name]))
+                {
+                    $childNameCounts[$name] = 0;
+                }
+                $childNameCounts[$name]++;
+            }
+
+            // Stop early if we have enough data
+            $totalSampled = array_sum($childNameCounts);
+            if ($totalSampled >= $sampleCount)
+            {
+                break;
+            }
+        }
+
+        if (empty($childNameCounts))
+        {
+            return null;
+        }
+
+        arsort($childNameCounts);
+        return array_key_first($childNameCounts); // Most common tag name
     }
 }

@@ -218,11 +218,15 @@ abstract class CEWidget extends \WP_Widget
 
     public function beforeWidget($args, $instance)
     {
-        $title = \apply_filters('widget_title', empty($instance['title']) ? '' : $instance['title'], $instance, $this->id_base);
+        $raw_title = empty($instance['title']) ? '' : $instance['title'];
+        $sanitized_title = wp_kses_post($raw_title);
+        $title = apply_filters('widget_title', $sanitized_title, $instance, $this->id_base);
         echo wp_kses_post($args['before_widget']);
         if ($title)
         {
-            echo wp_kses_post($args['before_title'] . $title . $args['after_title']);
+            echo $args['before_title']
+                . $title
+                . $args['after_title'];
         }
     }
 

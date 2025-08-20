@@ -203,17 +203,28 @@ class ModuleManager
         if (Plugin::isActivated() && LManager::isNulled())
             return array();
 
-        $result = array();
+        global $wpdb;
 
-        for ($i = 1; $i <= self::MAX_NUM_FEED_MODULES; $i++)
+        $like = $wpdb->esc_like('content-egg_Feed__') . '%';
+        $names = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT option_name
+         FROM {$wpdb->options}
+         WHERE option_name LIKE %s
+           AND option_value <> ''",
+                $like
+            )
+        );
+
+        $result = [];
+        $prefixMod = self::FEED_MODULES_PREFIX . '__';
+
+        foreach ($names as $name)
         {
-            if (get_option('content-egg_Feed__' . $i))
+            // extract the numeric ID at the end
+            if (preg_match('/__(\d+)$/', $name, $m))
             {
-                $result[] = self::FEED_MODULES_PREFIX . '__' . $i;
-            }
-            else
-            {
-                break;
+                $result[] = $prefixMod . $m[1];
             }
         }
 
@@ -228,8 +239,32 @@ class ModuleManager
 
         if (count($result) < $max)
         {
-            $num = count($result) + 1;
-            $result[] = self::FEED_MODULES_PREFIX . '__' . $num;
+            // Extract the numeric IDs from $result
+            $usedIds = array_map(function ($val) use ($prefixMod)
+            {
+                return (int) str_replace($prefixMod, '', $val);
+            }, $result);
+
+            sort($usedIds);
+
+            // Find first gap from 1..$max
+            $num = null;
+            for ($i = 1; $i <= $max; $i++)
+            {
+                if (!in_array($i, $usedIds, true))
+                {
+                    $num = $i;
+                    break;
+                }
+            }
+
+            // If no gap found, take max+1 capped at $max
+            if ($num === null)
+            {
+                $num = min(max($usedIds) + 1, $max);
+            }
+
+            $result[] = $prefixMod . $num;
         }
 
         return $result;
@@ -261,7 +296,6 @@ class ModuleManager
 
     public static function factory($module_id)
     {
-
         if (!isset(self::$modules[$module_id]))
         {
             $path_prefix = Module::getPathId($module_id);
@@ -273,7 +307,14 @@ class ModuleManager
             if (class_exists($module_class, true) === false)
                 throw new \Exception("Unable to load module class: '{$module_class}'.");
 
-            $module = new $module_class($module_id);
+            try
+            {
+                $module = new $module_class($module_id);
+            }
+            catch (\Exception $e)
+            {
+                return false;
+            }
 
             if (!($module instanceof \ContentEgg\application\components\Module))
                 throw new \Exception("The module '{$module_id}' must inherit from Module.");
@@ -404,6 +445,23 @@ class ModuleManager
         return $parsers;
     }
 
+    public function getParsers($only_active = false)
+    {
+        $modules = $this->getModules($only_active);
+        $parsers = array();
+        foreach ($modules as $module)
+        {
+            if (!$module->isParser())
+            {
+                continue;
+            }
+
+            $parsers[$module->getId()] = $module;
+        }
+
+        return $parsers;
+    }
+
     public function getAffiliateParsers($only_active = false, $only_product = false)
     {
         $modules = $this->getModules($only_active);
@@ -523,6 +581,36 @@ class ModuleManager
         return $options;
     }
 
+    public function importOptions(array $options): array
+    {
+        $existingOptions = $this->getOptionsList();
+        $importedOptions = [];
+
+        foreach ($options as $optionName => $incomingValues)
+        {
+            if (!array_key_exists($optionName, $existingOptions))
+            {
+                continue;
+            }
+
+            $currentValues = $existingOptions[$optionName];
+
+            // Merge only keys that exist in current options
+            foreach ($currentValues as $key => $currentValue)
+            {
+                if (array_key_exists($key, $incomingValues))
+                {
+                    $currentValues[$key] = $incomingValues[$key];
+                }
+            }
+
+            update_option($optionName, $currentValues);
+            $importedOptions[$optionName] = $currentValues;
+        }
+
+        return $importedOptions;
+    }
+
     public function getItemsUpdateModuleIds()
     {
         $result = array();
@@ -545,7 +633,7 @@ class ModuleManager
     public function getByKeywordUpdateModuleIds()
     {
         $result = array();
-        foreach ($this->getAffiliateParsers(true) as $module)
+        foreach ($this->getParsers(true) as $module)
         {
             if (!$module->config('ttl'))
             {
@@ -638,5 +726,105 @@ class ModuleManager
         }
 
         return '';
+    }
+
+    /**
+     * Return metadata for all affiliate parsers.
+     */
+    public function getAffiliateParsersMeta(
+        $onlyActive = true,
+        $excludeCoupons = true,
+        $sortByPriority = false
+    )
+    {
+        $parsers = $this->getAffiliateParsers($onlyActive);
+        $metaList = [];
+
+        foreach ($parsers as $parser)
+        {
+            $id = $parser->getId();
+
+            if (in_array($id, ['Offer']))
+            {
+                continue;
+            }
+
+            // Skip coupon parsers if requested
+            if ($excludeCoupons && stripos($id, 'coupon') !== false || stripos($id, 'CjLinks') !== false)
+            {
+                continue;
+            }
+
+            // Price‐filter support
+            $priceMap = $parser->getPriceParamMap();
+            $hasPriceFilter = !empty($priceMap);
+
+            // Locale‐filter support
+            $localeMap = $parser->getLocaleParamMap();
+            $hasLocaleFilter = !empty($localeMap);
+
+            $hasUrlSearch = (bool) $parser->isUrlSearchAllowed();
+
+            // Priority from module config
+            $priority = (int) $parser->getConfigInstance()->option('priority');
+
+            // Locale
+            $config = $parser->getConfigInstance();
+            if (method_exists($config, 'getActiveLocalesList'))
+            {
+                $locales = $config->getActiveLocalesList();
+                $default_locale = $config->option('locale');
+            }
+            else
+            {
+                $locales = [];
+                $default_locale = '';
+            }
+
+            $metaList[$id] = [
+                'module_id'         => $id,
+                'module_name'       => $parser->getName(),
+                'is_price_filter'   => $hasPriceFilter,
+                'is_locale_filter'  => $hasLocaleFilter,
+                'priority'          => $priority,
+                'locales'           => $locales,
+                'default_locale'    => $default_locale,
+                'has_url_search'    => $hasUrlSearch,
+            ];
+        }
+
+        if ($sortByPriority)
+        {
+            uasort($metaList, static function (array $a, array $b): int
+            {
+                return $a['priority'] <=> $b['priority'];
+            });
+        }
+
+        return $metaList;
+    }
+
+    public function getModulePriority($module_id)
+    {
+        $module = ModuleManager::factory($module_id);
+
+        if (!$module)
+            return 0;
+
+        return (int) $module->getConfigInstance()->option('priority');
+    }
+
+    public function getActiveFeedModules()
+    {
+        $feed_modules = array();
+        foreach ($this->getAffiliateParsers(true, true) as $module)
+        {
+            if ($module->isFeedModule())
+            {
+                $feed_modules[$module->getId()] = $module;
+            }
+        }
+
+        return $feed_modules;
     }
 }

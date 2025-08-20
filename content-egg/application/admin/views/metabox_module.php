@@ -49,6 +49,8 @@ $templates = $tpl_manager->getTemplatesList(true);
                         <?php if ($module->isAffiliateParser()) : ?>
                             <input class="form-control form-control-sm" id="updateKeyword_<?php echo esc_attr($module_id); ?>" type="text" ng-model="updateKeywords.<?php echo esc_attr($module_id); ?>" placeholder="<?php esc_html_e('Autoupdate keyword', 'content-egg'); ?>" title="<?php esc_html_e('Keyword for automated product list update', 'content-egg'); ?>" />
                             <?php $module->renderUpdatePanel(); ?>
+                        <?php elseif ($module->isParser()) : ?>
+                            <input class="form-control form-control-sm" id="updateKeyword_<?php echo esc_attr($module_id); ?>" type="text" ng-model="updateKeywords.<?php echo esc_attr($module_id); ?>" placeholder="<?php esc_html_e('Autoupdate keyword', 'content-egg'); ?>" title="<?php esc_html_e('Keyword for automated content update', 'content-egg'); ?>" />
                         <?php endif; ?>
 
                         <?php if (stristr($module_id, 'Amazon') || $module_id == 'Bolcom') : ?>

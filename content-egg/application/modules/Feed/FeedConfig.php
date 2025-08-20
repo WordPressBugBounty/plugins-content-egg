@@ -4,9 +4,14 @@ namespace ContentEgg\application\modules\Feed;
 
 defined('\ABSPATH') || exit;
 
+use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\AffiliateFeedParserModuleConfig;
 use ContentEgg\application\helpers\CurrencyHelper;
 use ContentEgg\application\helpers\TextHelper;
+use ContentEgg\application\Plugin;
+
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
 
 /**
  * FeedConfig class file
@@ -22,10 +27,34 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
     {
         $currencies = CurrencyHelper::getCurrenciesList();
 
+        $has_ai_api_key = (bool) GeneralConfig::getOption('system_ai_key', '', 'contentegg_options');
+
+        $ai_description = __('Automatically maps feed fields using AI suggestions. You can manually adjust the mapping after it’s generated.', 'content-egg');
+
+        if (empty($has_ai_api_key))
+        {
+            $ai_description .= ' <span class="description warning" style="color: #ff5400;">' . sprintf(
+                __('Warning: OpenAI API key is not set. AI features will not work until it is configured. You can set it under %s.', 'content-egg'),
+                'Settings &gt; AI &gt; OpenAI API Key'
+            ) . '</span>';
+        }
+
+        $zip_notice = '';
+
+        if (is_admin() && !class_exists('\ZipArchive'))
+        {
+            $zip_notice = ' ' . sprintf(
+                '<p class="description">%s</p>',
+                sprintf(
+                    '⚠ ' . __('ZIP support is not enabled on your server. For better performance and support for large feed files, please enable the %s PHP extension.', 'content-egg'),
+                    '<a href="https://www.php.net/manual/en/zip.installation.php" target="_blank" rel="noopener noreferrer">ZipArchive</a>'
+                )
+            );
+        }
+
         $options = array(
             'feed_name' => array(
                 'title' => __('Feed name', 'content-egg') . ' <span class="cegg_required">*</span>',
-                'description' => sprintf(__('For example: %s', 'content-egg'), 'Saturn.de'),
                 'callback' => array($this, 'render_input'),
                 'default' => '',
                 'validator' => array(
@@ -41,28 +70,30 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                     ),
                 ),
             ),
-            'feed_url' => array(
-                'title' => __('Feed download URL', 'content-egg') . ' <span class="cegg_required">*</span>',
-                'description' => __('CSV or XML format.', 'content-egg') . ' ' .
-                    sprintf(__('Make sure your unzipped feed size is less than %s.', 'content-egg'), \WP_MAX_MEMORY_LIMIT),
-                'callback' => array($this, 'render_input'),
-                'default' => '',
-                'validator' => array(
-                    'trim',
-                    array(
-                        'call' => array('\ContentEgg\application\helpers\FormValidator', 'required'),
-                        'when' => 'is_active',
-                        'message' => sprintf(__('The field "%s" can not be empty.', 'content-egg'), 'Datafeed Download URL'),
-                    ),
-                    array(
-                        'call' => array($this, 'validateFeedUrl'),
-                        'when' => 'is_active',
-                        'message' => sprintf(__('Field "%s" filled with wrong data.', 'content-egg'), 'Feed download URL'),
-                    ),
+            'feed_url' => [
+                'title'       => sprintf(
+                    '%s <span class="cegg_required">*</span>',
+                    __('Feed URL', 'content-egg')
                 ),
-            ),
+                'description' => __('Enter the URL to your product feed file (CSV, XML, or JSON). CSV is recommended if available.', 'content-egg'),
+                'callback'    => [$this, 'render_input'],
+                'default'     => '',
+                'validator'   => [
+                    'trim',
+                    [
+                        'call'    => [\ContentEgg\application\helpers\FormValidator::class, 'required'],
+                        'when'    => 'is_active',
+                        'message' => __('Please provide the feed URL.', 'content-egg'),
+                    ],
+                    [
+                        'call'    => [$this, 'validateFeedUrl'],
+                        'when'    => 'is_active',
+                        'message' => __('Please enter a valid feed URL (must start with http:// or https://).', 'content-egg'),
+                    ],
+                ],
+            ],
             'feed_format' => array(
-                'title' => __('Feed format', 'content-egg') . ' <span class="cegg_required">*</span>',
+                'title' => __('Feed format', 'content-egg') . '**',
                 'callback' => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
                     'csv' => __('CSV', 'content-egg'),
@@ -72,7 +103,8 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                 'default' => 'csv',
             ),
             'archive_format' => array(
-                'title' => __('Archive format', 'content-egg') . ' <span class="cegg_required">*</span>',
+                'title' => __('Archive format', 'content-egg') . '**',
+                'description' => $zip_notice,
                 'callback' => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
                     'none' => __('None', 'content-egg'),
@@ -81,7 +113,7 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                 'default' => 'none',
             ),
             'encoding' => array(
-                'title' => __('Feed encoding', 'content-egg') . ' <span class="cegg_required">*</span>',
+                'title' => __('Feed encoding', 'content-egg') .  '**',
                 'callback' => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
                     'UTF-8' => 'UTF-8',
@@ -90,14 +122,14 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                 'default' => 'UTF-8',
             ),
             'currency' => array(
-                'title' => __('Default currency', 'content-egg') . ' <span class="cegg_required">*</span>',
+                'title' => __('Default currency', 'content-egg') .  '**',
                 'callback' => array($this, 'render_dropdown'),
                 'dropdown_options' => array_combine($currencies, $currencies),
                 'default' => 'USD',
             ),
             'domain' => array(
                 'title' => __('Default merchant domain', 'content-egg') . ' <span class="cegg_required">*</span>',
-                'description' => sprintf(__('For example: %s', 'content-egg'), 'saturn.de'),
+                'description' => __('Enter the default domain name of the merchant (e.g., example.com).', 'content-egg'),
                 'callback' => array($this, 'render_input'),
                 'default' => '',
                 'validator' => array(
@@ -112,9 +144,21 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                     ),
                 ),
             ),
+            'auto_mapping' => [
+                'title'            => __('AI Auto-Mapping', 'content-egg') . '**',
+                'description'      => $ai_description,
+                'callback'         => [$this, 'render_dropdown'],
+                'dropdown_options' => [
+                    'enabled'  => __('Enabled', 'content-egg'),
+                    'disabled' => __('Disabled', 'content-egg'),
+                ],
+                'is_pro' => false,
+                'default' => 'enabled',
+            ],
             'mapping' => array(
-                'title' => __('Field mapping', 'content-egg') . ' <span class="cegg_required">*</span>',
-                'description' => '',
+                'title' => __('Field mapping', 'content-egg') . '**',
+                'description' => __('Map your feed columns to the appropriate Content Egg product fields, or enable AI Auto-Mapping to do it automatically.', 'content-egg'),
+                'help_url' => 'https://ce-docs.keywordrush.com/modules/feed-modules/field-mapping',
                 'callback' => array($this, 'render_mapping_block'),
                 'validator' => array(
                     array(
@@ -128,9 +172,24 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                     ),
                 ),
             ),
+            'sync_interval' => [
+                'title'            => __('Feed sync interval', 'content-egg') . ' **',
+                'description'      => __('Sets how frequently the product feed is synced with the local database.', 'content-egg'),
+                'callback'         => [$this, 'render_dropdown'],
+                'dropdown_options' => [
+                    '3600.'    => __('Every 1 hour',             'content-egg'),
+                    '10800.'   => __('Every 3 hours',            'content-egg '),
+                    '21600.'   => __('Every 6 hours',            'content-egg'),
+                    '43200.'   => __('Every 12 hours',           'content-egg ') . ' ' . __('(default)', 'content-egg'),
+                    '86400.'   => __('Every 1 day',              'content-egg'),
+                    '259200.'  => __('Every 3 days',             'content-egg '),
+                    '604800.'  => __('Every 1 week',             'content-egg'),
+                ],
+                'default' => '43200.',
+            ],
             'deeplink' => array(
                 'title' => __('Deeplink', 'content-egg'),
-                'description' => __('Set this option only if your feed does not contain affiliate links.', 'content-egg'),
+                'description' => __('Enable this option only if your feed does not include affiliate links.', 'content-egg'),
                 'callback' => array($this, 'render_input'),
                 'default' => '',
                 'validator' => array(
@@ -139,7 +198,7 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                 'section' => 'default',
             ),
             'search_type' => array(
-                'title' => __('Search type', 'content-egg') . ' <span class="cegg_required">*</span>',
+                'title' => __('Search type', 'content-egg'),
                 'callback' => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
                     'full' => 'Full text search (relevance)',
@@ -148,13 +207,15 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                 ),
                 'default' => 'full',
             ),
-            'in_stock' => array(
-                'title' => __('In stock', 'content-egg'),
-                'description' => __('Search only products in stock.', 'content-egg'),
-                'callback' => array($this, 'render_checkbox'),
-                'default' => true,
-                'section' => 'default',
-            ),
+            'in_stock' => [
+                'title'       => __('In-Stock Products', 'content-egg'),
+                'description' =>  __('Only Import In-Stock Products', 'content-egg') .
+                    '<p class="description">' . __('Make sure the "Availability" or "In Stock" fields are correctly mapped in your feed settings.', 'content-egg')  . '</p>',
+                'callback'    => [$this, 'render_checkbox'],
+                'default'     => true,
+                'section'     => 'default',
+            ],
+
         );
         $options = array_merge(parent::options(), $options);
 
@@ -172,7 +233,7 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
         {
             $display_name .= ' ' . __('(required for XML/JSON feed only)', 'content-egg');
         }
-        elseif (self::isMappingFieldRequared($field_name))
+        elseif ($this->isMappingFieldRequared($field_name))
         {
             $display_name .= ' ' . __('(required)', 'content-egg');
         }
@@ -193,7 +254,7 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
         if (!$args['value'])
             $args['value'] = array();
 
-        foreach (array_keys(self::mappingFields()) as $str)
+        foreach (array_keys($this->mappingFields()) as $str)
         {
             echo '<div style="padding-bottom: 5px;">';
             $args['_field_name'] = $str;
@@ -202,12 +263,17 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
         }
 
         if ($args['description'])
-            echo '<p class="description">' . esc_html($args['description']) . '</p>';
+        {
+            echo '<p class="description">';
+            echo esc_html($args['description']);
+            $this->render_help_icon($args);
+            echo '</p>';
+        }
     }
 
-    public static function mappingFields()
+    public function mappingFields()
     {
-        return array(
+        $fields = array(
             'product node' => false,
             'id' => true,
             'title' => true,
@@ -220,19 +286,23 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
             'availability' => false,
             'is in stock' => false,
             'direct link' => false,
+            'additional image link' => false,
             'brand' => false,
             'category' => false,
             'short description' => false,
+            'subtitle' => false,
             'isbn' => false,
             'gtin' => false,
             'shipping cost' => false,
             'attributes' => false,
         );
+
+        return $fields;
     }
 
-    public static function isMappingFieldRequared($field)
+    public function isMappingFieldRequared($field)
     {
-        $fields = self::mappingFields();
+        $fields = $this->mappingFields();
         if (isset($fields[$field]) && $fields[$field])
         {
             return true;
@@ -255,15 +325,43 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
 
     public function mappingValidate($values)
     {
-        foreach ($values as $field => $value)
+        if ($this->get_submitted_value('auto_mapping') == 'enabled')
         {
-            if (self::isMappingFieldRequared($field) && !$value)
+            return true;
+        }
+
+        return $this->isAllRequiredFieldsFilled($values);
+    }
+
+    public function isAllRequiredFieldsFilled(array $mapping): bool
+    {
+        foreach ($this->mappingFields() as $field => $isRequired)
+        {
+            if ($isRequired)
             {
-                return false;
+                if (!isset($mapping[$field]) || $mapping[$field] === '')
+                {
+                    return false;
+                }
             }
         }
 
         return true;
+    }
+
+    public  function missingRequired(array $values): array
+    {
+        $missing = [];
+
+        foreach ($this->mappingFields() as $field => $isRequired)
+        {
+            if ($isRequired && empty($values[$field]))
+            {
+                $missing[] = $field;
+            }
+        }
+
+        return $missing;
     }
 
     public function sanitizeDomain($value)

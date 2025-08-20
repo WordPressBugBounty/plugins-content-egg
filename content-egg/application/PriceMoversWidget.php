@@ -41,7 +41,7 @@ class PriceMoversWidget extends CEWidget
 
     public function description()
     {
-        return __('Products with the biggest price drops.', 'content-egg');
+        return __('Displays products with the largest recent price drops.', 'content-egg');
     }
 
     protected function name()
@@ -56,62 +56,77 @@ class PriceMoversWidget extends CEWidget
 
     public function settings($force = false)
     {
-        return
-            array(
-                'title' => array(
-                    'type' => 'text',
-                    'default' => __('Price Drops', 'content-egg-tpl'),
-                    'title' => __('Title', 'content-egg'),
+        return array(
+            'title' => array(
+                'type'    => 'text',
+                'default' => __('Price Drops', 'content-egg-tpl'),
+                'title'   => __('Title', 'content-egg'),
+            ),
+
+            'limit' => array(
+                'type'    => 'number',
+                'min'     => 1,
+                'max'     => 30,
+                'default' => 5,
+                'title'   => __('Number of products to show', 'content-egg'),
+            ),
+
+            'drop_type' => array(
+                'type'    => 'select',
+                'default' => 'absolute',
+                'title'   => __('Drop type', 'content-egg'),
+                'options' => array(
+                    'absolute' => __('Biggest absolute', 'content-egg'),
+                    'relative' => __('Biggest relative', 'content-egg'),
                 ),
-                'limit' => array(
-                    'type' => 'number',
-                    'min' => 1,
-                    'max' => 30,
-                    'default' => 5,
-                    'title' => __('Number of products to show', 'content-egg'),
+            ),
+
+            'direction' => array(
+                'type'    => 'select',
+                'default' => 'drops',
+                'title'   => __('Price Change Type', 'content-egg'),
+                'options' => array(
+                    'drops'     => __('Show price drops', 'content-egg'),
+                    'increases' => __('Show price increases', 'content-egg'),
                 ),
-                'drop_type' => array(
-                    'type' => 'select',
-                    'default' => 'absolute',
-                    'title' => __('Drop type', 'content-egg'),
-                    'options' => array(
-                        'absolute' => __('Biggest absolute', 'content-egg'),
-                        'relative' => __('Biggest relative', 'content-egg'),
-                        //'recent' => __('Most recent', 'content-egg'),
-                    )
+            ),
+
+            'last_update' => array(
+                'type'    => 'select',
+                'default' => 7,
+                'title' => __('Only show products updated within', 'content-egg'),
+                'options' => array(
+                    1  => __('1 day ago', 'content-egg'),
+                    2  => sprintf(__('%d days ago', 'content-egg'), 2),
+                    3  => sprintf(__('%d days ago', 'content-egg'), 3),
+                    4  => sprintf(__('%d days ago', 'content-egg'), 4),
+                    5  => sprintf(__('%d days ago', 'content-egg'), 5),
+                    6  => sprintf(__('%d days ago', 'content-egg'), 6),
+                    7  => sprintf(__('%d days ago', 'content-egg'), 7),
+                    21 => sprintf(__('%d days ago', 'content-egg'), 21),
+                    30 => sprintf(__('%d days ago', 'content-egg'), 30),
                 ),
-                'direction' => array(
-                    'type' => 'select',
-                    'default' => 'drops',
-                    'title' => __('Direction', 'content-egg'),
-                    'options' => array(
-                        'drops' => __('Price drops', 'content-egg'),
-                        'increases' => __('Price increases', 'content-egg'),
-                    )
-                ),
-                'last_update' => array(
-                    'type' => 'select',
-                    'default' => 7,
-                    'title' => __('Last update', 'content-egg'),
-                    'options' => array(
-                        1 => __('1 day ago', 'content-egg'),
-                        2 => sprintf(__('%d days ago', 'content-egg'), 2),
-                        3 => sprintf(__('%d days ago', 'content-egg'), 3),
-                        4 => sprintf(__('%d days ago', 'content-egg'), 4),
-                        5 => sprintf(__('%d days ago', 'content-egg'), 5),
-                        6 => sprintf(__('%d days ago', 'content-egg'), 6),
-                        7 => sprintf(__('%d days ago', 'content-egg'), 7),
-                        21 => sprintf(__('%d days ago', 'content-egg'), 21),
-                        30 => sprintf(__('%d days ago', 'content-egg'), 30),
-                    )
-                ),
-                'template' => array(
-                    'type' => 'select',
-                    'default' => 'wdgt_price_movers_grid',
-                    'title' => __('Template', 'content-egg'),
-                    'options' => WidgetTemplateManager::getInstance($this->slug())->getTemplatesList()
-                ),
-            );
+            ),
+
+            'include_module_ids' => array(
+                'type'    => 'text',
+                'default' => '',
+                'title'   => __('Include Module IDs (comma-separated)', 'content-egg'),
+            ),
+
+            'exclude_module_ids' => array(
+                'type'    => 'text',
+                'default' => '',
+                'title'   => __('Exclude Module IDs (comma-separated)', 'content-egg'),
+            ),
+
+            'template' => array(
+                'type'    => 'select',
+                'default' => 'wdgt_price_movers_grid',
+                'title'   => __('Template', 'content-egg'),
+                'options' => WidgetTemplateManager::getInstance($this->slug())->getTemplatesList(),
+            ),
+        );
     }
 
     public function widget($args, $instance)
@@ -205,30 +220,42 @@ class PriceMoversWidget extends CEWidget
         return $tpl_manager->render($a['template'], array('items' => $items, 'is_shortcode' => true, 'cols' => $a['cols'], 'btn_text' => '', 'params' => $params));
     }
 
-    private function prepareAttr($atts)
+    private function prepareAttr(array $atts): array
     {
         $general = ShortcodeAtts::prepare($atts);
 
         $settings = $this->settings(true);
+        $defaults = [];
 
-        $defaults = array();
-        foreach ($settings as $name => $setting)
+        foreach ($settings as $name => $cfg)
         {
-            if (isset($setting['default']))
-                $defaults[$name] = $setting['default'];
-            else
-                $defaults[$name] = '';
+            $defaults[$name] = $cfg['default'] ?? '';
         }
-        $defaults['template'] = 'wdgt_price_movers_list';
-        $defaults['cols'] = 0;
-        $defaults['currency'] = '';
+
+        $defaults['template']           = 'wdgt_price_movers_list';
+        $defaults['cols']               = 0;
+        $defaults['currency']           = '';
+        $defaults['include_module_ids'] = '';
+        $defaults['exclude_module_ids'] = '';
 
         $a = \shortcode_atts($defaults, $atts);
-        $a['limit'] = (int) $a['limit'];
-        $a['cols'] = (int) $a['cols'];
+
+        $a['limit']       = (int) $a['limit'];
+        $a['cols']        = (int) $a['cols'];
         $a['last_update'] = (int) $a['last_update'];
-        $a['template'] = \sanitize_text_field($a['template']);
-        $a['currency'] = strtoupper(TextHelper::clear($a['currency']));
+        $a['template']    = \sanitize_text_field($a['template']);
+        $a['currency']    = strtoupper(TextHelper::clear($a['currency']));
+
+        $rawInclude = sanitize_text_field($a['include_module_ids']);
+        $rawExclude = sanitize_text_field($a['exclude_module_ids']);
+
+        $a['include_module_ids'] = TextHelper::getArrayFromCommaList($rawInclude);
+        $a['exclude_module_ids'] = TextHelper::getArrayFromCommaList($rawExclude);
+
+        $validIds = ModuleManager::getInstance()->getParserModulesIdList(true, true);
+        $a['include_module_ids'] = array_values(array_intersect($a['include_module_ids'], $validIds));
+        $a['exclude_module_ids'] = array_values(array_intersect($a['exclude_module_ids'], $validIds));
+
         $a = array_merge($general, $a);
 
         return $a;

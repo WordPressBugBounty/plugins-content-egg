@@ -7,6 +7,8 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\components\Config;
 use ContentEgg\application\Plugin;
 
+use function ContentEgg\prnx;
+
 /**
  * AeIntegrationConfig class file
  *
@@ -32,11 +34,6 @@ class AeIntegrationConfig extends Config
     public function add_admin_menu()
     {
         \add_submenu_page(Plugin::slug, __('Affiliate Egg integration', 'content-egg') . ' &lsaquo; Content Egg', __('Affiliate Egg integration', 'content-egg'), 'manage_options', $this->page_slug(), array($this, 'settings_page'));
-
-        global $submenu;
-
-        if (Plugin::isFree() && !Plugin::isEnvato())
-            $submenu['content-egg'][] = array('<b style="color: #75b798;">Go PRO</b>', 'manage_options', Plugin::pluginSiteUrl());
     }
 
     protected function options()
@@ -59,6 +56,8 @@ class AeIntegrationConfig extends Config
 
     public function settings_page()
     {
+        \wp_enqueue_style('cegg-bootstrap5-full');
+
         PluginAdmin::render('ae_integration', array('page_slug' => $this->page_slug()));
     }
 

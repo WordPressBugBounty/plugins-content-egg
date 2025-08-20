@@ -4,12 +4,15 @@ namespace ContentEgg\application\modules\Feed;
 
 defined('\ABSPATH') || exit;
 
+use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\admin\PluginAdmin;
 use ContentEgg\application\components\AffiliateFeedParserModule;
+use ContentEgg\application\components\ai\ModulePrompt;
 use ContentEgg\application\components\ModuleName;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\components\LinkHandler;
+use ContentEgg\application\Plugin;
 
 use function ContentEgg\prn;
 use function ContentEgg\prnx;
@@ -23,6 +26,7 @@ use function ContentEgg\prnx;
  */
 class FeedModule extends AffiliateFeedParserModule
 {
+    private bool $aiMappingDone = false;
 
     public function info()
     {
@@ -105,16 +109,40 @@ class FeedModule extends AffiliateFeedParserModule
         return $url;
     }
 
+    public function getProductsTtl()
+    {
+        $ttl = (int) $this->config('sync_interval', static::PRODUCTS_TTL);
+
+        if ($ttl < 3600)
+        {
+            $ttl = static::PRODUCTS_TTL;
+        }
+
+        $ttl = (int) \apply_filters('cegg_feed_products_ttl', $ttl);
+        $ttl = (int) \apply_filters('cegg_feed_products_module_ttl', $ttl, $this->getId());
+
+        return $ttl;
+    }
+
     protected function feedProductPrepare(array $data)
     {
+        $format = $this->config('feed_format');
+
+        if (in_array($format, ['csv', 'json'], true))
+        {
+            $this->maybeAiAutomap($data);
+        }
+
         $mapped_data = $this->mapProduct($data);
         $missed = array();
         if (empty($mapped_data['description']))
-            $mapped_data['description'] = '';
-
-        foreach (array_keys(FeedConfig::mappingFields()) as $field)
         {
-            if (FeedConfig::isMappingFieldRequared($field) && !isset($mapped_data[$field]))
+            $mapped_data['description'] = '';
+        }
+
+        foreach (array_keys($this->getConfigInstance()->mappingFields()) as $field)
+        {
+            if ($this->getConfigInstance()->isMappingFieldRequared($field) && !isset($mapped_data[$field]))
             {
                 $missed[] = $field;
             }
@@ -122,12 +150,15 @@ class FeedModule extends AffiliateFeedParserModule
 
         if ($missed)
         {
-            throw new \Exception(sprintf('Required mapping fields are missing in the feed: %s.', join(', ', $missed)));
+            throw new \Exception(sprintf(
+                'The following required mapping fields are missing from the feed: %s.',
+                implode(', ', $missed)
+            ));
         }
 
         $product = array();
         $product['id'] = sanitize_text_field($mapped_data['id']);
-        $product['title'] = \sanitize_text_field($mapped_data['title']);
+        $product['title'] = sanitize_text_field($mapped_data['title']);
 
         if (!$product['id'] || !$product['title'])
         {
@@ -191,7 +222,7 @@ class FeedModule extends AffiliateFeedParserModule
             $product['orig_url'] = $mapped_data['affiliate link'];
         }
 
-        $product['product'] = serialize($data);
+        $product['product'] = serialize((array) $data);
 
         return $product;
     }
@@ -355,6 +386,23 @@ class FeedModule extends AffiliateFeedParserModule
                 $content->short_description = $r['short description'];
             }
 
+            if (!empty($r['subtitle']))
+            {
+                $content->subtitle = $r['subtitle'];
+            }
+
+            $content->images = [];
+            foreach (['additional image link', 'additional image link 2', 'additional image link 3', 'additional image link 4'] as $field)
+            {
+                if (!empty($r[$field]))
+                {
+                    $content->images = array_merge(
+                        $content->images,
+                        TextHelper::getArrayFromCommaList($r[$field])
+                    );
+                }
+            }
+
             if (isset($r['shipping cost']))
                 $content->shipping_cost = self::extractShippingCost($r['shipping cost']);
             else
@@ -457,12 +505,20 @@ class FeedModule extends AffiliateFeedParserModule
 
     public function mapProduct(array $data)
     {
-        $mapped_data = array();
         $mapping = $this->config('mapping');
+
+        // Awin feeds trick for multiple image support
+        if (isset($mapping['additional image link']) && $mapping['additional image link'] === 'alternate_image')
+        {
+            $mapping['additional image link 2'] = 'alternate_image_two';
+            $mapping['additional image link 3'] = 'alternate_image_three';
+            $mapping['additional image link 4'] = 'alternate_image_four';
+        }
+
+        $mapped_data = array();
 
         foreach ($mapping as $field => $feed_field)
         {
-
             // regex syntax: [regex][pattern][feed_field]
             if (strpos($feed_field, '[regex]') === 0)
             {
@@ -537,5 +593,228 @@ class FeedModule extends AffiliateFeedParserModule
         }
 
         return $attributes;
+    }
+
+    protected function maybeAiAutomap($data)
+    {
+        // only once per feed
+        if ($this->aiMappingDone)
+        {
+            return null;
+        }
+
+        $this->aiMappingDone = true;
+
+        if ($this->getLastImportError())
+        {
+            throw new \RuntimeException('Cannot perform AI mapping due to previous import errors.');
+        }
+
+        $mapping = $this->config('mapping');
+
+        if ($this->getConfigInstance()->isAllRequiredFieldsFilled($mapping))
+        {
+            return null;
+        }
+
+        if ($this->config('auto_mapping') !== 'enabled')
+        {
+            return null;
+        }
+
+        return $this->aiAutomap($data);
+    }
+
+    /**
+     * Perform AI-driven mapping of raw product data to platform-standard fields.
+     *
+     * @param array|string $data  A single product row/node in CSV (array), XML (string) or JSON (string) form.
+     */
+    protected function aiAutomap($data): array
+    {
+        $prompt     = $this->getPrompt();
+        $fields     = $this->buildNormalizedFieldList();
+        $excluded   = ['product node', 'attributes', 'short description', 'isbn', 'subtitle'];
+
+        $fieldNames = array_values(array_diff(array_keys($fields), $excluded));
+
+        if ($data instanceof \SimpleXMLElement)
+        {
+            $data = $data->asXML();
+            if ($data === false)
+            {
+                throw new \RuntimeException('Failed to serialize XML node for AI mapping.');
+            }
+        }
+
+        try
+        {
+            $format      = $this->config('feed_format');
+            $suggestions = $this->askAiForMapping($prompt, $format, $data, $fieldNames);
+        }
+        catch (\Throwable $e)
+        {
+            throw new \RuntimeException(
+                __('AI mapping failed: ', 'content-egg') . $e->getMessage(),
+                0,
+                $e
+            );
+        }
+
+        $suggestions = $this->normaliseSuggestionKeys($suggestions);
+
+        $mapping = $this->applyAiSuggestions($suggestions);
+        $this->persistMapping($mapping);
+
+        if (!$this->getConfigInstance()->isAllRequiredFieldsFilled($mapping))
+        {
+            $missing = implode(', ', $this->getConfigInstance()->missingRequired($mapping));
+            throw new \RuntimeException(
+                sprintf(
+                    __('AI mapping did not cover required fields: %s. Please map them manually.', 'content-egg'),
+                    $missing
+                )
+            );
+        }
+
+        return $mapping;
+    }
+
+    /**
+     * Instantiate and return a ModulePrompt configured with the API key.
+     */
+    protected function getPrompt(): ModulePrompt
+    {
+        $apiKey = GeneralConfig::getInstance()->option('system_ai_key');
+        if (!$apiKey)
+        {
+            throw new \RuntimeException(
+                __('OpenAI API key is not configured. Please add it under Content Egg → Settings → AI → OpenAI API Key.', 'content-egg')
+            );
+        }
+
+        return new ModulePrompt($apiKey);
+    }
+
+    /**
+     * Retrieve and normalize the list of allowed mapping fields.
+     */
+    private function buildNormalizedFieldList(): array
+    {
+        $fields = $this->getConfigInstance()->mappingFields();
+        $normalized = [];
+
+        foreach (array_keys($fields) as $field)
+        {
+            $normalized[$this->stripControlChars($field)] = true;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Remove zero‑width and other control characters from a string.
+     */
+    private function stripControlChars(string $value): string
+    {
+        return preg_replace('/\p{Cf}/u', '', $value) ?? $value;
+    }
+
+    /**
+     * Build the final mapping from AI suggestions.
+     */
+    private function applyAiSuggestions(array $suggestions): array
+    {
+        $mapping = [];
+
+        $allFields = array_keys($this->getConfigInstance()->mappingFields());
+        $currentMapping = $this->config('mapping');
+
+        if (!empty($this->product_node))
+        {
+            $allFields[] = 'product node';
+            $suggestions['product node'] = $this->product_node;
+        }
+
+        foreach ($allFields as $field)
+        {
+            if (!empty($suggestions[$field]) && $suggestions[$field] !== 'unknown')
+            {
+                $mapping[$field] = $suggestions[$field];
+            }
+            else
+            {
+                if (isset($currentMapping[$field]))
+                {
+                    $mapping[$field] = $currentMapping[$field];
+                }
+                else
+                {
+                    $mapping[$field] = '';
+                }
+            }
+        }
+
+        return $mapping;
+    }
+
+    /**
+     * Persist the mapping to the database and current configuration instance
+     */
+    private function persistMapping(array $mapping): void
+    {
+        $this->getConfigInstance()->set_current('mapping', $mapping);
+        FeedConfig::updateOption('mapping', $mapping, 'content-egg_' . $this->getId());
+    }
+
+    /**
+     * Decide which AI prompt method to call for the given format.
+     */
+    private function askAiForMapping($prompt, $format, $data, $fieldNames): array
+    {
+        switch ($format)
+        {
+            case 'csv':
+                return $prompt->suggestFieldsMappingCsv($data, $fieldNames);
+            case 'xml':
+                return $prompt->suggestFieldsMappingXml($data, $fieldNames);
+            case 'json':
+                return $prompt->suggestFieldsMappingJson($data, $fieldNames);
+            default:
+                throw new \InvalidArgumentException("Unsupported format: $format");
+        }
+    }
+
+    private function normaliseSuggestionKeys(array $suggestions): array
+    {
+        $aliases = [
+            'image link' => 'image ​​link',
+        ];
+
+        foreach ($aliases as $from => $to)
+        {
+            if (isset($suggestions[$from]) && !isset($suggestions[$to]))
+            {
+                $suggestions[$to] = $suggestions[$from];
+                unset($suggestions[$from]);
+            }
+        }
+
+        return $suggestions;
+    }
+
+    protected function mapXmlData(\SimpleXMLElement $node): array
+    {
+        $this->maybeAiAutomap($node);
+
+        return parent::mapXmlData($node);
+    }
+
+    public static function getPriceParamMap()
+    {
+        return [
+            'min' => 'price_min',
+            'max' => 'price_max',
+        ];
     }
 }

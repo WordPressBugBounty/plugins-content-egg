@@ -2,6 +2,9 @@
 
 namespace ContentEgg\application\components;
 
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
+
 defined('\ABSPATH') || exit;
 
 /**
@@ -48,9 +51,9 @@ abstract class AffiliateFeedParserModuleConfig extends AffiliateParserModuleConf
                 ),
             ),
             'partial_url_match' => array(
-                'title' => __('Search partial URL', 'content-egg'),
-                'description' => __('Partial URL match', 'content-egg')
-                    . '<p class="description">' . __('You can use part of a URL to search for products by URL.', 'content-egg') . '</p>',
+                'title' => __('Search Partial URL', 'content-egg'),
+                'description' => __('Partial URL matching', 'content-egg')
+                    . '<p class="description">' . __('Allows you to search for products using a portion of the URL.', 'content-egg') . '</p>',
                 'callback' => array($this, 'render_checkbox'),
                 'default' => true,
                 'section' => 'default',
@@ -71,28 +74,21 @@ abstract class AffiliateFeedParserModuleConfig extends AffiliateParserModuleConf
         );
 
         $options['update_mode']['default'] = 'cron';
-        $options['update_mode']['validator'][] = array(
-            'call' => array($this, 'emptyLastImportDate'),
-        );
-
         $options['ttl_items']['default'] = 86400;
 
+        // reset feed data when setting are changed
+        $options['update_mode']['validator'][] = array(
+            'call' => array($this, 'resetFeedData'),
+        );
 
         return $options;
     }
 
-    public function emptyLastImportDate()
+    public function resetFeedData()
     {
-        $this->getModuleInstance()->setLastImportDate(0);
-        $this->getModuleInstance()->setLastImportError('');
-
-        // download feed in background
-        $hook = 'cegg_' . $this->getModuleId() . '_init_products';
-
-        if ($this->option('is_active') && !\wp_next_scheduled($hook))
-        {
-            \wp_schedule_single_event(time() + 1, $hook, array('module_id' => $this->getModuleId()));
-        }
+        $is_active = $this->get_submitted_value('is_active');
+        $module = $this->getModuleInstance();
+        $module->refreshFeedData($is_active);
 
         return true;
     }

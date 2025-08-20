@@ -13,6 +13,9 @@ use ContentEgg\application\components\ExtraData;
 use ContentEgg\application\components\LManager;
 use ContentEgg\application\Plugin;
 
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
+
 /**
  * EggMetabox class file
  *
@@ -125,7 +128,7 @@ class EggMetabox
 
     public function renderBlankMetabox($post)
     {
-        esc_attr_e('Configure and activate modules of Content Egg plugin', 'content-egg');
+        esc_attr_e('Configure and activate modules for the Content Egg plugin.', 'content-egg');
     }
 
     private function metadataInit()
@@ -143,6 +146,7 @@ class EggMetabox
 
             if (!$post_meta || !is_array($post_meta))
                 continue;
+
             foreach ($post_meta as $key => $meta)
             {
                 if (!empty($meta['description']) && !TextHelper::isHtmlTagDetected($meta['description']))
@@ -160,6 +164,10 @@ class EggMetabox
             }
             $init_data[$module->getId()] = array_values($post_meta);
         }
+
+        $init_productGroups = \apply_filters('cegg_static_product_groups', $init_productGroups, $post->ID);
+        $init_productGroups = array_values(array_unique($init_productGroups));
+
         $this->addAppParam('initData', $init_data);
         $this->addAppParam('initProductGroups', $init_productGroups);
 
@@ -168,7 +176,7 @@ class EggMetabox
         $init_updateParams = array();
         foreach ($modules as $module)
         {
-            if (!$module->isAffiliateParser())
+            if (!$module->isParser())
                 continue;
             $keywords_meta = \get_post_meta($post->ID, ContentManager::META_PREFIX_KEYWORD . $module->getId(), true);
             if (!$keywords_meta)
@@ -292,7 +300,7 @@ class EggMetabox
                 continue;
 
             $module = ModuleManager::getInstance()->factory($module_id);
-            if (!$module->isAffiliateParser())
+            if (!$module->isParser())
                 continue;
 
             $keyword = ContentManager::sanitizeKeyword($keyword);

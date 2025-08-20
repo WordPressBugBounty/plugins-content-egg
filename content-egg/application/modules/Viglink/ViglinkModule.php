@@ -149,6 +149,11 @@ class ViglinkModule extends AffiliateParserModule
 		{
 			$content = new ContentProduct;
 
+			if (empty($r['id']))
+			{
+				continue;
+			}
+
 			$content->unique_id = $r['id'];
 			$content->title = $r['name'];
 			$content->img = $r['image'];
@@ -289,5 +294,13 @@ class ViglinkModule extends AffiliateParserModule
 		);
 
 		return \apply_filters('cegg_viglink_merchant2domain', $m2d);
+	}
+
+	public static function getPriceParamMap()
+	{
+		return [
+			'min' => 'priceFrom',
+			'max' => 'priceTo',
+		];
 	}
 }

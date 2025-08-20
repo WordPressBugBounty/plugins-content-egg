@@ -2,6 +2,7 @@
 
 namespace ContentEgg\application\components;
 
+use function ContentEgg\prn;
 use function ContentEgg\prnx;
 
 defined('\ABSPATH') || exit;
@@ -86,14 +87,36 @@ abstract class ParserModuleConfig extends ModuleConfig
                 'default' => '',
                 'section' => 'default',
             ),
-            'set_local_redirect' => array(
-                'title' => __('Link Cloaking', 'content-egg'),
-                'description' => __('Enable local 301 redirect for links.', 'content-egg'),
-                'callback' => array($this, 'render_checkbox'),
-                'default' => 0,
-                'section' => 'default',
+            'set_local_redirect' => [
+                'title'       => esc_html__('Link Cloaking', 'content-egg'),
+                'description' => esc_html__('Enable local 301 redirects for affiliate links', 'content-egg'),
+                'callback'    => [$this, 'render_checkbox'],
+                'default'     => 0,
+                'section'     => 'default',
+            ],
+            'ttl' => array(
+                'title'       => __('Update by Keyword', 'content-egg'),
+                'description' => __('Cache lifetime in seconds. After this period, content will be updated if a keyword is set for updating. Set to \'0\' to disable updates.', 'content-egg'),
+                'callback'    => array($this, 'render_input'),
+                'default'     => 0,
+                'validator'   => array(
+                    'trim',
+                    'absint',
+                ),
+                'section'     => 'default',
             ),
+            'update_mode' => array(
+                'title'            => __('Update Mode', 'content-egg'),
+                'description'      => __('Choose how content updates are triggered.', 'content-egg'),
+                'callback'         => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'visit'      => __('Page View', 'content-egg'),
+                    'cron'       => __('Cron Job', 'content-egg'),
+                    'visit_cron' => __('Page View + Cron Job', 'content-egg'),
+                ),
+                'default'          => 'visit',
 
+            )
         );
 
         if ($this->getModuleInstance()->isClone())
@@ -128,41 +151,55 @@ abstract class ParserModuleConfig extends ModuleConfig
             return true;
     }
 
-    protected static function moveRequiredUp(array $options)
+    protected static function moveRequiredUp(array $options): array
     {
-        uasort($options, function ($a, $b)
+        $required   = [];
+        $neutral    = [];
+        $deprecated = [];
+
+        // 1) Partition into three buckets, preserving keys
+        foreach ($options as $key => $opt)
         {
-            if (strpos($a['title'], '*') !== false && strpos($b['title'], '*') === false)
-                return -1;
+            $title = $opt['title'];
 
-            if (strpos($a['title'], '*') === false && strpos($b['title'], '*') !== false)
-                return 1;
-
-            if (strpos($a['title'], 'deprecated') !== false && strpos($b['title'], 'deprecated') === false)
-                return 1;
-
-            if (strpos($a['title'], 'deprecated') === false && strpos($b['title'], 'deprecated') !== false)
-                return -1;
-
-            return 0;
-        });
-
-        foreach ($options as $key => $option)
-        {
-            if (strpos($option['title'], '**') !== false)
-                $options[$key]['title'] = str_replace('**', '', $option['title']);
+            if (strpos($title, '*') !== false)
+            {
+                $required[$key] = $opt;
+            }
+            elseif (strpos($title, 'deprecated') !== false)
+            {
+                $deprecated[$key] = $opt;
+            }
+            else
+            {
+                $neutral[$key] = $opt;
+            }
         }
 
-        return $options;
+        // 2) Re-assemble, preserving keys and order within each bucket
+        $sorted = $required + $neutral + $deprecated;
+
+        // 3) Strip only the ** markers from titles
+        foreach ($sorted as $key => $opt)
+        {
+            $sorted[$key]['title'] = trim(str_replace('**', '', $opt['title']));
+        }
+
+        return $sorted;
     }
 
-    public function applayCustomOptions(array $settings)
+    public function applyCustomOptions(array $settings)
     {
         foreach ($settings as $name => $value)
         {
             if (isset($this->option_values[$name]))
                 $this->option_values[$name] = $value;
         }
+    }
+
+    public function applayCustomOptions(array $settings)
+    {
+        $this->applyCustomOptions($settings);
     }
 
     public function saveModuleName($value)

@@ -18,7 +18,7 @@ defined('\ABSPATH') || exit;
 
 abstract class AiClient
 {
-	const TIMEOUT = 60;
+	const TIMEOUT = 180;
 	const MAX_RETRIES = 0;
 	const INITIAL_WAIT = 5;
 	const DEBUG_CACHE_TTL = 2592000;
@@ -28,6 +28,7 @@ abstract class AiClient
 	protected $openrouter_models = array();
 	protected $curl_info;
 	protected $last_usage = array();
+	protected $last_used_model;
 
 	public static function models()
 	{
@@ -35,6 +36,18 @@ abstract class AiClient
 			'openrouter/auto' => array(
 				'name' => 'OpenRouter' . ' ' . __('(unified interface)', 'content-egg'),
 				'class' => OpenRouterClient::class,
+			),
+			'gpt-5-mini' => array(
+				'name' => 'OpenAI: gpt-5-mini' . ' ' . __('(recommended)', 'content-egg'),
+				'class' => OpenAiClient::class,
+			),
+			'gpt-5-nano' => array(
+				'name' => 'OpenAI: gpt-5-nano',
+				'class' => OpenAiClient::class,
+			),
+			'gpt-5' => array(
+				'name' => 'OpenAI: gpt-5',
+				'class' => OpenAiClient::class,
 			),
 			'gpt-4o-mini' => array(
 				'name' => 'OpenAI: gpt-4o-mini' . ' ' . __('(recommended)', 'content-egg'),
@@ -90,7 +103,7 @@ abstract class AiClient
 			),
 		);
 
-		$models = \apply_filters('ei_ai_models', $models);
+		$models = \apply_filters('cegg_ai_models', $models);
 		return $models;
 	}
 
@@ -106,6 +119,26 @@ abstract class AiClient
 		$this->api_key = $api_key;
 		$this->model = $model;
 		$this->openrouter_models = $openrouter_models;
+	}
+
+	public function getModel()
+	{
+		return $this->model;
+	}
+
+	public function getAiModelPrices()
+	{
+		return array();
+	}
+
+	public function getLastUsedModelPriceInput()
+	{
+		return 0;
+	}
+
+	public function getLastUsedModelPriceOutput()
+	{
+		return 0;
 	}
 
 	public static function createClient($api_key, $model, $openrouter_models = array())
@@ -140,6 +173,15 @@ abstract class AiClient
 	{
 		$payload = $this->getPayload($prompt, $system, $params);
 
+		if (isset($params['model']))
+		{
+			$this->last_used_model = $params['model'];
+		}
+		else
+		{
+			$this->last_used_model = $this->model;
+		}
+
 		// Debug
 		if ($cache = $this->getFromCache($payload))
 		{
@@ -151,6 +193,7 @@ abstract class AiClient
 				throw new \Exception('No response from AI API.');
 
 			$info = $this->curl_info;
+
 			if ($info['http_code'] !== 200)
 			{
 				$data = json_decode($response, true) ?? array();

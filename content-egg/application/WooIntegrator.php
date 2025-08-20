@@ -223,6 +223,7 @@ class WooIntegrator
 
         // image
         FeaturedImage::doAction($post_id, $item);
+        GalleryScheduler::maybeSchedulePendingImages($post_id, $item);
 
         if ($product->get_type() == 'external' && \apply_filters('cegg_sync_woo_url_allowed', true))
             $product->set_product_url($item['url']);
@@ -235,6 +236,27 @@ class WooIntegrator
                 \wp_set_object_terms($post_id, \sanitize_text_field($item['manufacturer']), 'store', true);
             elseif ($sync_brand == 'store' && \apply_filters('cegg_sync_store', true) && $item['domain'])
                 \wp_set_object_terms($post_id, \sanitize_text_field($item['domain']), 'store', true);
+        }
+
+        // Map manufacturer or store to the WooCommerce product_brand taxonomy
+        $syncWooBrand = GeneralConfig::getInstance()->option('sync_woo_brand');
+        if (in_array($syncWooBrand, ['brand', 'store'], true))
+        {
+            $termValue = '';
+            if ('brand' === $syncWooBrand && ! empty($item['manufacturer']))
+            {
+                $termValue = $item['manufacturer'];
+            }
+            elseif ('store' === $syncWooBrand && ! empty($item['domain']))
+            {
+                $termValue = $item['domain'];
+            }
+
+            if ($termValue)
+            {
+                $sanitizedTerm = sanitize_text_field($termValue);
+                wp_set_object_terms($post_id, $sanitizedTerm, 'product_brand', true);
+            }
         }
 
         if (isset($item['stock_status']))

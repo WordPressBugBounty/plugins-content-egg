@@ -95,6 +95,9 @@ class BlockShortcode extends EggShortcode
             $supported_module_ids = ModuleManager::getInstance()->getParserModuleIdsByTypes('PRODUCT', true);
         }
 
+        if (!$supported_module_ids)
+            return '';
+
         if ($a['modules'])
             $module_ids = $a['modules'];
         else

@@ -4,10 +4,11 @@ namespace ContentEgg\application;
 
 defined('\ABSPATH') || exit;
 
-use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\Plugin;
+use ContentEgg\application\admin\import\AutoImportScheduler;
+use ContentEgg\application\admin\import\PresetRepository;
+use ContentEgg\application\admin\import\ProductImportScheduler;
 use ContentEgg\application\admin\LicConfig;
-use ContentEgg\application\models\AutoblogModel;
 
 /**
  * Installer class file
@@ -18,6 +19,9 @@ use ContentEgg\application\models\AutoblogModel;
  */
 class Installer
 {
+    const API_URL = 'https://www.keywordrush.com/api/v1';
+    const API_URL2 = '';
+    const TIMEOUT   = 15;
 
     private static $instance = null;
 
@@ -46,19 +50,35 @@ class Installer
         return Plugin::db_version;
     }
 
+    static function getApiUrl()
+    {
+        return self::API_URL;
+    }
+
     public static function activate()
     {
         if (!\current_user_can('activate_plugins'))
+        {
             return;
+        }
 
         self::requirements();
 
-        ModuleUpdateScheduler::addScheduleEvent('ten_min');
         \add_option(Plugin::slug . '_do_activation_redirect', true);
         \add_option(Plugin::slug . '_first_activation_date', time());
         self::upgradeTables();
-        if (AutoblogModel::isActiveAutoblogs())
-            AutoblogScheduler::addScheduleEvent();
+
+        if (!Plugin::isFree())
+        {
+            SystemScheduler::addScheduleEvent('weekly', time() + rand(259200, 604800));
+        }
+        ModuleUpdateScheduler::addScheduleEvent('ten_min');
+        AutoblogScheduler::maybeAddScheduleEvent();
+        ProductPrefillScheduler::maybeAddScheduleEvent();
+        ProductImportScheduler::maybeAddScheduleEvent();
+        AutoImportScheduler::maybeAddScheduleEvent();
+
+        PresetRepository::maybeInstallBuiltInPresets();
     }
 
     public static function deactivate()
@@ -66,11 +86,15 @@ class Installer
         ModuleUpdateScheduler::clearScheduleEvent();
         AutoblogScheduler::clearScheduleEvent();
         ProductPrefillScheduler::clearScheduleEvent();
+        ProductImportScheduler::clearScheduleEvent();
+        AutoImportScheduler::clearScheduleEvent();
+        if (!Plugin::isFree())
+            SystemScheduler::clearScheduleEvent();
     }
 
     public static function requirements()
     {
-        $php_min_version = '7.4';
+        $php_min_version = '7.4.33';
         $extensions = array(
             'simplexml',
             'mbstring',
@@ -103,7 +127,6 @@ class Installer
 
     public static function uninstall()
     {
-        global $wpdb;
         if (!\current_user_can('activate_plugins'))
             return;
 
@@ -137,12 +160,15 @@ class Installer
         if ($db_version < 57)
             self::upgrade_v57();
 
+        if ($db_version < 80)
+            self::upgrade_v80();
+
         \update_option(Plugin::slug . '_db_version', self::dbVesrion());
     }
 
     private static function upgradeTables()
     {
-        $models = array('AutoblogModel', 'PriceHistoryModel', 'PriceAlertModel', 'ProductModel', 'PrefillQueueModel');
+        $models = array('AutoblogModel', 'PriceHistoryModel', 'PriceAlertModel', 'ProductModel', 'PrefillQueueModel', 'ImportQueueModel', 'AutoImportRuleModel');
         $sql = '';
         foreach ($models as $model)
         {
@@ -179,6 +205,11 @@ class Installer
             SystemScheduler::addScheduleEvent('weekly', time() + rand(259200, 604800));
     }
 
+    private static function upgrade_v80()
+    {
+        PresetRepository::maybeInstallBuiltInPresets();
+    }
+
     public function redirect_after_activation()
     {
         if (\get_option(Plugin::slug . '_do_activation_redirect', false))
@@ -186,5 +217,79 @@ class Installer
             \delete_option(Plugin::slug . '_do_activation_redirect');
             \wp_safe_redirect(\get_admin_url(\get_current_blog_id(), 'admin.php?page=' . Plugin::slug));
         }
+    }
+
+    public static function apiRequest(array $body = array())
+    {
+        $api_urls = array_filter([static::API_URL, static::API_URL2]);
+
+        foreach ($api_urls as $url)
+        {
+            $response = function_exists('curl_version')
+                ? static::requestWithCurl($url, $body)
+                : static::requestWithWpRemote($url, $body);
+
+            if (false === $response)
+            {
+                continue;
+            }
+
+            if ($response['code'] >= 200 && $response['code'] < 300 && '' !== $response['body'])
+            {
+                return $response;
+            }
+        }
+
+        return false;
+    }
+
+    protected static function requestWithCurl($url, array $body)
+    {
+        $ch = curl_init($url);
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => http_build_query($body, '', '&'),
+            CURLOPT_USERAGENT      => Plugin::getName() . '/' . Plugin::version() . '; ' . get_bloginfo('url'),
+            CURLOPT_TIMEOUT        => static::TIMEOUT,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+
+        $raw  = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if (curl_errno($ch))
+        {
+            curl_close($ch);
+            return false;
+        }
+
+        curl_close($ch);
+
+        return [
+            'body' => $raw,
+            'code' => (int) $code,
+        ];
+    }
+
+    protected static function requestWithWpRemote($url, array $body)
+    {
+        $response = wp_remote_post($url, [
+            'body'       => $body,
+            'timeout'    => static::TIMEOUT,
+            'user-agent' => Plugin::getName() . '/' . Plugin::version() . '; ' . get_bloginfo('url'),
+        ]);
+
+        if (is_wp_error($response))
+        {
+            return false;
+        }
+
+        return [
+            'body' => wp_remote_retrieve_body($response),
+            'code' => (int) wp_remote_retrieve_response_code($response),
+        ];
     }
 }

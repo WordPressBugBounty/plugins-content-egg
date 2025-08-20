@@ -5105,7 +5105,7 @@ msgstr ""
 #: application/modules/RssFetcher/RssFetcherConfig.php:55
 #: application/modules/Twitter/TwitterConfig.php:100
 #: application/modules/Youtube/YoutubeConfig.php:49
-msgid "Number of results for autoblogging."
+msgid "Maximum number of results returned for keyword autoupdates and other automatic searches."
 msgstr ""
 
 #: application/modules/BingImages/BingImagesConfig.php:71

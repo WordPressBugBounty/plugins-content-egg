@@ -35,7 +35,6 @@ class TemplateHelper
     const IMG_ORIGINAL = 'original';
 
     static $global_id = 0;
-    static $logos = null;
     static $shop_info = null;
     static $shop_coupons = null;
     static $merchnat_info = null;
@@ -573,141 +572,9 @@ class TemplateHelper
         return CurrencyHelper::getInstance()->getName($currency);
     }
 
-    public static function getCustomLogo($domain)
-    {
-        if (self::$logos === null)
-        {
-            $logos = GeneralConfig::getInstance()->option('logos');
-            if (!$logos)
-            {
-                $logos = array();
-            }
-            foreach ($logos as $logo)
-            {
-                self::$logos[$logo['name']] = $logo['value'];
-            }
-        }
-
-        if (isset(self::$logos[$domain]))
-        {
-            return self::$logos[$domain];
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    private static function getMerchantImageUrl(array $item, $prefix = '', $remote_url = null, $blank_on_error = false, $color_mode = 'light')
-    {
-        $default_ext = 'png';
-
-        if (!strpos($remote_url, 'www.google.com/s2/favicons?domain'))
-        {
-            // custom logos for Offer module
-            if (isset($item['module_id']) && $item['module_id'] == 'Offer' && !empty($item['logo']))
-            {
-                return $item['logo'];
-            }
-
-            // custom logos
-            if (isset($item['domain']) && $custom_logo = self::getCustomLogo($item['domain']))
-            {
-                return $custom_logo;
-            }
-        }
-
-        if (!empty($item['domain']))
-        {
-            $logo_file_name = $item['domain'];
-        }
-        elseif (!empty($item['logo']))
-        {
-            $logo_file_name = md5($item['logo']);
-        }
-        else
-        {
-            return $blank_on_error ? self::getBlankImg() : false;
-        }
-        if (!$prefix && strstr($item['domain'], 'amazon.'))
-            $logo_file_name = 'amazon.webp';
-        elseif (!$prefix &&  strstr($item['domain'], 'ebay.'))
-            $logo_file_name = 'ebay.webp';
-        else
-        {
-            $logo_file_name = str_replace('.', '-', $logo_file_name);
-            $logo_file_name .= '.' . $default_ext;
-            $logo_file_name = $prefix . $logo_file_name;
-        }
-
-        if ($color_mode == 'dark')
-        {
-            if (file_exists(\ContentEgg\PLUGIN_PATH . 'res/logos/dark-' . $logo_file_name))
-                return \ContentEgg\PLUGIN_RES . '/logos/dark-' . $logo_file_name;
-        }
-
-        if (file_exists(\ContentEgg\PLUGIN_PATH . 'res/logos/' . $logo_file_name))
-            return \ContentEgg\PLUGIN_RES . '/logos/' . $logo_file_name;
-
-        $uploads = \wp_upload_dir();
-        if (!$logo_dir = self::getMerchantLogoDir())
-        {
-            return $blank_on_error ? self::getBlankImg() : false;
-        }
-        $logo_file = \trailingslashit($logo_dir) . $logo_file_name;
-        $logo_url = $uploads['baseurl'] . '/' . self::MERHANT_LOGO_DIR . '/' . $logo_file_name;
-
-        // logo exists
-        if (file_exists($logo_file))
-        {
-            return $logo_url;
-        }
-
-        // download
-        if (!$remote_url)
-        {
-            return $blank_on_error ? self::getBlankImg() : false;
-        }
-        if ($logo_file_name = ImageHelper::downloadImg($remote_url, $logo_dir, $logo_file_name, '', true))
-        {
-            return $uploads['baseurl'] . '/' . self::MERHANT_LOGO_DIR . '/' . $logo_file_name;
-        }
-        else
-        {
-            // save blank to prevent new requests
-            copy(\ContentEgg\PLUGIN_PATH . 'res/img/blank.gif', $logo_file);
-
-            return $blank_on_error ? self::getBlankImg() : false;
-        }
-    }
-
     public static function getMerchantLogoUrl(array $item, $blank_on_error = false, $color_mode = 'light')
     {
-        $prefix = '';
-        if (!empty($item['module_id']))
-        {
-            $parser = ModuleManager::getInstance()->parserFactory($item['module_id']);
-            if ($parser->getConfigInstance()->option_exists('show_large_logos') && !filter_var($parser->config('show_large_logos'), FILTER_VALIDATE_BOOLEAN))
-            {
-                return $blank_on_error ? self::getBlankImg() : false;
-            }
-        }
-
-        if (!empty($item['logo']))
-        {
-            $remote_url = $item['logo'];
-        }
-        elseif (!empty($item['domain']))
-        {
-            $item['domain'] = preg_replace('/^https:\/\//', '', $item['domain']);
-            $remote_url = 'https://logo.clearbit.com/' . urlencode($item['domain']) . '?size=128';
-        }
-        else
-        {
-            $remote_url = '';
-        }
-
-        return self::getMerchantImageUrl($item, $prefix, $remote_url, $blank_on_error, $color_mode);
+        return LogoHelper::getMerchantLogoUrl($item, $blank_on_error, $color_mode);
     }
 
     public static function getMerhantLogoUrl(array $item, $blank_on_error = false)
@@ -717,20 +584,7 @@ class TemplateHelper
 
     public static function getMerchantIconUrl(array $item, $blank_on_error = false)
     {
-        $prefix = 'icon_';
-        if (!empty($item['module_id']))
-        {
-            $parser = ModuleManager::getInstance()->parserFactory($item['module_id']);
-            if ($parser->getConfigInstance()->option_exists('show_small_logos') && !filter_var($parser->config('show_small_logos'), FILTER_VALIDATE_BOOLEAN))
-            {
-                return $blank_on_error ? self::getBlankImg() : false;
-            }
-        }
-
-        $item['domain'] = preg_replace('/^https:\/\//', '', $item['domain']);
-        $remote_url = 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://' . urlencode($item['domain']) . '&size=16';
-
-        return self::getMerchantImageUrl($item, $prefix, $remote_url, $blank_on_error);
+        return LogoHelper::getMerchantIconUrl($item, $blank_on_error);
     }
 
     public static function getMerhantIconUrl(array $item, $blank_on_error = false)
@@ -2099,10 +1953,20 @@ class TemplateHelper
         {
             foreach ($items as $item)
             {
+
                 if (!empty($item['extra']['images']))
                     $gallery = $item['extra']['images'];
                 elseif (!empty($item['images']))
                     $gallery = $item['images'];
+                elseif (!empty($item['extra']['imageSet']) && is_array($item['extra']['imageSet']))
+                {
+                    $gallery = array();
+                    foreach ($item['extra']['imageSet'] as $g)
+                    {
+                        if (isset($g['LargeImage']))
+                            $gallery[] = $g['LargeImage'];
+                    }
+                }
                 else
                     continue;
 
@@ -3172,7 +3036,7 @@ class TemplateHelper
             if (self::$price_history_since === null)
                 self::$price_history_since = strtotime($date);
 
-            if ($lowest_item === null || $data['price'] < $lowest_item['price'])
+            if ($lowest_item === null || $data['price'] <= $lowest_item['price'])
             {
                 $lowest_item = $data;
                 $lowest_item['date'] = $date;

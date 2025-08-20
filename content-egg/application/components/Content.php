@@ -14,6 +14,7 @@ defined('\ABSPATH') || exit;
 class Content
 {
 	public $unique_id;
+	public $module_id;
 	public $title;
 	public $description;
 	public $img;

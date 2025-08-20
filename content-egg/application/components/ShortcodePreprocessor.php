@@ -6,6 +6,8 @@ use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\EggShortcode;
 use ContentEgg\application\components\ModuleManager;
 
+use function ContentEgg\prnx;
+
 defined('\ABSPATH') || exit;
 
 /**
@@ -70,7 +72,7 @@ class ShortcodePreprocessor
                 continue;
 
             $module = ModuleManager::getInstance()->factory($module_id);
-            if (!$module->isAffiliateParser())
+            if (!$module->isParser())
                 continue;
 
             $keywords = array_unique($keywords);

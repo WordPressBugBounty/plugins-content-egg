@@ -37,7 +37,7 @@ abstract class AffiliateParserModuleConfig extends ParserModuleConfig
 			'title'       => __('Update by Keyword', 'content-egg'),
 			'description' => __('Cache lifetime in seconds. After this period, products will be updated if a keyword is set for updating. Set to \'0\' to disable updates.', 'content-egg'),
 			'callback'    => array($this, 'render_input'),
-			'default'     => 604800, // 7 days in seconds
+			'default'     => 604800,
 			'validator'   => array(
 				'trim',
 				'absint',

@@ -159,26 +159,56 @@ class ContentHelper
         return $text;
     }
 
-    public static function prepareArticle($text, $title = '')
+    public static function prepareArticle(string $html, string $title = ''): string
     {
-        $text = str_replace('```html', '', $text);
-        $text = str_replace('```', '', $text);
+        // 1) Remove markdown fences
+        $html = str_replace(['```html', '```'], '', $html);
 
-        if (strstr($text, '<h1>'))
-            $text = self::headerDown($text);
-
-        if ($title)
+        // 2) If there's a <body>, extract only its inner HTML
+        if (stripos($html, '<body') !== false)
         {
-            $text = str_replace('<h2>' . $title . '</h2>', '', $text);
-            $text = str_replace('<h3>' . $title . '</h3>', '', $text);
+            $doc = new \DOMDocument();
+            libxml_use_internal_errors(true);
+            // Prepend XML tag to force UTF-8
+            $doc->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+            libxml_clear_errors();
+
+            if ($body = $doc->getElementsByTagName('body')->item(0))
+            {
+                $inner = '';
+                foreach ($body->childNodes as $child)
+                {
+                    $inner .= $doc->saveHTML($child);
+                }
+                $html = $inner;
+            }
         }
 
-        $text = trim($text);
-        $text = preg_replace('/<title>.+?<\/title>/ui', '', $text);
-        $text = preg_replace('/<style>.+?<\/style>/ims', '', $text);
-        $text = preg_replace('/<script>.+?<\/script>/ims', '', $text);
-        $text = TextHelper::sanitizeHtml($text);
-        return $text;
+        // 3) Move <h1> down if present
+        if (stripos($html, '<h1>') !== false)
+        {
+            $html = self::headerDown($html);
+        }
+
+        // 4) Remove the specific title heading (h2 or h3) if provided
+        if ($title !== '')
+        {
+            $escaped = preg_quote($title, '#');
+            $html = preg_replace(
+                "#<h[23]>\s*{$escaped}\s*</h[23]>#iu",
+                '',
+                $html
+            );
+        }
+
+        // 5) Strip out <title>, <style> and <script> blocks
+        $html = preg_replace('#<title>.*?</title>#isu',       '', $html);
+        $html = preg_replace('#<style[^>]*>.*?</style>#isu',   '', $html);
+        $html = preg_replace('#<script[^>]*>.*?</script>#isu', '', $html);
+
+        // 6) Final trim & sanitize
+        $html = trim($html);
+        return TextHelper::sanitizeHtml($html);
     }
 
     public static function headerDown($html)
@@ -196,6 +226,8 @@ class ContentHelper
 
     public static function htmlToText($html)
     {
+        $html = (string) $html;
+
         $text = preg_replace(
             array(
                 '~</?((div)|(h[1-9])|(ins)|(br)|(p)|(pre))~iu',
@@ -253,5 +285,184 @@ class ContentHelper
             return $json;
         else
             return array();
+    }
+
+    public static function countWords($text, $lang = '')
+    {
+        return TextHelper::countWords($text, $lang);
+    }
+
+    /**
+     * Clean and truncate post content for prompt usage.
+     *
+     * @param string $rawContent Raw post_content coming from WP_Query.
+     * @param int    $maxChars   Optional hard limit (multibyte‑safe). 0 ⇒ no limit.
+     */
+    public static function prepareBlockPostContent(string $rawContent, int $maxChars = 0): string
+    {
+        $allowedBlocks = apply_filters(
+            'cegg_prefill_allowed_text_blocks',
+            [
+                'core/paragraph',
+                'core/heading',
+                'core/list',        // wrapper – recursion handles children
+                'core/list-item',   // individual <li>
+                'core/quote',
+            ]
+        );
+
+        // 1. Parse blocks & collect text recursively.
+        $text = self::collectAllowedBlocksText(parse_blocks($rawContent), $allowedBlocks);
+
+        if ($text === '')
+        {
+            $text = $rawContent; // Ultimate fallback – we tried, but nothing matched.
+        }
+
+        // 2. Replace angle‑collision ("><") to keep words separated once tags are stripped.
+        $text = str_replace('><', '> <', $text);
+
+        // 3. Strip shortcodes & tags – now that we handled block‑level extraction.
+        $text = strip_shortcodes($text);
+        $text = wp_strip_all_tags($text);
+
+        // 4. Normalise newlines.
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+
+        // 5. Collapse horizontal whitespace (tabs/spaces) but keep newlines.
+        $text = preg_replace('/[ \t]+/', ' ', $text);
+
+        // 6. Collapse >2 consecutive newlines into exactly two (paragraph spacing).
+        $text = preg_replace("/\n{3,}/", "\n\n", $text);
+
+        $text = trim($text);
+
+        // 7. Truncate if necessary.
+        if ($maxChars && mb_strlen($text) > $maxChars)
+        {
+            $text = TextHelper::truncate($text, $maxChars);
+        }
+
+        return $text;
+    }
+
+    /**
+     * Recursively walk parsed Gutenberg blocks and collect text from allowed ones.
+     * Also performs a heuristic fallback for custom blocks by scanning innerContent
+     * for <p> / <hN> tags or any raw HTML chunk.
+     *
+     * @param array $blocks        Output of parse_blocks().
+     * @param array $allowedBlocks Block names we explicitly support.
+     * @param bool  $inOrderedList Whether we are inside an ordered list.
+     */
+    private static function collectAllowedBlocksText(array $blocks, array $allowedBlocks, bool $inOrderedList = false): string
+    {
+        $out = '';
+        static $liCounterStack = []; // track numbering per nested ordered list
+
+        foreach ($blocks as $block)
+        {
+            $name        = $block['blockName']   ?? '';
+            $innerHTML   = $block['innerHTML']   ?? '';
+            $innerBlocks = $block['innerBlocks'] ?? [];
+            $innerContent = $block['innerContent'] ?? [];
+
+            // Detect list context for <li> numbering / bullets
+            $isListWrapper  = $name === 'core/list';
+            $orderedContext = $inOrderedList;
+            if ($isListWrapper)
+            {
+                $orderedContext = !empty($block['attrs']['ordered']);
+                if ($orderedContext)
+                {
+                    array_push($liCounterStack, 0); // start new numbering context
+                }
+            }
+
+            // Recurse into children first so wrapper tags are skipped
+            if ($innerBlocks)
+            {
+                $out .= self::collectAllowedBlocksText($innerBlocks, $allowedBlocks, $orderedContext);
+            }
+
+            // ----- PRIMARY EXTRACTION FOR ALLOWED BLOCKS -----
+            if ($name && in_array($name, $allowedBlocks, true))
+            {
+                if ($name === 'core/list')
+                {
+                    // Already handled via recursion – nothing else to do.
+                }
+                elseif ($name === 'core/list-item')
+                {
+                    $clean = self::cleanInnerHTML($innerHTML);
+                    if ($clean !== '')
+                    {
+                        if ($orderedContext)
+                        {
+                            $idx = ++$liCounterStack[array_key_last($liCounterStack)];
+                            $clean = $idx . '. ' . $clean;
+                        }
+                        else
+                        {
+                            $clean = '• ' . $clean;
+                        }
+                        $out .= $clean . "\n\n";
+                    }
+                }
+                else
+                { // paragraph, heading, quote, etc.
+                    $clean = self::cleanInnerHTML($innerHTML);
+                    if ($clean !== '')
+                    {
+                        $out .= $clean . "\n\n";
+                    }
+                }
+            }
+            // ----- HEURISTIC FALLBACK FOR UNKNOWN / CUSTOM BLOCKS -----
+            elseif ($innerContent && is_array($innerContent))
+            {
+                foreach ($innerContent as $chunk)
+                {
+                    if (!is_string($chunk))
+                    {
+                        continue;
+                    }
+
+                    if (preg_match('/<(p|h[1-6])[^>]*>/i', $chunk))
+                    {
+                        $clean = self::cleanInnerHTML($chunk);
+                    }
+                    else
+                    {
+                        // Broad HTML‑to‑text conversion for arbitrary markup.
+                        $clean = method_exists('ContentHelper', 'htmlToText')
+                            ? ContentHelper::htmlToText($chunk)
+                            : trim(strip_tags($chunk));
+                    }
+
+                    if ($clean !== '')
+                    {
+                        $out .= $clean . "\n\n";
+                    }
+                }
+            }
+
+            // Exit ordered list context when wrapper ends.
+            if ($isListWrapper && $orderedContext)
+            {
+                array_pop($liCounterStack);
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Remove leading numbers/bullets and strip tags from an HTML fragment.
+     */
+    private static function cleanInnerHTML(string $html): string
+    {
+        $text = preg_replace('/^\s*\d+\.\s*/u', '', strip_tags($html));
+        return trim($text);
     }
 }

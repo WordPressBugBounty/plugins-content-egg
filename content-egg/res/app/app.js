@@ -464,6 +464,12 @@ contentEgg.controller('ContentEggController', function ($scope, $element, $http,
         });
     };
 
+    $scope.confirmAndRemoveProductGroups = function () {
+    if (confirm('Are you sure you want to remove all product groups?')) {
+        $scope.removeProductGroups();
+    }
+};
+
 });
 
 contentEgg.filter('stockStatus', function () {

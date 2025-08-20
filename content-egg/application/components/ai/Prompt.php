@@ -41,16 +41,20 @@ class Prompt
         $params = $this->prepareParams($params, $prompt);
         $prompt = PromptHelper::build($prompt, $params);
         if ($this->lang)
-            $system = sprintf('Language: Ensure all texts are written in %s!', $this->lang);
+            $system = sprintf('Respond in %s!', $this->lang);
 
         if ($this->temperature && !isset($ai_params['temperature']))
-            $ai_params['temperature'] = $this->temperature;
+        {
+            $ai_params['temperature'] = (float) $this->temperature;
+        }
+
+        // GPT-5 models do not support temperature settings
+        if (isset($ai_params['temperature']) && strpos($this->client->getModel(), 'gpt-5') !== false)
+        {
+            unset($ai_params['temperature']);
+        }
 
         $content = $this->client->query($prompt, $system, $ai_params);
-
-        $content = ContentHelper::fixAiResponse($content);
-        if (ContentHelper::isAiGenerated($content))
-            return '';
 
         return $content;
     }

@@ -19,9 +19,12 @@ class GoogleImagesConfig extends ParserModuleConfig
 	public function options()
 	{
 		$options = array(
-			'cx'                      => array(
+			'cx' => array(
 				'title'       => 'Search engine ID <span class="cegg_required">*</span>',
-				'description' => __('The custom <a target="_blank" href="https://support.google.com/customsearch/answer/2649143">search engine ID</a>. Don\'t forget to <a target="_blank" href="https://support.google.com/customsearch/answer/2630972">enable image search</a>.', 'content-egg'),
+				'description' => sprintf(
+					__('Enter your Google Custom Search Engine ID. See the <a target="_blank" href="%s">setup guide</a> for detailed instructions.', 'content-egg'),
+					'https://ce-docs.keywordrush.com/modules/content/googleimages'
+				),
 				'callback'    => array($this, 'render_input'),
 				'default'     => '',
 				'validator'   => array(
@@ -33,10 +36,15 @@ class GoogleImagesConfig extends ParserModuleConfig
 					),
 				),
 			),
-			'key'                     => array(
+
+			'key' => array(
 				'title'       => 'API Key <span class="cegg_required">*</span>',
-				'description' => __('API access key. You can get in Google <a href="http://code.google.com/apis/console">API console</a>.', 'content-egg'),
-				'callback'    => array($this, 'render_input'),
+				'description' => sprintf(
+					__('Enter your Google API key. You can create one in the <a target="_blank" href="%s">Google API Console</a>. See the <a target="_blank" href="%s">setup guide</a> for detailed instructions.', 'content-egg'),
+					'https://console.developers.google.com',
+					'https://ce-docs.keywordrush.com/modules/content/googleimages'
+				),
+				'callback'    => array($this, 'render_password'),
 				'default'     => '',
 				'validator'   => array(
 					'trim',
@@ -47,6 +55,7 @@ class GoogleImagesConfig extends ParserModuleConfig
 					),
 				),
 			),
+
 			'entries_per_page'        => array(
 				'title'       => __('Results', 'content-egg'),
 				'description' => __('Number of results for one query.', 'content-egg'),
@@ -69,7 +78,7 @@ class GoogleImagesConfig extends ParserModuleConfig
 			),
 			'entries_per_page_update' => array(
 				'title'       => __('Results for updates', 'content-egg'),
-				'description' => __('Number of results for autoblogging.', 'content-egg'),
+				'description' => __('Maximum number of results returned for keyword autoupdates and other automatic searches.', 'content-egg'),
 				'callback'    => array($this, 'render_input'),
 				'default'     => 6,
 				'validator'   => array(
@@ -176,7 +185,7 @@ class GoogleImagesConfig extends ParserModuleConfig
 			),
 			'siteSearch'              => array(
 				'title'       => __('Search', 'content-egg'),
-				'description' => __('Limit search to only that domain. For example ask: photobucket.com', 'content-egg'),
+				'description' => __('Restrict searches to a specific domain. For example: photobucket.com', 'content-egg'),
 				'callback'    => array($this, 'render_input'),
 				'default'     => '',
 				'validator'   => array(

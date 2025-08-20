@@ -175,14 +175,8 @@ abstract class ParserModule extends Module
 
         if (!$token || $force)
         {
-            // try
-            // {
             list($token, $expires_in) = $this->requestAccessToken();
-            //  }
-            //  catch (\Exception $e)
-            //  {
-            //       return false;
-            //   }
+
             \set_transient($transient_name, $token, (int) $expires_in);
         }
 
@@ -229,6 +223,11 @@ abstract class ParserModule extends Module
                 {
                     $data[$key]->group = $groups[$i];
                 }
+            }
+
+            foreach ($data as $key => $d)
+            {
+                $data[$key]->module_id = $this->getId();
             }
 
             $results = array_merge($results, $data);

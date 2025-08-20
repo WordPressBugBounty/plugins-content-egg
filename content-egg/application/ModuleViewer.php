@@ -148,7 +148,7 @@ class ModuleViewer
 
             foreach ($data as $key => $d)
             {
-                if (!$d['group'] || !in_array($d['group'], $params['groups']))
+                if (empty($d['group']) || !in_array($d['group'], $params['groups']))
                     unset($data[$key]);
             }
         }

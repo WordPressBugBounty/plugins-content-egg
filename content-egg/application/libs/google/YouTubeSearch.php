@@ -77,9 +77,7 @@ class YouTubeSearch extends RestClient
                     break;
             }
         }
-        //\ContentEgg\prn($_query);
-        //\ContentEgg\prn($this->_decodeResponse($this->restGet('/search', $_query)));
-        //exit;
+
         $response = $this->restGet('/search', $_query);
 
         return $this->_decodeResponse($response);

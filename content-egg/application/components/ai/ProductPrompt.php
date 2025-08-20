@@ -251,7 +251,7 @@ class ProductPrompt extends Prompt
 
         if ($this->product['description'])
             $prompt .= "\n\nProduct description:\n%description%";
-        if ($this->product['extra']['comments'])
+        if (!empty($this->product['extra']['comments']))
             $prompt .= "\n\nUser feedback:\n%reviews%";
 
         $prompt .= "\n\n\nWrite a comprehensive product review for the \"%title%\".";

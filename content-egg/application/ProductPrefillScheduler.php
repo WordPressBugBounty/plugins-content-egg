@@ -66,52 +66,42 @@ class ProductPrefillScheduler
 
     public static function processPrefillBatch()
     {
+        if (Plugin::isDevEnvironment())
+        {
+            return;
+        }
+
         // prevent multiple instances
         if (get_transient('cegg_prefill_batch_lock'))
         {
             return;
         }
+
         set_transient('cegg_prefill_batch_lock', 1, 15 * MINUTE_IN_SECONDS);
 
-        @set_time_limit(1200);
-
-        $queue = PrefillQueueModel::model();
-        $batch = $queue->getNextBatch(self::getBatchSize());
-
-        if (empty($batch))
+        try
+        {
+            @set_time_limit(1200);
+            $service = new \ContentEgg\application\components\ProductPrefillService();
+            $service->processBatch(self::getBatchSize());
+        }
+        finally
         {
             delete_transient('cegg_prefill_batch_lock');
-            return;
         }
-
-        foreach ($batch as $item)
-        {
-            try
-            {
-                self::processSinglePost($item['post_id']);
-                $queue->markAsDone($item['post_id']);
-            }
-            catch (\Exception $e)
-            {
-                $queue->markAsFailed($item['post_id'], $e->getMessage());
-            }
-        }
-
-        delete_transient('cegg_prefill_batch_lock');
 
         // If there are still posts to process, queue the next batch
-        if ($queue->countPending() > 0)
+        if (PrefillQueueModel::model()->isInProgress())
         {
             if (!wp_next_scheduled(self::CRON_TAG_BATCH))
             {
                 wp_schedule_single_event(time() + 10, self::CRON_TAG_BATCH);
             }
         }
-    }
-
-    public static function processSinglePost($post_id)
-    {
-        // TODO: Implement prefill logic
+        else
+        {
+            self::clearScheduleEvents();
+        }
     }
 
     public static function clearScheduleEvent()
@@ -132,5 +122,15 @@ class ProductPrefillScheduler
         }
 
         delete_transient('cegg_prefill_batch_lock');
+    }
+
+    public static function maybeAddScheduleEvent()
+    {
+        $queue = \ContentEgg\application\models\PrefillQueueModel::model();
+
+        if ($queue->isInProgress())
+        {
+            ProductPrefillScheduler::addScheduleEvent();
+        }
     }
 }

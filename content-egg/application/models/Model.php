@@ -2,6 +2,9 @@
 
 namespace ContentEgg\application\models;
 
+use ContentEgg\application\Plugin;
+
+use function ContentEgg\prn;
 use function ContentEgg\prnx;
 
 defined('\ABSPATH') || exit;
@@ -314,35 +317,63 @@ abstract class Model
 
     public function multipleInsert(array $items, $per_request = 200)
     {
-        $fields = array_keys(reset($items));
-
-        $sql = 'INSERT INTO ' . $this->tableName() . ' (' . join(',', $fields) . ') VALUES ';
-        $placeholder = str_repeat('%s, ', count($fields));
-        $placeholder = '(' . rtrim($placeholder, " ,") . ')';
-
-        reset($items);
-        $request_count = ceil(count($items) / $per_request);
-        for ($i = 0; $i < $request_count; $i++)
+        if (empty($items))
         {
-            $query = $sql;
-            $values = array();
-            $place_holders = array();
-            for ($j = $i * $per_request; $j < $i * $per_request + $per_request; $j++)
-            {
-                if (!isset($items[$j]))
-                {
-                    break;
-                }
-                $query .= $this->getDb()->prepare($placeholder, $items[$j]) . ', ';
-            }
-            $query = rtrim($query, " ,") . ';';
+            return;
+        }
 
-            $this->getDb()->query($query);
+        global $wpdb;
+        $firstRow = reset($items);
+        $fields   = array_keys($firstRow);
+        $escaped_columns = array_map(function ($col)
+        {
+            return "`" . str_replace("`", "``", $col) . "`";
+        }, $fields);
+        $columns = implode(',', $escaped_columns);
+
+        $colCount  = count($fields);
+        $oneRowTpl = '(' . rtrim(str_repeat('%s, ', $colCount), ', ') . ')';
+
+        $batches = array_chunk($items, $per_request);
+        foreach ($batches as $batch)
+        {
+            $placeholders = array_fill(0, count($batch), $oneRowTpl);
+            $valuesSql    = implode(',', $placeholders);
+
+            $allValues = [];
+            foreach ($batch as $row)
+            {
+                foreach ($fields as $columnName)
+                {
+                    $allValues[] = $row[$columnName];
+                }
+            }
+
+            $prefix  = $wpdb->prefix;
+            $rawName = $this->tableName();
+            if (substr($rawName, 0, strlen($prefix)) === $prefix)
+            {
+                $table = $rawName;
+            }
+            else
+            {
+                $table = $prefix . $rawName;
+            }
+
+            $sql    = "INSERT INTO `{$table}` ({$columns}) VALUES {$valuesSql};";
+            $prepared = $wpdb->prepare($sql, ...$allValues);
+            $result   = $wpdb->query($prepared);
+
+            if ($result === false && Plugin::isDevEnvironment())
+            {
+                error_log('DB INSERT ERROR: ' . $wpdb->last_error . ' SQL: ' . $wpdb->last_query);
+            }
         }
     }
 
     public function dropTable()
     {
+
         $this->getDb()->query('DROP TABLE IF EXISTS ' . $this->tableName());
     }
 }

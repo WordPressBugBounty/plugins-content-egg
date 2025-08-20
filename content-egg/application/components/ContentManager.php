@@ -35,16 +35,15 @@ class ContentManager
 
     private static $_view_data = array();
 
-    public static function saveData(array $data, $module_id, $post_id, $is_last_iteration = true)
+    public static function saveData(array $data, $module_id, $post_id, $is_last_iteration = true, $add_group = '')
     {
-
         if (!$data)
         {
             self::deleteData($module_id, $post_id, $is_last_iteration);
             return;
         }
 
-        $data = self::dataPresavePrepare($data, $module_id, $post_id);
+        $data = self::dataPresavePrepare($data, $module_id, $post_id, $add_group);
 
         $old_data = ContentManager::getData($post_id, $module_id);
 
@@ -88,17 +87,26 @@ class ContentManager
         self::resetViewDataCache($module_id, $post_id);
 
         \do_action('content_egg_save_data', $data, $module_id, $post_id, $is_last_iteration);
+
+        return $data;
     }
 
-    public static function dataPresavePrepare(array $data, $module_id, $post_id)
+    public static function dataPresavePrepare(array $data, $module_id, $post_id, $add_group = '')
     {
         foreach ($data as $i => $d)
         {
             if (is_object($d))
+            {
                 $data[$i] = ArrayHelper::object2Array($d);
+            }
 
             $data[$i]['module_id'] = $module_id;
             $data[$i]['post_id'] = $post_id;
+
+            if ($add_group)
+            {
+                $data[$i]['group'] = $add_group;
+            }
         }
 
         $data = self::setIds($data);
@@ -498,7 +506,7 @@ class ContentManager
                     $data[$key]['endDate'] = '';
             }
 
-            if (isset($d['price']) && isset($d['priceOld']) && $d['price'] == $d['priceOld'])
+            if (isset($d['price']) && isset($d['priceOld']) && (float)$d['price'] == (float)$d['priceOld'])
                 $data[$key]['priceOld'] = 0;
 
             if (isset($data[$key]['rating']))
@@ -517,12 +525,14 @@ class ContentManager
             if (empty($data[$key]['rating']) && !empty($data[$key]['ratingDecimal']))
                 $data[$key]['rating'] = round($data[$key]['ratingDecimal']);
 
-            if ($badge_data = self::getBadgeFromDescription($data[$key]['description']))
+            $description = $data[$key]['description'];
+            if ($badge_data = self::getBadgeFromDescription($description))
             {
                 list($badge, $color) = $badge_data;
                 $data[$key]['badge'] = $badge;
                 $data[$key]['badge_color'] = $color;
             }
+            $data[$key]['description'] = $description;
 
             $data[$key]['number'] = 999;
             $number = TemplateHelper::getNumberFromTitle($data[$key]['title']);
@@ -543,6 +553,11 @@ class ContentManager
 
         // local redirect & other
         $module = ModuleManager::getInstance()->factory($module_id);
+
+        if (!$module)
+        {
+            return [];
+        }
 
         if ($module->isParser())
         {
@@ -1106,7 +1121,6 @@ class ContentManager
      */
     public static function findDuplicatesByField($items, $field)
     {
-        //prnx($field);
         $modules_priority = self::getModulesPriority($items);
 
         $all_items = TemplateHelper::mergeData($items);

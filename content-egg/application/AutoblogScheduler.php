@@ -43,4 +43,10 @@ class AutoblogScheduler extends Scheduler
         if (!AutoblogModel::isActiveAutoblogs())
             AutoblogScheduler::clearScheduleEvent();
     }
+
+    public static function maybeAddScheduleEvent()
+    {
+        if (AutoblogModel::isActiveAutoblogs())
+            AutoblogScheduler::addScheduleEvent();
+    }
 }

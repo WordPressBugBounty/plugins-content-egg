@@ -78,7 +78,6 @@ class YoutubeModule extends ParserModule
 
 		try
 		{
-			//$keyword = str_replace('-', ' ', $keyword);
 			$client = new YouTubeSearch('json');
 			$data   = $client->search($keyword, $params);
 		}

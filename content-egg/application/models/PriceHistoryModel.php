@@ -7,6 +7,9 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ContentProduct;
 
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
+
 /**
  * PriceHistoryModel class file
  *
@@ -196,7 +199,8 @@ class PriceHistoryModel extends Model
 		$saved = 0;
 		foreach ($data as $key => $d)
 		{
-			if (empty($d['unique_id']) || empty($d['price']) || $d['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+			$stock_status = isset($d['stock_status']) ? $d['stock_status'] : ContentProduct::STOCK_STATUS_UNKNOWN;
+			if (empty($d['unique_id']) || empty($d['price']) || $stock_status == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
 			{
 				continue;
 			}
@@ -226,74 +230,25 @@ class PriceHistoryModel extends Model
 		}
 	}
 
-	public function getPriceMoversOld(array $params = array())
-	{
-
-		$defaults = array(
-			'time_period' => 7,
-			'limit'       => 5,
-			'drop_type'   => 'absolute',
-			'direction'   => 'drops',
-		);
-		$params   = \wp_parse_args($params, $defaults);
-
-		$params['time_period'] = (int) $params['time_period'];
-		$params['limit']       = (int) $params['limit'];
-
-		if ($params['direction'] == 'drops')
-		{
-			$order = 'DESC';
-		}
-		else
-		{
-			$order = 'ASC';
-		}
-
-		if ($params['drop_type'] == 'relative')
-		{
-			$change = '(100 - (p_last.price * 100) / p_prev.price)';
-		} //relative
-		else
-		{
-			$change = '(p_prev.price - p_last.price)';
-		} // absolute
-
-		$sql = '
-            SELECT
-               MAX(p_last.create_date) as last_date,
-               p_last.unique_id,
-               p_last.post_id,
-               p_last.module_id,
-               p_prev.price as old_price,
-               p_prev.create_date as old_date,
-               p_last.price as last_price,
-               ' . $change . ' as `change`
-            FROM ' . $this->tableName() . ' p_last
-               INNER JOIN (SELECT unique_id, create_date, MAX(price) as price FROM ' . $this->tableName() . ' GROUP BY unique_id) AS p_prev
-                    ON p_last.unique_id = p_prev.unique_id
-                    AND p_last.create_date >= NOW() - INTERVAL ' . $params['time_period'] . ' DAY
-               INNER JOIN ' . $this->getDb()->posts . ' AS post
-                   ON post.ID = p_last.post_id
-                   AND post.post_status = "publish"
-            GROUP BY unique_id
-            ORDER BY `change` ' . $order . '
-            LIMIT ' . $params['limit'];
-
-		return $this->getDb()->get_results($sql, \ARRAY_A);
-	}
-
 	public function getPriceMovers(array $params = array(), $double_limit = false)
 	{
-		$defaults              = array(
-			'limit'       => 5,
-			'last_update' => 7,
-			'drop_type'   => 'absolute',
-			'direction'   => 'drops',
+		$defaults = array(
+			'limit'              => 5,
+			'last_update'        => 7,
+			'drop_type'          => 'absolute',
+			'direction'          => 'drops',
+			'include_module_ids' => array(),
+			'exclude_module_ids' => array(),
 		);
+
 		$params                = \wp_parse_args($params, $defaults);
 		$params['limit']       = (int) $params['limit'];
 		$params['last_update'] = (int) $params['last_update'];
-		if ($params['direction'] == 'drops')
+
+		// ------------------------------------------------------------
+		// Direction (drops or increases)
+		// ------------------------------------------------------------
+		if ($params['direction'] === 'drops')
 		{
 			$order           = 'DESC';
 			$direction_where = 'price_old - price >= 0';
@@ -304,43 +259,77 @@ class PriceHistoryModel extends Model
 			$direction_where = 'price_old - price <= 0';
 		}
 
+		// ------------------------------------------------------------
+		// Limit handling (optionally doubled by caller)
+		// ------------------------------------------------------------
 		$limit = $params['limit'];
 		if ($double_limit)
 		{
 			$limit *= 2;
 		}
 
-		if ($params['drop_type'] == 'relative')
-		{
-			$change = '(100 - (price * 100) / price_old)';
-		}
-		else
-		{
-			$change = '(price_old - price)';
-		} // absolute
+		// ------------------------------------------------------------
+		// Calculate price change expression (absolute or relative)
+		// ------------------------------------------------------------
+		$change = ($params['drop_type'] === 'relative')
+			? '(100 - (price * 100) / price_old)'
+			: '(price_old - price)';
 
-		$sql     = '
-            SELECT
-                price_history.*, ' . $change . ' as pchange
-            FROM ' . $this->tableName() . ' as price_history
-               INNER JOIN ' . $this->getDb()->posts . ' AS post
-                   ON post.ID = price_history.post_id
-                   AND post.post_status = "publish"
-            WHERE ' . $direction_where . ' AND is_latest = 1 AND create_date >= NOW() - INTERVAL ' . $params['last_update'] . ' DAY
-            GROUP BY unique_id
-            ORDER BY pchange ' . $order . '
-            LIMIT ' . $limit;
-		$results = $this->getDb()->get_results($sql, \ARRAY_A);
+		// ------------------------------------------------------------
+		// Dynamic WHERE clauses for module_id inclusion / exclusion
+		// ------------------------------------------------------------
+		$where_extra  = array();
+		$query_params = array();
 
-		$return = array();
-		foreach ($results as $i => $r)
+		// INCLUDED module IDs
+		if (!empty($params['include_module_ids']))
 		{
-			if (\get_post_status($r['post_id']) == 'publish')
-			{
-				$return[] = $r;
-			}
+			$include_ids  = array_map('strval', (array) $params['include_module_ids']);
+			$placeholders = implode(', ', array_fill(0, count($include_ids), '%s'));
+			$where_extra[] = "price_history.module_id IN ($placeholders)";
+			$query_params  = array_merge($query_params, $include_ids);
 		}
 
-		return $return;
+		// EXCLUDED module IDs
+		if (!empty($params['exclude_module_ids']))
+		{
+			$exclude_ids  = array_map('strval', (array) $params['exclude_module_ids']);
+			$placeholders = implode(', ', array_fill(0, count($exclude_ids), '%s'));
+			$where_extra[] = "price_history.module_id NOT IN ($placeholders)";
+			$query_params  = array_merge($query_params, $exclude_ids);
+		}
+
+		$sql = "
+        SELECT
+            price_history.*,
+            {$change} AS pchange
+        FROM {$this->tableName()} AS price_history
+        INNER JOIN {$this->getDb()->posts} AS post
+            ON post.ID = price_history.post_id
+            AND post.post_status = 'publish'
+        WHERE {$direction_where}
+          AND price_history.is_latest = 1
+          AND price_history.create_date >= NOW() - INTERVAL %d DAY
+    ";
+
+		// Extra WHERE filters (module_id include / exclude)
+		if (!empty($where_extra))
+		{
+			$sql .= "\n    AND " . implode(' AND ', $where_extra);
+		}
+
+		$sql .= "
+        ORDER BY
+            pchange {$order}
+        LIMIT {$limit}
+    ";
+
+		// Prepend the last_update parameter so it matches the first %d
+		array_unshift($query_params, $params['last_update']);
+
+		$prepared_sql = $this->getDb()->prepare($sql, $query_params);
+		$results      = $this->getDb()->get_results($prepared_sql, \ARRAY_A);
+
+		return $results;
 	}
 }

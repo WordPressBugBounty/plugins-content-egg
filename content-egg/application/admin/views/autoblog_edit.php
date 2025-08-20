@@ -1,23 +1,24 @@
 <?php defined('\ABSPATH') || exit; ?>
-<?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
+<?php if (\ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
     <div class="cegg-maincol">
     <?php endif; ?>
     <div class="wrap">
-        <h2>
-            <?php if ($item['id']) : ?>
-                <?php esc_html_e('Edit autoblogging', 'content-egg'); ?>
-            <?php else : ?>
-                <?php esc_html_e('Add autoblogging', 'content-egg'); ?>
-                <?php if ($batch) : ?>
-                    - <?php esc_html_e('bulk adding', 'content-egg'); ?>
+        <div class="cegg5-container">
+            <h2 class="h4 mb-2 mt-4" style="height: 30px;">
+                <?php if ($item['id']) : ?>
+                    <?php esc_html_e('Edit autoblogging', 'content-egg'); ?>
+                <?php else : ?>
+                    <?php esc_html_e('Add autoblogging', 'content-egg'); ?>
+                    <?php if ($batch) : ?>
+                        - <?php esc_html_e('bulk adding', 'content-egg'); ?>
+                    <?php endif; ?>
                 <?php endif; ?>
-            <?php endif; ?>
-            <?php if (!$batch && !$item['id']) : ?>
-                <a class="add-new-h2 button-primary" href="<?php echo esc_url_raw(\get_admin_url(\get_current_blog_id(), 'admin.php?page=content-egg-autoblog-edit--batch')); ?>"><?php esc_html_e('Bulk adding', 'content-egg'); ?></a>
-            <?php endif; ?>
-            <a class="add-new-h2" href="<?php echo esc_url_raw(\get_admin_url(\get_current_blog_id(), 'admin.php?page=content-egg-autoblog')); ?>"><?php esc_html_e('Back to list', 'content-egg'); ?></a>
-        </h2>
-
+                <?php if (!$batch && !$item['id']) : ?>
+                    <a class="add-new-h2 button-primary" href="<?php echo esc_url_raw(\get_admin_url(\get_current_blog_id(), 'admin.php?page=content-egg-autoblog-edit--batch')); ?>"><?php esc_html_e('Bulk adding', 'content-egg'); ?></a>
+                <?php endif; ?>
+                <a class="add-new-h2" href="<?php echo esc_url_raw(\get_admin_url(\get_current_blog_id(), 'admin.php?page=content-egg-autoblog')); ?>"><?php esc_html_e('Back to list', 'content-egg'); ?></a>
+            </h2>
+        </div>
         <?php if (!empty($notice)) : ?>
             <div id="notice" class="error">
                 <p><?php echo esc_html($notice) ?></p>
@@ -60,7 +61,7 @@
         });
     </script>
 
-    <?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
+    <?php if (\ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
     </div>
     <?php include('_promo_box.php'); ?>
 <?php endif; ?>

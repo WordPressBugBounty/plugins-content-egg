@@ -64,7 +64,7 @@ defined('\ABSPATH') || exit; ?>
 
     <?php if ($is_in_progress): ?>
         <div class="d-flex gap-2 align-items-center">
-            <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=content-egg-product-prefill&action=prefill_stop')); ?>">
+            <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=content-egg-product-prefill&action=prefill_stop&noheader=true')); ?>">
                 <?php wp_nonce_field('cegg_prefill_stop', 'cegg_prefill_stop_nonce'); ?>
                 <p class="submit">
                     <input type="submit" class="button" value="<?php esc_attr_e('Stop All Tasks', 'content-egg'); ?>" onclick="return confirm('<?php esc_attr_e('Are you sure you want to stop all pending tasks?', 'content-egg'); ?>');">
@@ -72,7 +72,7 @@ defined('\ABSPATH') || exit; ?>
             </form>
 
             <?php if (Plugin::isDevEnvironment()): ?>
-                <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=content-egg-product-prefill&action=prefill_run_once')); ?>">
+                <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=content-egg-product-prefill&action=prefill_run_once&noheader=true')); ?>">
                     <?php wp_nonce_field('cegg_prefill_run_once', 'cegg_prefill_run_once_nonce'); ?>
                     <p class="submit">
                         <input type="submit" class="button" value="<?php esc_attr_e('Process Next Post', 'content-egg'); ?>">
@@ -83,7 +83,7 @@ defined('\ABSPATH') || exit; ?>
 
     <?php else: ?>
         <div class="d-flex gap-2 align-items-center">
-            <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=content-egg-product-prefill&action=prefill_restart')); ?>">
+            <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=content-egg-product-prefill&action=prefill_restart&noheader=true')); ?>">
                 <?php wp_nonce_field('cegg_prefill_restart', 'cegg_prefill_restart_nonce'); ?>
                 <p class="submit">
                     <input type="submit" class="button button-primary" value="<?php esc_attr_e('Start New Prefill', 'content-egg'); ?>">
@@ -91,7 +91,7 @@ defined('\ABSPATH') || exit; ?>
             </form>
 
             <?php if (!empty($failed_tasks_count)): ?>
-                <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=content-egg-product-prefill&action=prefill_restart_failed')); ?>">
+                <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=content-egg-product-prefill&action=prefill_restart_failed&noheader=true')); ?>">
                     <?php wp_nonce_field('cegg_prefill_restart_failed', 'cegg_prefill_restart_failed_nonce'); ?>
                     <p class="submit">
                         <input type="submit" class="button button-danger" value="<?php esc_attr_e('Restart Failed Tasks', 'content-egg'); ?>">
@@ -129,19 +129,22 @@ defined('\ABSPATH') || exit; ?>
     }
 </style>
 
-<script>
-    setTimeout(function() {
-        const url = new URL(window.location.href);
+<?php if ($is_in_progress && !Plugin::isDevEnvironment()): ?>
+    <script>
+        setTimeout(function() {
+            const url = new URL(window.location.href);
 
-        url.searchParams.delete('egg-notice');
-        url.searchParams.delete('egg-notice-level');
+            url.searchParams.delete('egg-notice');
+            url.searchParams.delete('egg-notice-level');
 
-        const paged = parseInt(url.searchParams.get('paged') || '1', 10);
+            const paged = parseInt(url.searchParams.get('paged') || '1', 10);
 
-        window.history.replaceState({}, document.title, url.toString());
+            window.history.replaceState({}, document.title, url.toString());
 
-        if (paged < 2) {
-            window.location.reload();
-        }
-    }, 50000);
-</script>
+            if (paged < 2) {
+                window.location.reload();
+            }
+        }, 50000);
+    </script>
+
+<?php endif; ?>

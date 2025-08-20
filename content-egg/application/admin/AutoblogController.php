@@ -78,7 +78,7 @@ class AutoblogController
     public function add_admin_menu()
     {
         \add_submenu_page(Plugin::slug, __('Autoblogging', 'content-egg') . ' &lsaquo; Content Egg', __('Autoblogging', 'content-egg'), 'manage_options', self::slug, array($this, 'actionIndex'));
-        \add_submenu_page(Plugin::slug, __('Add autoblogging', 'content-egg') . ' &lsaquo; Content Egg', __('Add autoblogging', 'content-egg'), 'manage_options', 'content-egg-autoblog-edit', array($this, 'actionUpdate'));
+        \add_submenu_page(null, __('Add autoblogging', 'content-egg') . ' &lsaquo; Content Egg', __('Add autoblogging', 'content-egg'), 'manage_options', 'content-egg-autoblog-edit', array($this, 'actionUpdate'));
         \add_submenu_page('options.php', __('Add autoblogging - bulk mode', 'content-egg') . ' &lsaquo; Content Egg', __('Add autoblogging - bulk mode', 'content-egg'), 'manage_options', 'content-egg-autoblog-edit--batch', array($this, 'actionUpdate'));
     }
 
@@ -93,6 +93,8 @@ class AutoblogController
             AutoblogModel::model()->run((int) $_GET['id']);
         }
         \wp_enqueue_script('content-egg-blockUI', \ContentEgg\PLUGIN_RES . '/js/jquery.blockUI.js', array('jquery'));
+        \wp_enqueue_style('cegg-bootstrap5-full');
+
         $table = new AutoblogTable(AutoblogModel::model());
         $table->prepare_items();
         PluginAdmin::getInstance()->render('autoblog_index', array('table' => $table));
@@ -242,6 +244,8 @@ class AutoblogController
         \add_meta_box('autoblog_metabox', 'Autoblog data', array($this, 'metaboxAutoblogCreateHandler'), 'autoblog_create', 'normal', 'default');
 
         $item['amazon_categs'] = $this->amazon_categs;
+
+        \wp_enqueue_style('cegg-bootstrap5-full');
 
         PluginAdmin::getInstance()->render('autoblog_edit', array(
             'item' => $item,

@@ -10,6 +10,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 
+use function ContentEgg\prn;
 use function ContentEgg\prnx;
 
 /**
@@ -135,6 +136,7 @@ class ModuleApi
 
         $module_id = TextHelper::clear(sanitize_text_field(wp_unslash($_POST['module'])));
         $parser = ModuleManager::getInstance()->parserFactory($module_id);
+        $cls = get_class($parser);
 
         if (!$parser || !$parser->isActive())
         {
@@ -171,6 +173,28 @@ class ModuleApi
         if (!$keyword)
         {
             die("Error: 'keyword' parameter cannot be empty.");
+        }
+
+        if ($parser->isAffiliateParser())
+        {
+            // price range mapping.
+            $map = $cls::getPriceParamMap();
+
+            if (isset($map['min']) && isset($query['minimum_price']))
+            {
+                $query[$map['min']] = floatval($query['minimum_price']);
+            }
+            if (isset($map['max']) && isset($query['maximum_price']))
+            {
+                $query[$map['max']] = floatval($query['maximum_price']);
+            }
+
+            // locale map
+            $localeMap = $cls::getLocaleParamMap();
+            if (isset($localeMap['locale']) && isset($query['locale']))
+            {
+                $query[$localeMap['locale']] = floatval($query['locale']);
+            }
         }
 
         try

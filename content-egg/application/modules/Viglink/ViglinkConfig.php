@@ -116,7 +116,7 @@ class ViglinkConfig extends AffiliateParserModuleConfig
 				'metaboxInit' => true,
 			),
 			'stock_status'            => array(
-				'title'            => __('Stock status', 'content-egg') . ' (beta)',
+				'title'            => __('Stock status', 'content-egg'),
 				'description'      => __('Set the status if the product is not found.', 'content-egg'),
 				'callback'         => array($this, 'render_dropdown'),
 				'dropdown_options' => array(

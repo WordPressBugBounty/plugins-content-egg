@@ -7,6 +7,9 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\helpers\TemplateHelper;
 
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
+
 /**
  * LinkHandler class file
  *
@@ -189,7 +192,6 @@ class LinkHandler
         }
 
         $pattern = $parts[1];
-        //$replacement = rtrim($parts[2], ']');
         $replacement = substr($parts[2], 0, -1);
 
         // null character allows a premature regex end and "/../e" injection

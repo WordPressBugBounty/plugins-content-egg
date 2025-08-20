@@ -1367,4 +1367,59 @@ class TextHelper
     {
         return filter_var($url, FILTER_VALIDATE_URL);
     }
+
+    public static function countWords($text, $lang = '')
+    {
+        if (!$text)
+            return 0;
+
+        if (is_array($text))
+        {
+            $to_string = array();
+            array_walk_recursive($text, function ($v) use (&$to_string)
+            {
+                $to_string[] = $v;
+            });
+            $to_string = implode(' ', $to_string);
+
+            $text = $to_string;
+        }
+
+        $symbol_to_word_ratio = array(
+            'Chinese' => 0.70,
+            'Korean' => 0.5,
+            'Japanese' => 0.5,
+            'Thai' => 0.20,
+        );
+
+        if ($lang && isset($symbol_to_word_ratio[$lang]))
+        {
+            $count_characters = self::countCharacters($text);
+            return round($count_characters * $symbol_to_word_ratio[$lang]);
+        }
+
+        $words = preg_split("/[\n\r\t ]+/", $text, 0, PREG_SPLIT_NO_EMPTY);
+        return count($words);
+    }
+
+    public static function countCharacters($text)
+    {
+        if (!$text)
+            return 0;
+
+        if (is_array($text))
+        {
+            $to_string = array();
+            array_walk_recursive($text, function ($v) use (&$to_string)
+            {
+                $to_string[] = $v;
+            });
+            $to_string = implode(' ', $to_string);
+
+            $text = $to_string;
+        }
+
+        $text = preg_replace("/[\n\r\t ]+/", '', $text);
+        return mb_strlen($text, 'UTF-8');
+    }
 }

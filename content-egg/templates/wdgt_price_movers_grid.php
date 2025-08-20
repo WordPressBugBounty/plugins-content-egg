@@ -13,7 +13,6 @@ if (!$is_shortcode)
     $params['cols_xs'] = 1;
 
 ?>
-
 <div class="container px-0 mb-5 pt-2" <?php $this->colorMode(); ?>>
 
     <div class="row g-3 <?php if ($is_shortcode): ?> row-gap-2<?php endif; ?><?php TemplateHelper::rowCols($params, 'row-cols-2 row-cols-md-3'); ?>">
@@ -75,7 +74,7 @@ if (!$is_shortcode)
                     <div class="row">
                         <?php if ($item['_price_movers']['discount_percent'] > 0): ?>
                             <div class="col-auto lh-1 text-danger fw-bolder">
-                                <span class="fs-5"><?php echo esc_html($item['_price_movers']['discount_percent']); ?></span>%</span>
+                                <span class="fs-5"><?php echo esc_html($item['_price_movers']['discount_percent']); ?>%</span>
                                 <div class="fs-6">
                                     <?php TemplateHelper::esc_html_e('OFF'); ?>
                                 </div>

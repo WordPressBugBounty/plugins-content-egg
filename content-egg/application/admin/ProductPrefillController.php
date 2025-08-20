@@ -5,6 +5,7 @@ namespace ContentEgg\application\admin;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\models\PrefillQueueModel;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\ProductPrefillScheduler;
@@ -32,10 +33,17 @@ class ProductPrefillController
 
     public function add_admin_menu()
     {
+        $badge = '';
+
+        if (Plugin::isFree() && time() < strtotime('2025-09-30 23:59:59'))
+        {
+            $badge = ' <span class="update-plugins count-1"><span class="plugin-count">New</span></span>';
+        }
+
         \add_submenu_page(
             Plugin::slug,
             __('Product Prefill', 'content-egg') . ' &lsaquo; Content Egg',
-            __('Prefill', 'content-egg') . ' <span class="update-plugins count-1"><span class="update-count">New</span></span>',
+            __('Prefill', 'content-egg') . $badge,
             'publish_posts',
             self::slug,
             array($this, 'handleAction')
@@ -44,6 +52,15 @@ class ProductPrefillController
 
     public function handleAction()
     {
+        if (!current_user_can('publish_posts'))
+        {
+            wp_die(
+                'Sorry, you do not have sufficient permissions to access this page.',
+                'Access Denied',
+                ['response' => 403]
+            );
+        }
+
         \wp_enqueue_style('cegg-bootstrap5-full');
 
         $action = $_GET['action'] ?? '';
@@ -118,14 +135,15 @@ class ProductPrefillController
 
     public function actionPostSelector()
     {
-        PluginAdmin::getInstance()->render('prefill_post_selector');
+        $settings = $this->getUserSettings('post_filter');
+        PluginAdmin::getInstance()->render('prefill_post_selector', ['settings' => $settings]);
     }
 
     public function actionPrefillConfig()
     {
         $post_type      = isset($_GET['_post_type']) && $_GET['_post_type'] ? sanitize_text_field($_GET['_post_type']) : '';
         $post_status    = isset($_GET['post_status']) && $_GET['post_status'] ? sanitize_text_field($_GET['post_status']) : '';
-        $category       = isset($_GET['category']) && $_GET['category'] ? intval($_GET['category']) : 0;
+        $category_post  = isset($_GET['category_post']) && $_GET['category_post'] ? intval($_GET['category_post']) : 0;
         $category_product = isset($_GET['category_product']) && $_GET['category_product'] ? intval($_GET['category_product']) : 0;
         $author         = isset($_GET['author']) && $_GET['author'] ? intval($_GET['author']) : 0;
         $date_from      = isset($_GET['date_from']) && $_GET['date_from'] ? sanitize_text_field($_GET['date_from']) : '';
@@ -137,15 +155,33 @@ class ProductPrefillController
         $offset         = isset($_GET['offset']) && $_GET['offset'] ? intval($_GET['offset']) : 0;
         $ce_filter      = isset($_GET['ce_filter']) && $_GET['ce_filter'] ? sanitize_text_field($_GET['ce_filter']) : '';
 
+        $settings = array(
+            'post_type'        => $post_type,
+            'post_status'      => $post_status,
+            'category_post'    => $category_post,
+            'category_product' => $category_product,
+            'author'           => $author,
+            'date_from'        => $date_from,
+            'date_to'          => $date_to,
+            'keywords'         => $keywords,
+            'post__in'         => $post__in,
+            'post__not_in'     => $post__not_in,
+            'post_limit'       => $post_limit,
+            'offset'           => $offset,
+            'ce_filter'        => $ce_filter,
+        );
+
+        $this->saveUserSettings('post_filter', $settings);
+
         $args = array(
             'post_type'      => $post_type ? $post_type : 'any',
             'post_status'    => $post_status ? $post_status : 'any',
             'offset'         => $offset,
         );
 
-        if ($post_type == 'post' && $category)
+        if ($post_type == 'post' && $category_post)
         {
-            $args['cat'] = $category;
+            $args['cat'] = $category_post;
         }
         elseif ($post_type === 'product' && $category_product)
         {
@@ -158,7 +194,13 @@ class ProductPrefillController
             );
         }
 
-        if ($author)
+        $current_user_id = get_current_user_id();
+
+        if (!current_user_can('edit_others_posts'))
+        {
+            $args['author'] = $current_user_id;
+        }
+        elseif ($author && $author !== $current_user_id)
         {
             $args['author'] = $author;
         }
@@ -186,6 +228,11 @@ class ProductPrefillController
         if (!empty($post__in))
         {
             $args['post__in'] = $post__in;
+
+            if (isset($args['post_status']))
+            {
+                $args['post_status'] = array('any');
+            }
         }
         if (!empty($post__not_in))
         {
@@ -196,6 +243,8 @@ class ProductPrefillController
         {
             self::applyCeggMetaWhereFilter($ce_filter);
         }
+
+        $args = apply_filters('cegg_prefill_config_query_args', $args);
 
         // First, get total count
         $count_args = $args;
@@ -221,7 +270,7 @@ class ProductPrefillController
         // Now, fitch all post IDs
         $list_args['fields'] = 'ids';
         $list_args['no_found_rows'] = true;
-        $list_args['posts_per_page'] = $post_limit ?: 10000;
+        $list_args['posts_per_page'] = $post_limit ?: 30000;
 
         $post_ids = get_posts($list_args);
 
@@ -234,7 +283,9 @@ class ProductPrefillController
         $transient_expiration = 60 * 60;
         \set_transient($transient_key, $post_ids, $transient_expiration);
 
-        $has_ai_api_key = GeneralConfig::getInstance()->option('system_ai_key');
+        $has_ai_api_key = (bool) GeneralConfig::getInstance()->option('system_ai_key');
+
+        $settings = $this->getUserSettings('prefill_config');
 
         PluginAdmin::getInstance()->render('prefill_config', array(
             'total_posts'    => $total_posts,
@@ -242,18 +293,14 @@ class ProductPrefillController
             'prefill_transient_key' => $transient_key,
             'post_type' => $post_type,
             'has_ai_api_key' => $has_ai_api_key,
+            'is_pro' => Plugin::isPro(),
+            'settings' => $settings,
         ));
     }
 
     public function actionPrefillStart()
     {
         $queue_model = \ContentEgg\application\models\PrefillQueueModel::model();
-
-        $pending = $queue_model->countPending();
-        if ($pending > 0)
-        {
-            wp_die(__('A prefill task is already running or pending. Please wait until it finishes.', 'content-egg'));
-        }
 
         $transient_key = sanitize_text_field($_POST['prefill_transient'] ?? '');
         $post_ids = get_transient($transient_key);
@@ -264,8 +311,10 @@ class ProductPrefillController
             wp_die(__('Post queue expired or invalid.', 'content-egg'));
         }
 
-        // Save config to transient
         $config = $this->parsePrefillConfig();
+        $this->saveUserSettings('prefill_config', $config);
+
+        // Save config to transient
         $config_key = 'cegg_prefill_config_' . get_current_user_id() . '_' . wp_generate_password(8, false);
         set_transient($config_key, $config, 7 * DAY_IN_SECONDS);
 
@@ -303,6 +352,7 @@ class ProductPrefillController
         $config['max_products_total'] = isset($_POST['max_products_total']) ? (int) $_POST['max_products_total'] : 0;
         $config['max_products_per_module'] = isset($_POST['max_products_per_module']) ? (int) $_POST['max_products_per_module'] : 0;
         $config['product_group'] = sanitize_text_field(wp_unslash($_POST['product_group'] ?? ''));
+        $config['product_group'] = TextHelper::truncate($config['product_group'], 80, '');
         $config['ai_relevance_check'] = !empty($_POST['ai_relevance_check']) ? 1 : 0;
 
         $config['shortcode_blocks'] = [];
@@ -313,6 +363,10 @@ class ProductPrefillController
             {
                 $position = sanitize_text_field($block['position'] ?? '');
                 $code = trim(wp_kses_post($block['code'] ?? ''));
+                if (strlen($code) > 300)
+                {
+                    continue;
+                }
 
                 if ($position !== 'disabled' && $code !== '')
                 {
@@ -330,7 +384,9 @@ class ProductPrefillController
             $custom_fields = wp_unslash($_POST['custom_fields']);
             foreach ($custom_fields as $field)
             {
-                $key = sanitize_key($field['key'] ?? '');
+                $key = wp_strip_all_tags($field['key'] ?? '');
+                $key = preg_replace('/[^A-Za-z0-9_\-]/', '', $key);
+
                 $value = sanitize_text_field($field['value'] ?? '');
 
                 if ($key !== '' && $value !== '')
@@ -455,6 +511,8 @@ class ProductPrefillController
 
     public function actionPrefillRunOnce()
     {
+        @set_time_limit(300);
+
         if (!Plugin::isDevEnvironment())
         {
             wp_die('This action is only allowed in a development environment.');
@@ -477,5 +535,18 @@ class ProductPrefillController
 
         wp_redirect(admin_url('admin.php?page=content-egg-product-prefill&action=prefill_status'));
         exit;
+    }
+
+    protected function saveUserSettings($optionName, array $settings)
+    {
+        $userId = get_current_user_id();
+        update_user_meta($userId, 'cegg_' . $optionName, $settings);
+    }
+
+    protected function getUserSettings($optionName)
+    {
+        $userId = get_current_user_id();
+        $settings = get_user_meta($userId, 'cegg_' . $optionName, true);
+        return is_array($settings) ? $settings : [];
     }
 }

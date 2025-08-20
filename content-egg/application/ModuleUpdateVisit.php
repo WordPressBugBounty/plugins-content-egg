@@ -9,6 +9,8 @@ use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\vendor\CrawlerDetect;
 
+use function ContentEgg\prnx;
+
 /**
  * ModuleUpdateVisit class file
  *
@@ -66,7 +68,7 @@ class ModuleUpdateVisit
         if (empty($post))
             return;
 
-        foreach (ModuleManager::getInstance()->getAffiliateParsers(true) as $module)
+        foreach (ModuleManager::getInstance()->getParsers(true) as $module)
         {
             $is_visit_update = in_array($module->config('update_mode'), array('visit', 'visit_cron'));
             $is_data_exists = ContentManager::isDataExists($post->ID, $module->getId());

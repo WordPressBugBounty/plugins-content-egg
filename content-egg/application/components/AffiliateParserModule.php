@@ -83,7 +83,10 @@ abstract class AffiliateParserModule extends ParserModule
                 $data[$key]['currency'] = TextHelper::currencyTyping($item['currencyCode']);
 
             if (!empty($data[$key]['domain']))
-                $data[$key]['merchant'] = \apply_filters('content_egg_custom_merchant', $data[$key]['merchant'], $data[$key]['domain']);
+            {
+                $marchant = isset($data[$key]['merchant']) ? $data[$key]['merchant'] : '';
+                $data[$key]['merchant'] = \apply_filters('content_egg_custom_merchant', $marchant, $data[$key]['domain']);
+            }
         }
 
         return $data;
@@ -91,5 +94,20 @@ abstract class AffiliateParserModule extends ParserModule
 
     public function renderUpdatePanel()
     {
+    }
+
+    public static function getPriceParamMap()
+    {
+        return [];
+    }
+
+    public static function getLocaleParamMap()
+    {
+        return '';
+    }
+
+    public static function getSortByNewestParamMap()
+    {
+        return [];
     }
 }

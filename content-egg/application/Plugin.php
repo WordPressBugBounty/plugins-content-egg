@@ -13,7 +13,11 @@ use ContentEgg\application\components\command\CommandFactory;
 use ContentEgg\application\components\Pattern;
 use ContentEgg\application\admin\SysNotice;
 use ContentEgg\application\admin\GeneralConfig;
+use ContentEgg\application\admin\import\AutoImportScheduler;
 use ContentEgg\application\blocks\productblock\ProductBlock;
+use ContentEgg\application\admin\import\ProductImportScheduler;
+
+use function ContentEgg\prnx;
 
 /**
  * Plugin class file
@@ -24,14 +28,12 @@ use ContentEgg\application\blocks\productblock\ProductBlock;
  */
 class Plugin
 {
-    const version = '8.0.0';
-    const db_version = 62;
-    const wp_requires = '4.6.1';
+    const version = '9.0.0';
+    const db_version = 80;
+    const wp_requires = '5.9';
     const slug = 'content-egg';
     const short_slug = 'cegg';
     const name = 'Content Egg';
-    const api_base = 'https://www.keywordrush.com/api/v1';
-    const api_base2 = '';
     const product_id = 302;
     const website = 'https://www.keywordrush.com';
     const supportUri = 'https://www.keywordrush.com/contact';
@@ -61,17 +63,16 @@ class Plugin
 
     private function __construct()
     {
-        add_action('init', array($this, 'loadTextdomain'));
+        $this->loadTextdomain();
 
         if (self::isFree() || (self::isPro() && self::isActivated()) || self::isEnvato())
         {
             EggShortcode::getInstance();
             BlockShortcode::getInstance();
             ShortcodePreprocessor::initAction();
-
             Pattern::initAction();
             ProductBlock::initAction();
-
+            GalleryScheduler::initAction();
             \add_action('wp_loaded', array($this, 'registerScripts'));
 
             if (!\is_admin())
@@ -89,6 +90,8 @@ class Plugin
             AutoblogScheduler::initAction();
             ModuleUpdateScheduler::initAction();
             ProductPrefillScheduler::initAction();
+            ProductImportScheduler::initAction();
+            AutoImportScheduler::initAction();
             WooIntegrator::initAction();
             ExternalFeaturedImage::initAction();
             AggregateOffer::initAction();
@@ -130,7 +133,7 @@ class Plugin
 
     public static function isDevEnvironment()
     {
-        if (defined('EXTERNAL_IMPORTER_DEBUG') && EXTERNAL_IMPORTER_DEBUG)
+        if (defined('CONTENT_EGG_DEBUG') && CONTENT_EGG_DEBUG)
             return true;
         else
             return false;
@@ -163,7 +166,7 @@ class Plugin
 
     public static function getApiBase()
     {
-        return self::api_base;
+        return Installer::API_URL;
     }
 
     public static function isFree()
@@ -213,25 +216,9 @@ class Plugin
             return false;
     }
 
-    public static function apiRequest($params = array())
+    public static function apiRequest($body)
     {
-        $api_urls = array(self::api_base);
-        if (self::api_base2)
-            $api_urls[] = self::api_base2;
-
-        foreach ($api_urls as $api_url)
-        {
-            $response = \wp_remote_post($api_url, $params);
-            if (\is_wp_error($response))
-                continue;
-
-            $response_code = (int) \wp_remote_retrieve_response_code($response);
-            if ($response_code == 200)
-                return $response;
-            else
-                return false;
-        }
-        return false;
+        return Installer::apiRequest($body);
     }
 
     public function loadTextdomain()
@@ -261,9 +248,38 @@ class Plugin
         return 'https://www.keywordrush.com/';
     }
 
-    public static function pluginSiteUrl()
+    public static function pluginSiteUrl(string $campaign = 'general', string $page = 'landing', ?string $content = null): string
     {
-        return self::getPluginDomain() . 'contentegg?utm_source=cegg&utm_medium=referral&utm_campaign=plugin';
+        $base = rtrim(self::getPluginDomain(), '/');
+        $path = ($page === 'pricing') ? '/contentegg/pricing' : '/contentegg';
+
+        $utmSource = Plugin::isFree() ? 'cefree' : 'cepro';
+
+        $params = [
+            'utm_source'   => $utmSource,
+            'utm_medium'   => 'referral',
+            'utm_campaign' => $campaign,
+            'utm_content'  => $content,
+        ];
+
+        $params = array_filter($params, static function ($v)
+        {
+            return $v !== null && $v !== '';
+        });
+
+        $query = http_build_query($params);
+
+        return $base . $path . ($query !== '' ? ('?' . $query) : '');
+    }
+
+    public static function pluginLandingUrl(string $campaign = 'general', ?string $content = null): string
+    {
+        return self::pluginSiteUrl($campaign, 'landing', $content);
+    }
+
+    public static function pluginPricingUrl(string $campaign = 'general', ?string $content = null): string
+    {
+        return self::pluginSiteUrl($campaign, 'pricing', $content);
     }
 
     public static function pluginDocsUrl()

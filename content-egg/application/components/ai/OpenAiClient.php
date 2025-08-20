@@ -16,6 +16,14 @@ defined('\ABSPATH') || exit;
 
 class OpenAiClient extends AiClient
 {
+	//@link: https://openai.com/api/pricing/
+	const PRICE_INPUT_5_nano = 0.05;
+	const PRICE_OUTPUT_5_nano = 0.40;
+	const PRICE_INPUT_4o_mini = 0.150;
+	const PRICE_OUTPUT_4o_mini = 0.600;
+	const PRICE_INPUT_4o = 2.50;
+	const PRICE_OUTPUT_4o = 10.00;
+
 	public function getChatUrl()
 	{
 		return 'https://api.openai.com/v1/chat/completions';
@@ -27,6 +35,24 @@ class OpenAiClient extends AiClient
 			'Content-Type: application/json',
 			'Authorization: Bearer ' . $this->api_key,
 		);
+	}
+
+	public function getAiModelPrices()
+	{
+		return [
+			'gpt-5-nano' => [
+				'input'  => apply_filters('cegg_price_input_4o_nano', self::PRICE_INPUT_5_nano),
+				'output' => apply_filters('cegg_price_output_4o_nano', self::PRICE_OUTPUT_5_nano),
+			],
+			'gpt-4o-mini' => [
+				'input'  => apply_filters('cegg_price_input_4o_mini', self::PRICE_INPUT_4o_mini),
+				'output' => apply_filters('cegg_price_output_4o_mini', self::PRICE_OUTPUT_4o_mini),
+			],
+			'gpt-4o' => [
+				'input'  => apply_filters('cegg_price_input_4o', self::PRICE_INPUT_4o),
+				'output' => apply_filters('cegg_price_output_4o', self::PRICE_OUTPUT_4o),
+			],
+		];
 	}
 
 	public function getPayload($prompt, $system = '', $params = array())
@@ -87,5 +113,28 @@ class OpenAiClient extends AiClient
 			$this->last_usage = array();
 
 		return $content;
+	}
+
+	public function getLastUsagePrice()
+	{
+		if (!$this->last_usage)
+			return 0;
+
+		$price = $this->last_usage['prompt_tokens'] / 1000000 * $this->getLastUsedModelPriceInput();
+		$price += $this->last_usage['completion_tokens'] / 1000000 * $this->getLastUsedModelPriceOutput();
+
+		return $price;
+	}
+
+	public function getLastUsedModelPriceInput()
+	{
+		$prices = $this->getAiModelPrices();
+		return $prices[$this->last_used_model]['input'];
+	}
+
+	public function getLastUsedModelPriceOutput()
+	{
+		$prices = self::getAiModelPrices();
+		return $prices[$this->last_used_model]['output'];
 	}
 }

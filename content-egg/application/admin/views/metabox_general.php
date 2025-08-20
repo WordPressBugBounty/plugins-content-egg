@@ -75,9 +75,15 @@ if (!$global_keyword = \get_post_meta($post->ID, '_cegg_global_autoupdate_keywor
             <button ng-disabled="!newProductGroup" ng-click="addProductGroup()" type="button" class="btn btn-sm btn-outline-primary" aria-label="Add">
                 <i class="bi bi-plus"></i>
             </button>
-            <button ng-show="productGroups.length" title="<?php esc_html_e('Remove all product groups', 'content-egg'); ?>" ng-click="removeProductGroups()" type="button" class="btn btn-sm btn-outline-danger" aria-label="Remove">
+            <button ng-show="productGroups.length"
+                title="<?php esc_html_e('Remove all product groups', 'content-egg'); ?>"
+                ng-click="confirmAndRemoveProductGroups()"
+                type="button"
+                class="btn btn-sm btn-outline-danger ms-1"
+                aria-label="Remove">
                 <i class="bi bi-trash3"></i>
             </button>
+
             <?php if (AdminHelper::isAiEnabled()) : ?>
                 <button ng-show="global_isAddedResults()" class="btn btn-outline-info btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <span ng-show="aiProcessingSmartGroups" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -121,6 +127,15 @@ if (!$global_keyword = \get_post_meta($post->ID, '_cegg_global_autoupdate_keywor
         </button>
         <button ng-show='!processCounter && global_isSearchResults()' ng-click="global_addAll()" type="button" class="btn btn-outline-primary"><?php echo esc_attr('Add all', 'content-egg'); ?></button>
         <button ng-show='global_isAddedResults()' ng-click="global_deleteAll()" ng-confirm-click="<?php esc_html_e('Are you sure you want to delete results from all modules?', 'content-egg'); ?>" type="button" class="btn btn-outline-danger ms-3"><?php echo esc_attr('Remove all', 'content-egg'); ?></button>
+
+        <?php
+        $post_id = get_the_ID();
+        $prefill_url = wp_nonce_url(add_query_arg(['page' => 'content-egg-product-prefill', 'action' => 'prefill_config', 'post__in' => $post_id], admin_url('admin.php')), 'prefill_config_nonce');
+        $confirm_msg = __('Existing product data will be replaced. Are you sure you want to proceed?', 'content-egg');
+        ?>
+        <a href="<?php echo esc_url($prefill_url); ?>" class="btn btn-outline-primary ms-3" onclick="return confirm('<?php echo esc_js($confirm_msg); ?>');">
+            <?php esc_html_e('Prefill', 'content-egg'); ?>
+        </a>
     </div>
 </div>
 

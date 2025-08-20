@@ -3,6 +3,8 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\AdminHelper;
+use ContentEgg\application\models\AutoblogModel;
+
 ?>
 <table cellspacing="2" cellpadding="5" style="width: 100%;" class="form-table">
     <tbody>
@@ -271,17 +273,35 @@ use ContentEgg\application\helpers\AdminHelper;
             </td>
         </tr>
 
-        <tr class="form-field">
-            <th valign="top" scope="row">
-                <label for="post_status"><?php esc_html_e('Post status', 'content-egg'); ?></label>
-            </th>
-            <td>
-                <select id="post_status" name="item[post_status]">
-                    <option value="1" <?php if ($item['post_status'] == 1) echo ' selected="selected"'; ?>>Publish</option>
-                    <option value="0" <?php if ($item['post_status'] == 0) echo ' selected="selected"'; ?>>Pending</option>
-                </select>
-            </td>
-        </tr>
+        <?php
+
+        $options = AutoblogModel::getPostStatusOptions();
+
+        $current = isset($item['post_status'])
+            ? (int) $item['post_status']
+            : 1;
+
+        echo '<tr class="form-field">';
+        echo '<th scope="row"><label for="post_status">'
+            . esc_html__('Post status', 'content-egg')
+            . '</label></th>';
+        echo '<td>';
+        echo '<select id="post_status" name="item[post_status]">';
+
+        foreach ($options as $value => $label)
+        {
+            printf(
+                '<option value="%d" %s>%s</option>',
+                $value,
+                selected($current, $value, false),
+                esc_html($label)
+            );
+        }
+
+        echo '</select>';
+        echo '</td>';
+        echo '</tr>';
+        ?>
 
         <tr class="form-field">
             <th valign="top" scope="row">

@@ -121,31 +121,33 @@ registerBlockType('content-egg/products', {
 
         useEffect(() => {
             const handleCeggProductGroupsUpdate = () => {
-                setAllGroups(
-                    (window.ceggProductGroups || []).map(group => ({
-                        label: group,
-                        value: group
-                    }))
-                );
+                // Build the fresh list once
+                const newAllGroups = (window.ceggProductGroups || []).map(g => ({
+                    label: g,
+                    value: g,
+                }));
+                setAllGroups(newAllGroups);
 
-                const updatedGroups = groups.filter(group =>
-                    allGroups.includes(group.value)
-                );
+                // Keep only those already-selected values that still exist
+                const validValues = newAllGroups.map(g => g.value);
+                const updatedGroups = groups.filter(v => validValues.includes(v));
 
-                setTimeout(() => {
+                // Update the attribute only if something actually changed
+                if (updatedGroups.length !== groups.length) {
                     setAttributes({ groups: updatedGroups });
-                }, 300);
-
+                }
             };
 
-            // Listen for the custom event
-            window.addEventListener('ceggProductGroupsUpdated', handleCeggProductGroupsUpdate);
-
-            // Clean up the event listener
-            return () => {
-                window.removeEventListener('ceggProductGroupsUpdated', handleCeggProductGroupsUpdate);
-            };
-        }, []);
+            window.addEventListener(
+                'ceggProductGroupsUpdated',
+                handleCeggProductGroupsUpdate,
+            );
+            return () =>
+                window.removeEventListener(
+                    'ceggProductGroupsUpdated',
+                    handleCeggProductGroupsUpdate,
+                );
+        }, [groups, setAttributes]); // include dependencies you *read*
 
         // Trigger a re-render when the post is saved
         const isSavingPost = useSelect((select) => select('core/editor').isSavingPost());

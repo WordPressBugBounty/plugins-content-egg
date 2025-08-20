@@ -26,7 +26,7 @@ class PrefillLogTable extends MyListTable
 
     function default_order()
     {
-        return 'asc';
+        return 'desc';
     }
 
     function get_columns()
@@ -75,13 +75,21 @@ class PrefillLogTable extends MyListTable
         $status = strtolower($item['status']);
         $label = ucfirst($status);
 
-        $class = match ($status)
+        switch ($status)
         {
-            'done'       => 'bg-success',
-            'failed'     => 'bg-danger',
-            'pending'    => 'bg-secondary',
-            default      => 'bg-secondary',
-        };
+            case 'done':
+                $class = 'bg-success';
+                break;
+            case 'failed':
+                $class = 'bg-danger';
+                break;
+            case 'pending':
+                $class = 'bg-secondary';
+                break;
+            default:
+                $class = 'bg-secondary';
+                break;
+        }
 
         return sprintf(
             '<span class="badge %s">%s</span>',
@@ -90,39 +98,71 @@ class PrefillLogTable extends MyListTable
         );
     }
 
-    function column_log($item)
+    function column_log(array $item): string
     {
-        $log_content = '';
-
-        if (!empty($item['log']))
+        if (empty($item['log']) && empty($item['processing_time']) && empty($item['ai_cost']))
         {
-            $log_content .= '<div class="cegg-log">' . wp_kses(
-                $item['log'],
-                ['br' => [], 'em' => [], 'strong' => [], 'b' => [], 'code' => []]
-            ) . '</div>';
+            return '-';
         }
 
-        if (!empty($item['processing_time']))
+        $allowed_tags = [
+            'br'     => [],
+            'em'     => [],
+            'strong' => [],
+            'b'      => [],
+            'code'   => [],
+        ];
+
+        $output = '';
+
+        if (! empty($item['log']))
         {
-            $processing_time = round((float) $item['processing_time']);
-
-            if ($processing_time <= 0)
-            {
-                $display_time = '< 1s';
-            }
-            else
-            {
-                $display_time = $processing_time . 's';
-            }
-
-            $log_content .= sprintf(
-                '<div class="cegg-log-meta small text-muted mt-1">%s %s</div>',
-                esc_html__('Time:', 'content-egg'),
-                esc_html($display_time)
+            $clean_log = wp_kses($item['log'], $allowed_tags);
+            $output   .= sprintf(
+                '<div class="cegg-log">%s</div>',
+                $clean_log
             );
         }
 
-        return $log_content ?: '-';
+        $meta_pieces = [];
+
+        if (! empty($item['processing_time']))
+        {
+            $time = round((float) $item['processing_time']);
+            $display_time = $time > 0
+                ? number_format_i18n($time) . 's'
+                : '&lt; 1s';
+
+            $meta_pieces[] = sprintf(
+                /* translators: %s is the processing time, e.g. "2s" */
+                esc_html__('Time: %s', 'content-egg'),
+                wp_kses_post($display_time)
+            );
+        }
+
+        if (! empty($item['ai_cost']))
+        {
+            $cost = (float) $item['ai_cost'];
+            $display_cost = $cost > 0.0001
+                ? '$' . number_format_i18n($cost, 4)
+                : '$&lt; 0.0001';
+
+            $meta_pieces[] = sprintf(
+                /* translators: %s is the AI cost, e.g. "$0.0123" */
+                esc_html__('AI cost: %s', 'content-egg'),
+                wp_kses_post($display_cost)
+            );
+        }
+
+        if ($meta_pieces)
+        {
+            $output .= sprintf(
+                '<div class="cegg-log-meta small text-muted mt-1">%s</div>',
+                implode(' | ', $meta_pieces)
+            );
+        }
+
+        return $output;
     }
 
     function column_updated_at($item)

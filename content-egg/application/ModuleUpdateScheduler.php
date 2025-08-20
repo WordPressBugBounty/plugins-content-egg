@@ -18,7 +18,6 @@ use ContentEgg\application\components\stopwatch\Stopwatch;
  */
 class ModuleUpdateScheduler extends Scheduler
 {
-
     const CRON_TAG = 'cegg_module_updater_cron';
     const BYKEYWORD_UPDATE_LIMIT_FOR_MODULE = 100;
     const ITEMS_UPDATE_LIMIT_FOR_MODULE = 100;

@@ -2,6 +2,9 @@
 
 namespace ContentEgg\application\components;
 
+use ContentEgg\application\helpers\AdminHelper;
+use ContentEgg\application\Plugin;
+
 use function ContentEgg\prn;
 use function ContentEgg\prnx;
 
@@ -59,7 +62,9 @@ abstract class Config
         $this->options = $this->options();
 
         if ($values)
+        {
             $this->option_values = $values;
+        }
         else
         {
             foreach ($this->options as $key => $option)
@@ -129,7 +134,7 @@ abstract class Config
         }
     }
 
-    protected function get_current($option)
+    public function get_current($option)
     {
         if (isset($this->option_values[$option]))
         {
@@ -142,6 +147,14 @@ abstract class Config
         else
         {
             return $this->get_default($option);
+        }
+    }
+
+    public function set_current($option, $value)
+    {
+        if (isset($this->option_values[$option]))
+        {
+            $this->option_values[$option] = $value;
         }
     }
 
@@ -196,7 +209,19 @@ abstract class Config
             {
                 $field['section'] = 'default';
             }
+            if (!empty($field['help_url']))
+            {
+                $params['help_url'] = $field['help_url'];
+            }
 
+            if (!empty($field['is_pro']))
+            {
+                $params['is_pro'] = true;
+            }
+            else
+            {
+                $params['is_pro'] = false;
+            }
             // section
             if (!isset($sections[$field['section']]))
             {
@@ -213,9 +238,16 @@ abstract class Config
                 $sections[$field['section']] = $field['section'];
             }
 
+            $title = $field['title'];
+
+            if ($params['is_pro'] && !Plugin::isPro())
+            {
+                $title .= AdminHelper::getProFeatureWarning();
+            }
+
             \add_settings_field(
                 $id,
-                $field['title'],
+                $title,
                 $field['callback'],
                 $this->page_slug, // menu slug
                 $field['section'],
@@ -313,37 +345,64 @@ abstract class Config
         echo '</label>';
     }
 
-    public function render_dropdown($args)
+    public function render_dropdown(array $args): void
     {
-        echo '<select name="' . esc_attr($args['option_name']) . '['
-            . esc_attr($args['name']) . ']" id="'
-            . esc_attr($args['label_for']) . '" value="'
-            . esc_attr($args['value']) . '" >';
-        foreach ($args['dropdown_options'] as $option_value => $option_name)
+        $name  = esc_attr("{$args['option_name']}[{$args['name']}]");
+        $id    = esc_attr($args['label_for']);
+        $value = $args['value'];
+
+        $fieldIsPro     = ! empty($args['is_pro']);
+        $disableAll     = $fieldIsPro && ! Plugin::isPro() ? ' disabled' : '';
+
+        printf(
+            '<select name="%s" id="%s"%s>',
+            $name,
+            $id,
+            $disableAll
+        );
+
+        foreach ($args['dropdown_options'] as $optValue => $optData)
         {
-            if ($option_value === $args['value'])
+            if (is_array($optData))
             {
-                $selected = ' selected="selected" ';
+                $optLabel = $optData['label'] ?? '';
+                $optPro   = ! empty($optData['is_pro']);
             }
             else
             {
-                $selected = '';
+                $optLabel = $optData;
+                $optPro   = false;
             }
-            echo '<option value="' . esc_attr($option_value) . '"';
-            if ($selected)
-                echo ' selected="selected" ';
-            echo '>';
-            echo esc_html($option_name) . '</option>';
+
+            $disableOpt = ($optPro && ! Plugin::isPro()) ? ' disabled' : '';
+
+            $suffix = ($optPro && ! Plugin::isPro())
+                ? ' <small>(Pro)</small>'
+                : '';
+
+            printf(
+                '<option value="%s"%s%s>%s%s</option>',
+                esc_attr($optValue),
+                selected($value, $optValue, false),
+                $disableOpt,
+                esc_html($optLabel),
+                $suffix
+            );
         }
+
         echo '</select>';
 
-        if (!empty($args['render_after']))
+        if (! empty($args['render_after']))
         {
             echo wp_kses_post($args['render_after']);
         }
-        if ($args['description'])
+
+        if (! empty($args['description']))
         {
-            echo '<p class="description">' . wp_kses_post($args['description']) . '</p>';
+            printf(
+                '<p class="description">%s</p>',
+                wp_kses_post($args['description'])
+            );
         }
     }
 
@@ -379,7 +438,7 @@ abstract class Config
                 if ($checked)
                     echo ' checked="checked" ';
                 echo ' value="' . esc_attr($value) . '" />';
-                echo esc_html($name);
+                echo ' ' . esc_html($name);
                 echo '</label>';
                 echo '</div>';
             }
@@ -592,5 +651,36 @@ abstract class Config
         }
 
         return $result;
+    }
+
+    protected function render_help_icon($args)
+    {
+        if (!empty($args['help_url']))
+        {
+            echo '&nbsp;';
+            echo '<a class="ms-1" href="' . esc_url($args['help_url']) . '" target="_blank">';
+            echo '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/></svg>';
+            echo '</a>';
+        }
+    }
+
+    public static function getOption($option, $default, $slug)
+    {
+        $options = get_option($slug, []);
+
+        if (is_array($options) && array_key_exists($option, $options))
+        {
+            return $options[$option];
+        }
+
+        return $default !== '' ? $default : null;
+    }
+
+    public static function updateOption($option, $value, $slug)
+    {
+        $options = get_option($slug, []);
+        $options[$option] = $value;
+
+        return update_option($slug, $options);
     }
 }

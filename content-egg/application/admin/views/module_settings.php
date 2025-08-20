@@ -2,19 +2,23 @@
 
 use ContentEgg\application\components\ModuleCloneManager;
 
+use function ContentEgg\prn;
+
 defined('\ABSPATH') || exit; ?>
-<?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
+<?php if (\ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
     <div class="cegg-maincol">
     <?php endif; ?>
     <div class="wrap">
-        <h2>
-            <?php esc_html_e('Module Settings', 'content-egg'); ?>
-            <span class="egg-label egg-label-pro"><?php if (\ContentEgg\application\Plugin::isPro()) : ?>pro <?php else : ?>free <?php endif; ?> <small>v<?php echo esc_html(\ContentEgg\application\Plugin::version()); ?></small></span>
-            <?php if (!\ContentEgg\application\Plugin::isTooMuchNicheActive()) : ?>
-                <a class="egg-label-tmniche" style="color: #479f76;" href="https://www.keywordrush.com/toomuchniche?utm_source=cegg&utm_medium=referral&utm_campaign=unlockaipower">Unlock AI Power</a>
-            <?php endif; ?>
-        </h2>
+        <div class="cegg5-container">
+            <h2 class="h4 d-flex align-items-center justify-content-between mb-2 mt-4" style="height: 30px;">
 
+                <span><?php esc_html_e('Module Settings', 'content-egg'); ?></span>
+                <div class="d-flex align-items-center">
+                    <?php include __DIR__ . '/_version_badge.php'; ?>
+                </div>
+
+            </h2>
+        </div>
         <h2 class="nav-tab-wrapper">
             <a href="?page=content-egg-modules" class="nav-tab<?php if (!empty($_GET['page']) && $_GET['page'] == 'content-egg-modules') echo ' nav-tab-active'; ?>">
                 <span class="dashicons dashicons-menu-alt3"></span>
@@ -136,27 +140,114 @@ defined('\ABSPATH') || exit; ?>
 
                     <?php endif; ?>
 
-                    <?php if (!empty($module) && $module->isFeedModule()) : ?>
-                        <ul style="margin-top: 20px;">
-                            <?php if ($last_date = $module->getLastImportDateReadable()) : ?>
-                                <?php $prod_count = $module->getProductCount(); ?>
-                                <li><?php echo esc_html(sprintf(__('Last feed import: %s.', 'content-egg'), $last_date)); ?></li>
-                                <li><?php echo esc_html(sprintf(__('Total products: %d.', 'content-egg'), $prod_count)); ?></li>
+                    <?php if (! empty($module) && $module->isFeedModule()) :
+                        $last_import    = $module->getLastImportDateReadable();
+                        $product_count  = (int) $module->getProductCount();
+                        $last_error     = $module->getLastImportError();
+                        $is_import_in_progress = $module->isImportInProgress();
+                        $is_import_scheduled = $module->isImportScheduled();
+                        $tools_page_url = admin_url('admin.php?page=content-egg-tools');
+                    ?>
+
+                        <ul class="ce-feed-info" style="margin-top:20px;">
+                            <?php if ($last_import) : ?>
+                                <li>
+                                    <?php printf(
+                                        esc_html__('Total products: %s', 'content-egg'),
+                                        number_format_i18n($product_count)
+                                    ); ?>
+
+                                </li>
+                                <li>
+                                    <?php printf(
+                                        esc_html__('Last feed sync: %s', 'content-egg'),
+                                        esc_html($last_import)
+                                    ); ?>
+
+                                </li>
+
                             <?php endif; ?>
-                            <li title="<?php echo \esc_attr(__('Your unzipped feed must be smaller than this.', 'content-egg')); ?>"><?php echo esc_html(sprintf(__('WordPress memory limit: %s', 'content-egg'), \WP_MAX_MEMORY_LIMIT)); ?>
-                                (<a href="https://wordpress.org/support/article/editing-wp-config-php/#increasing-memory-allocated-to-php" target="_blank">?</a>)
-                            </li>
-                            <?php if ($last_error = $module->getLastImportError()) : ?>
-                                <li style="color: red;"><?php echo esc_html(sprintf(__('Last error: %s', 'content-egg'), $last_error)); ?></li>
+
+                            <?php if ($last_error) : ?>
+                                <li class="error" style="color: red;"><?php printf(
+                                                                            esc_html__('Last error: %s', 'content-egg'),
+                                                                            esc_html($last_error)
+                                                                        ); ?></li>
                             <?php endif; ?>
                         </ul>
-                        <?php if ($last_date && $prod_count) : ?>
-                            <hr /><br />
-                            <div><a target="_blank" class="page-title-action" href="<?php echo esc_url_raw(\get_admin_url(\get_current_blog_id(), 'admin.php?page=content-egg-tools&action=feed-export&field=url&module=' . urlencode($module->getId()))); ?>"><?php esc_html_e('Export product URLs', 'content-egg') ?></a></div>
-                            <br />
-                            <div><a target="_blank" class="page-title-action" href="<?php echo esc_url_raw(\get_admin_url(\get_current_blog_id(), 'admin.php?page=content-egg-tools&action=feed-export&field=ean&module=' . urlencode($module->getId()))); ?>"><?php esc_html_e('Export product EANs', 'content-egg') ?></a></div>
-                            <br />
-                            <div><a target="_blank" class="page-title-action" href="<?php echo esc_url_raw(\get_admin_url(\get_current_blog_id(), 'admin.php?page=content-egg-tools&action=feed-export&field=ean_dublicate&module=' . urlencode($module->getId()))); ?>"><?php esc_html_e('Export duplicate EANs', 'content-egg') ?></a></div>
+
+                        <?php if ($is_import_in_progress) : ?>
+                            <div class="notice notice-warning inline ce-feed-status">
+                                <p>
+                                    <strong><?php esc_html_e('Feed sync in progress.', 'content-egg'); ?></strong>
+                                    <?php esc_html_e('Please wait until it completes.', 'content-egg'); ?>
+                                </p>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ($is_import_scheduled) : ?>
+                            <div class="notice notice-info inline ce-feed-status">
+                                <p>
+                                    <strong><?php esc_html_e('Feed sync scheduled.', 'content-egg'); ?></strong>
+                                    <?php esc_html_e('It will run automatically soon.', 'content-egg'); ?>
+                                </p>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ($is_import_in_progress || $is_import_scheduled) : ?>
+                            <div class="ce-refresh-action" style="margin-top:20px;">
+                                <button
+                                    type="button"
+                                    class="page-title-action"
+                                    onclick="window.location.reload();">
+                                    <?php esc_html_e('Refresh Feed Status', 'content-egg'); ?>
+                                </button>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Export Links -->
+                        <?php if ($last_import && $product_count) : ?>
+                            <hr />
+                            <div class="ce-export-actions" style="margin-top:20px;">
+                                <?php
+                                $exports = [
+                                    'url'             => __('Export product URLs', 'content-egg'),
+                                    'ean'             => __('Export product EANs', 'content-egg'),
+                                    'ean_duplicate'   => __('Export duplicate EANs', 'content-egg'),
+                                ];
+
+                                foreach ($exports as $field => $label) :
+                                    $raw_url   = add_query_arg([
+                                        'action' => 'feed-export',
+                                        'field'  => $field,
+                                        'module' => rawurlencode($module->getId()),
+                                    ], $tools_page_url);
+                                    $nonce_url = wp_nonce_url($raw_url, 'cegg_feed-export');
+                                ?>
+                                    <div>
+                                        <a href="<?php echo esc_url($nonce_url); ?>" class="page-title-action" target="_blank" rel="noopener">
+                                            <?php echo esc_html($label); ?>
+                                        </a>
+                                    </div>
+                                    <br />
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Reset Feed Button -->
+                        <?php if ($last_import && !$is_import_in_progress) : ?>
+                            <div class="ce-reset-action">
+                                <?php
+                                $reset_raw   = add_query_arg([
+                                    'action' => 'feed-reset',
+                                    'module' => rawurlencode($module->getId()),
+                                ], $tools_page_url);
+                                $reset_url   = wp_nonce_url($reset_raw, 'cegg_feed-reset');
+                                ?>
+                                <a href="<?php echo esc_url($reset_url); ?>" class="page-title-action" rel="noopener">
+                                    <?php esc_html_e('Reload Feed Data Now', 'content-egg'); ?>
+                                </a>
+                            </div>
                         <?php endif; ?>
 
                     <?php endif; ?>
@@ -167,7 +258,7 @@ defined('\ABSPATH') || exit; ?>
 
     </div>
 
-    <?php if (\ContentEgg\application\Plugin::isFree() || \ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
+    <?php if (\ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
     </div>
     <?php include('_promo_box.php'); ?>
 <?php endif; ?>

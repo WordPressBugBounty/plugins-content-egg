@@ -7,17 +7,14 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\helpers\TextHelper;
 
 /**
- * PrefillLogger class file
+ * PrefillLogger class
+ * Collects and formats prefill log messages.
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
  * @copyright Copyright &copy; 2025 keywordrush.com
  */
 
-/**
- * PrefillLogger class
- * Collects and formats prefill log messages.
- */
 class PrefillLogger
 {
     protected array $notices = [];
@@ -78,11 +75,6 @@ class PrefillLogger
         if (!empty($details['shortcode_positions']) && is_array($details['shortcode_positions']))
         {
             $log .= "Shortcodes Inserted: " . implode(', ', $details['shortcode_positions']) . "\n";
-        }
-
-        if (!empty($details['custom_fields']) && is_array($details['custom_fields']))
-        {
-            $log .= "Custom Fields Added: " . implode(', ', $details['custom_fields']) . "\n";
         }
 
         return trim($log);
