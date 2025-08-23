@@ -139,7 +139,6 @@ class PresetListTable extends \WP_List_Table
         $base_args = [
             'page'     => 'content-egg-product-import',
             'tab'      => 'presets',
-            'noheader' => 'true',
         ];
 
         // URLs
@@ -164,6 +163,7 @@ class PresetListTable extends \WP_List_Table
                 $base_args + [
                     'action'    => 'trash',
                     'preset_id' => $item->ID,
+                    'noheader' => 'true',
                 ],
                 $base_url
             ),

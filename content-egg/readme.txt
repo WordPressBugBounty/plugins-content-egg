@@ -1,16 +1,18 @@
-=== Content Egg ===
+=== Content Egg – Affiliate Product Importer & Price Comparison ===
 Contributors: keywordrush
-Tags: affiliate marketing, price comparison, csv import, ai content generation, autoblogging
+Tags: affiliate marketing, price comparison, csv import, ai content generation, affiliate links
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 9.0.0
+Stable tag: 9.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-All in one solution for creating affiliate websites.
+Import affiliate products, compare prices, sync to WooCommerce, and auto-generate SEO content with AI — all in one toolkit.
 
 == Description ==
+
+Content Egg is an affiliate marketing plugin for WordPress and WooCommerce. Import products from multiple networks, build price comparison blocks, sync with WooCommerce, and generate SEO-friendly content with AI to boost traffic and affiliate sales.
 
 = What is this plugin for? =
 
@@ -165,14 +167,18 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 == Screenshots ==
 
 1. Modules
-2. Feed module settings
-3. Products search
-4. Output demo 1
-5. Output demo 2
-6. Price history
+2. Product Import Tools
+3. Products Search
+4. Output Demo 1
+5. Output Demo 2
+6. Price History
 7. AI features
 
 == Changelog ==
+
+= Version 9.0.1 =
+
+* Fix: Wp-admin UI bug fixes.
 
 = Version 9.0.0 =
 

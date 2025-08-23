@@ -14,6 +14,7 @@ use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\Translator;
 
+use function ContentEgg\prn;
 use function ContentEgg\prnx;
 
 /**
@@ -292,7 +293,9 @@ class WooIntegrator
         }
 
         if (isset($item['stock_status']) && $item['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK && $outofstock_woo == 'move_to_trash')
+        {
             \wp_trash_post($product->get_id());
+        }
 
         return $res;
     }

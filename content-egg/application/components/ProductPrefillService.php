@@ -9,7 +9,6 @@ use ContentEgg\application\components\ai\NullPrompt;
 use ContentEgg\application\components\ai\PrefillPrompt;
 use ContentEgg\application\helpers\ProductHelper;
 use ContentEgg\application\helpers\TextHelper;
-use ContentEgg\application\models\AutoblogModel;
 use ContentEgg\application\models\PrefillQueueModel;
 use ContentEgg\application\Plugin;
 
@@ -240,11 +239,6 @@ class ProductPrefillService
 
             $settings = ['entries_per_page' => $max_per_module];
 
-            if (!empty($config['product_group']))
-            {
-                $keyword = $keyword . '->' . $config['product_group'];
-            }
-
             try
             {
                 $parser->getConfigInstance()->applyCustomOptions($settings);
@@ -261,6 +255,15 @@ class ProductPrefillService
                 $module_name = ModuleManager::getInstance()->getModuleNameById($module_id);
                 $this->logger->notice(sprintf(__('No products found for module "%s".', 'content-egg'), $module_name));
                 continue;
+            }
+
+            // Assign group
+            if (!empty($config['product_group']))
+            {
+                foreach ($data as &$product)
+                {
+                    $product->group = $config['product_group'];
+                }
             }
 
             if ($total_products_founded + count($data) > $max_products_total)
@@ -372,13 +375,21 @@ class ProductPrefillService
         $added_fields = [];
 
         $main_product = ContentManager::getMainProduct($modules_data, 'min_price');
+        if (!$main_product)
+        {
+            return;
+        }
 
         foreach ($customFields as $custom_field)
         {
+            if (!$custom_field['key'])
+            {
+                continue;
+            }
+
             $cf_name = $custom_field['key'];
             $cf_value = $custom_field['value'];
 
-            //$cf_value = ProductHelper::replacePatterns($cf_value, $modules_data, $keyword, [], $main_product);
             $cf_value = ProductHelper::replaceImportPatterns($cf_value, $main_product, $main_product, [], $keyword);
 
             if (!empty($cf_value) && is_string($cf_value))

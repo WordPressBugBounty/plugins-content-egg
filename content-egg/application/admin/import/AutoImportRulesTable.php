@@ -89,7 +89,6 @@ class AutoImportRulesTable extends MyListTable
         $base_args = [
             'page' => 'content-egg-product-import',
             'tab'  => 'autoimport',
-            'noheader' => 'true',
         ];
 
         // Edit link
@@ -107,6 +106,7 @@ class AutoImportRulesTable extends MyListTable
                 $base_args + [
                     'ai_action' => 'delete',
                     'rule_id'   => $item['id'],
+                    'noheader' => 'true',
                 ],
                 admin_url('admin.php')
             ),
@@ -136,6 +136,7 @@ class AutoImportRulesTable extends MyListTable
                     $base_args + [
                         'ai_action' => 'run',
                         'rule_id'   => $item['id'],
+                        'noheader' => 'true',
                     ],
                     admin_url('admin.php')
                 ),
@@ -163,6 +164,7 @@ class AutoImportRulesTable extends MyListTable
                     $base_args + [
                         'ai_action' => 'toggle',
                         'rule_id'   => $item['id'],
+                        'noheader' => 'true',
                     ],
                     admin_url('admin.php')
                 ),
