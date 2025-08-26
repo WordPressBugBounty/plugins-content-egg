@@ -471,7 +471,7 @@ $provider = ($is_pro) ? ImportPostPromptPro::class : ImportPostPromptFree::class
 
             <!-- Custom Fields -->
             <tr>
-                <th><label for="cegg_preset_custom_fields"><?php _e('Custom Fields', 'content-egg'); ?></label></th>
+                <th><label for="cegg_preset_custom_fields"><?php _e('Add Custom Meta Fields', 'content-egg'); ?></label></th>
                 <td>
                     <?php
                     $existing_fields = array_values(array_filter((array)($data['custom_fields'] ?? []), function ($row)
@@ -533,6 +533,9 @@ $provider = ($is_pro) ? ImportPostPromptPro::class : ImportPostPromptFree::class
             <tr>
                 <th><label for="cegg_preset_avoid_duplicates"><?php _e('Avoid Duplicates', 'content-egg'); ?></label></th>
                 <td>
+                    <!-- Ensure a value is always submitted -->
+                    <input type="hidden" name="cegg_preset[avoid_duplicates]" value="0">
+
                     <input
                         type="checkbox"
                         id="cegg_preset_avoid_duplicates"
@@ -547,6 +550,9 @@ $provider = ($is_pro) ? ImportPostPromptPro::class : ImportPostPromptFree::class
             <tr>
                 <th><label for="cegg_preset_use_default"><?php _e('Use as Default Preset', 'content-egg'); ?></label></th>
                 <td>
+                    <!-- Ensure a value is always submitted -->
+                    <input type="hidden" name="cegg_preset[use_default]" value="0">
+
                     <input
                         type="checkbox"
                         id="cegg_preset_use_default"

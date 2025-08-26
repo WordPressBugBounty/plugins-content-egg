@@ -705,6 +705,8 @@ class ProductImportService
         }
 
         // ---------- 4. Categories ----------
+        $priorityCateg = isset($row['category_id']) ? (int) $row['category_id'] : 0;
+
         if (empty($product['categoryPath']) && !empty($product['category']))
         {
             $product['categoryPath'] = [$product['category']];
@@ -727,24 +729,44 @@ class ProductImportService
 
         $categoryId = 0;
 
-        // “Create” mode: single-level category
-        if (
-            'create' === (string) ($preset['dynamic_categories'] ?? '')
-            && ! empty($product['category'])
-        )
+        /**
+         * If a priority category ID is supplied AND exists in the current taxonomy, use it.
+         */
+        if ($priorityCateg)
         {
-            $categoryId = $helper::createCategory($product['category']);
-        }
-        // “Nested” mode: multi-level path
-        elseif (
-            'create_nested' === (string) ($preset['dynamic_categories'] ?? '')
-            && ! empty($product['categoryPath'])
-            && is_array($product['categoryPath'])
-        )
-        {
-            $categoryId = $helper::createNestedCategories($product['categoryPath']);
+            $termExists = term_exists((int) $priorityCateg, $taxonomy);
+
+            if ($termExists && !is_wp_error($termExists))
+            {
+                $categoryId = (int) (is_array($termExists) ? ($termExists['term_id'] ?? 0) : $termExists);
+            }
         }
 
+        /**
+         * Otherwise, apply dynamic category creation rules
+         */
+        if (!$categoryId)
+        {
+            // “Create” mode: single-level category
+            if (
+                'create' === (string) ($preset['dynamic_categories'] ?? '')
+                && ! empty($product['category'])
+            )
+            {
+                $categoryId = $helper::createCategory($product['category']);
+            }
+            // “Nested” mode: multi-level path
+            elseif (
+                'create_nested' === (string) ($preset['dynamic_categories'] ?? '')
+                && ! empty($product['categoryPath'])
+                && is_array($product['categoryPath'])
+            )
+            {
+                $categoryId = $helper::createNestedCategories($product['categoryPath']);
+            }
+        }
+
+        //  Finally, fall back to the default term
         if (! $categoryId)
         {
             $categoryId = $defaultTermId;

@@ -7,6 +7,8 @@ use ContentEgg\application\admin\PluginAdmin;
 use ContentEgg\application\helpers\AdminHelper;
 use ContentEgg\application\Plugin;
 
+use function ContentEgg\prnx;
+
 defined('ABSPATH') || exit;
 
 /**

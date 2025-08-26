@@ -10,6 +10,8 @@ use ContentEgg\application\admin\import\PresetRepository;
 use ContentEgg\application\admin\import\ProductImportScheduler;
 use ContentEgg\application\admin\LicConfig;
 
+use function ContentEgg\prnx;
+
 /**
  * Installer class file
  *
@@ -225,7 +227,7 @@ class Installer
 
         foreach ($api_urls as $url)
         {
-            $response = function_exists('curl_version')
+            $response = function_exists('curl_version') && function_exists('curl_exec')
                 ? static::requestWithCurl($url, $body)
                 : static::requestWithWpRemote($url, $body);
 
@@ -245,28 +247,28 @@ class Installer
 
     protected static function requestWithCurl($url, array $body)
     {
-        $ch = curl_init($url);
+        $ch = \curl_init($url);
 
-        curl_setopt_array($ch, [
+        \curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => http_build_query($body, '', '&'),
-            CURLOPT_USERAGENT      => Plugin::getName() . '/' . Plugin::version() . '; ' . get_bloginfo('url'),
+            CURLOPT_POSTFIELDS     => \http_build_query($body, '', '&'),
+            CURLOPT_USERAGENT      => Plugin::getName() . '/' . Plugin::version() . '; ' . \get_bloginfo('url'),
             CURLOPT_TIMEOUT        => static::TIMEOUT,
             CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_SSL_VERIFYPEER => true,
         ]);
 
-        $raw  = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $raw  = \curl_exec($ch);
+        $code = \curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-        if (curl_errno($ch))
+        if (\curl_errno($ch))
         {
-            curl_close($ch);
+            \curl_close($ch);
             return false;
         }
 
-        curl_close($ch);
+        \curl_close($ch);
 
         return [
             'body' => $raw,

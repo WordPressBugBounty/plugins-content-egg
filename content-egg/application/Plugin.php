@@ -28,7 +28,7 @@ use function ContentEgg\prnx;
  */
 class Plugin
 {
-    const version = '9.0.1';
+    const version = '9.0.2';
     const db_version = 80;
     const wp_requires = '5.9';
     const slug = 'content-egg';

@@ -37,7 +37,8 @@ class ImportQueueApi
      *  - module_id       (string)
      *  - keyword         (string, optional)
      *  - payload         (JSON-encoded array, optional)
-     *  - category_id     (int, optional)
+     *  - post_cat        (int, optional)
+     *  - woo_cat         (int, optional)
      *  - scheduled_at    (string MySQL datetime, optional)
      */
     public static function handle_enqueue(): void
@@ -58,7 +59,18 @@ class ImportQueueApi
         $preset_id    = isset($_POST['preset_id']) ? absint($_POST['preset_id']) : 0;
         $module_id    = isset($_POST['module_id']) ? sanitize_text_field($_POST['module_id']) : '';
         $keyword      = isset($_POST['keyword']) ? sanitize_text_field($_POST['keyword']) : '';
-        $category_id  = isset($_POST['category_id']) ? absint($_POST['category_id']) : null;
+
+        $category_id = null;
+
+        if (!empty($_POST['post_cat']))
+        {
+            $category_id = absint($_POST['post_cat']);
+        }
+        elseif (!empty($_POST['woo_cat']))
+        {
+            $category_id = absint($_POST['woo_cat']);
+        }
+
         $scheduled_at = isset($_POST['scheduled_at'])
             ? sanitize_text_field($_POST['scheduled_at'])
             : null;

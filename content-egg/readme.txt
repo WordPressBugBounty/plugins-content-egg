@@ -4,7 +4,7 @@ Tags: affiliate marketing, price comparison, csv import, ai content generation, 
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 9.0.1
+Stable tag: 9.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -175,6 +175,11 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 7. AI features
 
 == Changelog ==
+
+= Version 9.0.2 =
+
+* Fix: Importing to the selected category.
+* Fix: Unable to disable "Skip import if product already exists" option.
 
 = Version 9.0.1 =
 
