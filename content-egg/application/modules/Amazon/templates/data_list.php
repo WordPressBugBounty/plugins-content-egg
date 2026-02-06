@@ -1,10 +1,10 @@
 <?php
 
-defined( '\ABSPATH' ) || exit;
+defined('\ABSPATH') || exit;
 
 /*
   Name: List
  */
-__( 'List', 'content-egg-tpl' );
 
-$this->renderPartial( 'list' );
+
+$this->renderPartial('list');

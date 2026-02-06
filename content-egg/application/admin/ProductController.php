@@ -4,6 +4,7 @@ namespace ContentEgg\application\admin;
 
 defined('\ABSPATH') || exit;
 
+use ContentEgg\application\helpers\AdminHelper;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\models\ProductModel;
 use ContentEgg\application\helpers\TemplateHelper;
@@ -57,7 +58,7 @@ class ProductController
         if ($forced)
         {
             $redirect_url = \admin_url('admin.php?page=' . self::slug);
-            \wp_safe_redirect($redirect_url);
+            AdminHelper::redirect($redirect_url);
             exit;
         }
 

@@ -6,7 +6,6 @@ defined('\ABSPATH') || exit;
 /*
   Name: Tile
  */
-__('Tile', 'content-egg-tpl');
 ?>
 
 <div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>

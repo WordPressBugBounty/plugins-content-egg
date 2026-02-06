@@ -4,8 +4,6 @@ defined('\ABSPATH') || exit;
   Name: Compare (deprecated)
  */
 
-__('Compare', 'content-egg-tpl');
-
 use ContentEgg\application\helpers\TemplateHelper;
 ?>
 
@@ -211,7 +209,6 @@ $barcodes = array(
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-
 
         <div class="row">
             <div class="col-xs-12 col-md-2 text-info">

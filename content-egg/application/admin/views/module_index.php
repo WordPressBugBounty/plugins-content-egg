@@ -29,7 +29,7 @@ function _cegg_print_module_item(array $modules)
             . 'display:inline-block;'
             . 'width:0.5rem;height:0.5rem;'
             . 'border-radius:50%;'
-            . 'background-color:' . $dotColor . ';'
+            . 'background-color:' . esc_attr($dotColor) . ';'
             . '" title="' . esc_attr($dotTitle) . '"></span>';
 
         // --- module name (this span will grow to fill all space) ---
@@ -131,24 +131,47 @@ function _cegg_print_module_item(array $modules)
                 </div>
                 <div class="col-md-4 col-xs-12">
 
-                    <?php if ($modules = \ContentEgg\application\helpers\AdminHelper::getAeProductModules()) : ?>
-                        <h3 class="h5"><?php esc_html_e('Affiliate Egg modules', 'content-egg'); ?></h3>
-                        <div class="list-group">
-                            <?php _cegg_print_module_item($modules); ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <h3 class="h5 mt-4"><?php esc_html_e('Feed modules', 'content-egg'); ?></h3>
+                    <h3 class="h5 d-flex align-items-center justify-content-between">
+                        <?php esc_html_e('Feed modules', 'content-egg'); ?>
+                        <a href="<?php echo esc_url('https://ce-docs.keywordrush.com/modules/feed-modules'); ?>"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-muted small d-inline-flex align-items-center"
+                            style="font-size: 13px;"
+                            title="<?php esc_attr_e('View documentation', 'content-egg'); ?>">
+                            <i class="bi bi-question-circle me-2"></i>
+                        </a>
+                    </h3>
                     <div class="list-group">
                         <?php _cegg_print_module_item(\ContentEgg\application\helpers\AdminHelper::getFeedProductModules()); ?>
                     </div>
 
                     <?php if (\ContentEgg\application\Plugin::isFree()) : ?>
-                        <p class="description cegg-pro-notice">
+                        <p class="description cegg-pro-notice small py-1 pt-2">
                             <?php
                             printf(
-                                esc_html__('Free version supports up to 3 feed modules. Upgrade to Pro for 50 modules and more features. %s', 'content-egg'),
+                                esc_html__('Free version supports up to 3 Feed modules. Upgrade to Pro for 50 modules and more features. %s', 'content-egg'),
                                 '<a href="' . esc_url(\ContentEgg\application\Plugin::pluginPricingUrl('ce_feed_modules', 'feed_modules_notice')) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Go PRO →', 'content-egg') . '</a>'
+                            );
+                            ?>
+                        </p>
+                    <?php endif; ?>
+
+                    <h3 class="h5 mt-4"><?php esc_html_e('Affiliate Egg modules', 'content-egg'); ?></h3>
+                    <?php if ($modules = \ContentEgg\application\helpers\AdminHelper::getAeProductModules()) : ?>
+                        <div class="list-group">
+                            <?php _cegg_print_module_item($modules); ?>
+                        </div>
+                    <?php else: ?>
+                        <p class="description cegg-pro-notice small py-1">
+                            <?php
+                            $activate_url = admin_url('admin.php?page=content-egg-ae-integration');
+                            printf(
+                                wp_kses(
+                                    __('Affiliate Egg integration is not activated. <a href="%s">Activate&nbsp;&rarr;</a>', 'content-egg'),
+                                    array('a' => array('href' => array()))
+                                ),
+                                esc_url($activate_url)
                             );
                             ?>
                         </p>

@@ -5,7 +5,7 @@ defined('\ABSPATH') || exit;
 /*
   Name: Specifications
  */
-__('Specifications', 'content-egg-tpl');
+
 ?>
 
 <?php foreach ($items as $key => $item) : ?>

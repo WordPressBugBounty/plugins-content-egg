@@ -11,8 +11,7 @@ use ContentEgg\application\components\ShortcodeAtts;
 use ContentEgg\application\components\Shortcoded;
 use ContentEgg\application\helpers\TextHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * EggShortcode class file

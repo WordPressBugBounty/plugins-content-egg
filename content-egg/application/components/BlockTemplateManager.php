@@ -3,9 +3,7 @@
 namespace ContentEgg\application\components;
 
 use ContentEgg\application\admin\GeneralConfig;
-use ContentEgg\application\helpers\TemplateHelper;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\helpers\TemplateHelper;;
 
 defined('\ABSPATH') || exit;
 

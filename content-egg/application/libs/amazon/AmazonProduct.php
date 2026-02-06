@@ -315,7 +315,7 @@ class AmazonProduct extends RestClient
 				$err_message = $errors['Message'];
 			}
 
-			throw new \Exception($err_message);
+			throw new \Exception(esc_html($err_message));
 		}
 
 		if (!isset($data['Items']['Item']))

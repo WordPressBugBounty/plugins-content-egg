@@ -12,9 +12,6 @@ use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ContentProduct;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * PriceAlert class file
  *
@@ -27,7 +24,6 @@ class PriceAlert
 
     private static $instance = null;
     private $tickbox_message;
-    private $tickbox_subject;
 
     public static function getInstance()
     {

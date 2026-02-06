@@ -5,9 +5,7 @@ namespace ContentEgg\application\admin\import;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\models\AutoImportRuleModel;
-use ContentEgg\application\Plugin;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\Plugin;;
 
 /**
  * Auto-Import Scheduler

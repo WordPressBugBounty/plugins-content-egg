@@ -6,12 +6,9 @@
  *
  */
 
-__('Sorted list with store logos and shipping price + group pills', 'content-egg-tpl');
-
 use ContentEgg\application\helpers\TemplateHelper;
 
 defined('\ABSPATH') || exit;
-
 
 $params['visible'][] = 'shipping_cost';
 $this->setParams($params);

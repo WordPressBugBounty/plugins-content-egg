@@ -2,8 +2,6 @@
 
 namespace ContentEgg\application\components\command;
 
-use function ContentEgg\prnx;
-
 defined('\ABSPATH') || exit;
 
 /**

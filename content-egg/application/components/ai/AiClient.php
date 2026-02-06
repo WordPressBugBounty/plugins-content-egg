@@ -2,9 +2,7 @@
 
 namespace ContentEgg\application\components\ai;
 
-use ContentEgg\application\vendor\openai\OpenAi;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\vendor\openai\OpenAi;;
 
 defined('\ABSPATH') || exit;
 
@@ -204,7 +202,7 @@ abstract class AiClient
 					$errorMessage .= ' Error message: ' . $data['error']['message'];
 				}
 
-				throw new \Exception($errorMessage, $info['http_code']);
+				throw new \Exception(esc_html(wp_strip_all_tags($errorMessage)), (int) $info['http_code']);
 			}
 
 			$this->saveToCache($payload, $response);

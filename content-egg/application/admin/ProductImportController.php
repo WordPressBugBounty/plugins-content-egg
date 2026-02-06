@@ -11,9 +11,7 @@ use ContentEgg\application\admin\import\FeedImportTab;
 use ContentEgg\application\admin\import\SearchTab;
 use ContentEgg\application\admin\import\AutoImportTab;
 use ContentEgg\application\admin\import\PresetsTab;
-use ContentEgg\application\admin\import\QueueTab;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\admin\import\QueueTab;;
 
 /**
  * ProductImportController class file
@@ -68,6 +66,23 @@ class ProductImportController
 
     public function renderPage()
     {
+        if (Plugin::isInactiveEnvato())
+        {
+            echo '<div class="wrap">';
+            echo '<h1>' . esc_html__('Product Import', 'content-egg') . '</h1>';
+            echo '<div class="notice notice-error"><p>'
+                . esc_html__('You need to activate the plugin first to use the Product Import Tool.', 'content-egg')
+                . '</p></div>';
+            echo '</div>';
+
+            $activate_url = admin_url('admin.php?page=content-egg-lic');
+            echo '<p><a href="' . esc_url($activate_url) . '" class="button button-primary">'
+                . esc_html__('Activate now', 'content-egg') . '</a></p>';
+
+            echo '</div></div>';
+            return;
+        }
+
         $this->initTabs();
 
         $requested = sanitize_key($_GET['tab'] ?? '');
@@ -95,7 +110,7 @@ class ProductImportController
             printf(
                 '<a href="%1$s" class="nav-tab%2$s">%3$s</a>',
                 esc_url($url),
-                $is_active,
+                esc_attr($is_active),
                 esc_html($tab->getTitle())
             );
         }

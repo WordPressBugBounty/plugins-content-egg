@@ -18,10 +18,10 @@
                     <span ng-show="result.ean" class="ms-2"><small class="small text-muted"><?php esc_html_e('EAN:', 'content-egg'); ?> {{result.ean}}</small></span>
                     <?php if ($module_id == 'Amazon' || $module_id == 'AmazonNoApi' || $module_id == 'Ebay2') : ?>
                         <div class="text-muted small">
-                            <small class="text-success" ng-show="result.promo">{{result.promo}}</small>
-                            <small class="text-primary" ng-show="result.extra.IsPrimeEligible">PRIME</small>
-                            <small class="text-primary" ng-show="result.extra.priorityListing">Priority listing</small>
-                            <small class="text-success" ng-show="result.extra.IsEligibleForSuperSaverShipping">Free Shipping<span ng-show="result.extra.IsAmazonFulfilled"> by Amazon</span></small>
+                            <small class="text-success me-2" ng-show="result.promo">{{result.promo}}</small>
+                            <small class="text-primary me-2" ng-show="result.extra.DealAccessType=='PRIME_EXCLUSIVE'"><?php _e('Prime exclusive', 'content-egg'); ?></small>
+                            <small class="text-primary me-2" ng-show="result.extra.DealAccessType=='PRIME_EARLY_ACCESS'"><?php _e('Prime early access', 'content-egg'); ?></small>
+                            <small class="text-muted" ng-show="result.extra.AvailabilityMessage">{{result.extra.AvailabilityMessage}}</small>
                         </div>
                     <?php endif; ?>
 

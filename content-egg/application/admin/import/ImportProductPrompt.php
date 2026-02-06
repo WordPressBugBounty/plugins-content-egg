@@ -2,9 +2,7 @@
 
 namespace ContentEgg\application\admin\import;
 
-use ContentEgg\application\helpers\TextHelper;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\helpers\TextHelper;;
 
 defined('\ABSPATH') || exit;
 
@@ -169,12 +167,17 @@ EOD;
         );
 
         /* -----------------------------------------------------------------
-        * 4. Decode & validate JSON
-        * ----------------------------------------------------------------- */
+ * 4. Decode & validate JSON
+ * ----------------------------------------------------------------- */
         $item = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($item))
         {
-            throw new \RuntimeException('Invalid JSON from AI: ' . json_last_error_msg());
+            throw new \RuntimeException(
+                sprintf(
+                    'Invalid JSON from AI: %s',
+                    esc_html(json_last_error_msg())
+                )
+            );
         }
 
         /* -----------------------------------------------------------------

@@ -19,6 +19,7 @@ if (!empty($params['btn_text']))
     $btn_text = $params['btn_text'];
 else
     $btn_text = '';
+
 ?>
 
 <div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>
@@ -79,7 +80,7 @@ else
                 <div class="d-grid gap-2 mt-3" style="max-width: 450px;">
                     <?php foreach ($items as $i => $btn_item): ?>
                         <?php
-                        if (empty($btn_text))
+                        if (empty($btn_text) && !TemplateHelper::isLinkedToBridge($btn_item))
                         {
                             if ($btn_item['price'])
                                 $params['btn_text'] = sprintf(TemplateHelper::__('%s at %s'), '%PRICE%', '%MERCHANT%');

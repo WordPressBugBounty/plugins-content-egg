@@ -60,9 +60,8 @@ class RssFetcherModule extends ParserModule
 		}
 		catch (Exception $e)
 		{
-			throw new \Exception(strip_tags($e->getMessage()));
+			throw new \Exception(esc_html(wp_strip_all_tags($e->getMessage())));
 		}
-
 
 		$results = $this->normaliseResults($results, $entries_per_page);
 

@@ -11,9 +11,6 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\admin\PluginAdmin;
 use ContentEgg\application\admin\GeneralConfig;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * YoutubeModule class file
  *
@@ -83,7 +80,7 @@ class YoutubeModule extends ParserModule
 		}
 		catch (\Exception $e)
 		{
-			throw new \Exception(strip_tags($e->getMessage()));
+			throw new \Exception(esc_html(wp_strip_all_tags($e->getMessage())));
 		}
 
 		if (!isset($data['items']) || !isset($data['items'][0]))

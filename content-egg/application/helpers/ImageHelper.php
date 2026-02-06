@@ -4,8 +4,7 @@ namespace ContentEgg\application\helpers;
 
 use ContentEgg\application\ImageProxy;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 defined('\ABSPATH') || exit;
 

@@ -2,9 +2,7 @@
 
 namespace ContentEgg\application\admin\import;
 
-use ContentEgg\application\Plugin;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\Plugin;;
 
 defined('ABSPATH') || exit;
 

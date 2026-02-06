@@ -10,8 +10,7 @@ use ContentEgg\application\helpers\AdminHelper;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\models\ImportQueueModel;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 defined('ABSPATH') || exit;
 

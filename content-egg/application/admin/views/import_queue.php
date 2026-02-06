@@ -1,8 +1,6 @@
 <?php
 
-use ContentEgg\application\Plugin;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\Plugin;;
 
 defined('\ABSPATH') || exit;
 ?>
@@ -121,19 +119,19 @@ defined('\ABSPATH') || exit;
         <tbody>
             <tr>
                 <td><?php esc_html_e('Done', 'content-egg'); ?></td>
-                <td><?php echo number_format_i18n($stats['done']); ?></td>
+                <td><?php echo esc_html(number_format_i18n($stats['done'])); ?></td>
             </tr>
             <tr>
                 <td><?php esc_html_e('Pending', 'content-egg'); ?></td>
-                <td><?php echo number_format_i18n($stats['pending']); ?></td>
+                <td><?php echo esc_html(number_format_i18n($stats['pending'])); ?></td>
             </tr>
             <tr>
                 <td><?php esc_html_e('Working', 'content-egg'); ?></td>
-                <td><?php echo number_format_i18n($stats['working']); ?></td>
+                <td><?php echo esc_html(number_format_i18n($stats['working'])); ?></td>
             </tr>
             <tr>
                 <td><?php esc_html_e('Failed', 'content-egg'); ?></td>
-                <td><?php echo number_format_i18n($stats['failed']); ?></td>
+                <td><?php echo esc_html(number_format_i18n($stats['failed'])); ?></td>
             </tr>
 
         </tbody>
@@ -223,15 +221,16 @@ defined('\ABSPATH') || exit;
     <?php endif; ?>
 </div>
 
-<?php if ($is_in_progress && !Plugin::isDevEnvironment()): ?>
+<?php if ($is_in_progress && ! Plugin::isDevEnvironment()) : ?>
     <script>
         (function() {
+            "use strict";
             // auto-refresh every 60 s (page 1 only) to show live progress
             setTimeout(function() {
                 const url = new URL(window.location.href);
-                url.searchParams.delete('egg-notice');
-                url.searchParams.delete('egg-notice-level');
-                const paged = parseInt(url.searchParams.get('paged') || '1', 10);
+                url.searchParams.delete("egg-notice");
+                url.searchParams.delete("egg-notice-level");
+                const paged = parseInt(url.searchParams.get("paged") || "1", 10);
                 history.replaceState({}, document.title, url.toString());
                 if (paged < 2) {
                     window.location.reload();

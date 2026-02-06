@@ -10,9 +10,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\ModuleViewer;
 use ContentEgg\application\components\ContentManager;
-use ContentEgg\application\Translator;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\Translator;;
 
 /**
  * ProductSearch class file

@@ -36,19 +36,20 @@
                     for ($m = 0; $m <= 12; $m++)
                     {
                         printf(
-                            '<option value="%1$d">%2$s</option>',
-                            $m,
+                            '<option value="%1$s">%2$s</option>',
+                            esc_attr($m),
                             (0 === $m)
                                 ? esc_html__('Immediately', 'content-egg')
                                 : sprintf(
                                     /* translators: %d = number of months */
                                     esc_html__('Within %d month(s)', 'content-egg'),
-                                    $m
+                                    intval($m)
                                 )
                         );
                     }
                     ?>
                 </select>
+
             </div>
         </div><!-- /.row -->
 

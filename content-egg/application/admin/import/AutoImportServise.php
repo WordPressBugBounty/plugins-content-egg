@@ -8,9 +8,7 @@ use ContentEgg\application\helpers\PostHelper;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\models\AutoImportRuleModel;
 use ContentEgg\application\models\ImportQueueModel;
-use ContentEgg\application\Plugin;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\Plugin;;
 
 defined('ABSPATH') || exit;
 
@@ -205,8 +203,15 @@ final class AutoImportServise
      * ------------------------------------------------------------------*/
     protected function fetchProductDynamically(string $moduleId, string $keyword): array
     {
-        if (!$moduleId) throw new \RuntimeException(__('No module ID provided.', 'content-egg'));
-        if (!$keyword)  throw new \RuntimeException(__('No keyword provided.', 'content-egg'));
+        if (! $moduleId)
+        {
+            throw new \RuntimeException(esc_html__('No module ID provided.', 'content-egg'));
+        }
+
+        if (! $keyword)
+        {
+            throw new \RuntimeException(esc_html__('No keyword provided.', 'content-egg'));
+        }
 
         $parser = ModuleManager::getInstance()->parserFactory($moduleId);
         $cfg    = $parser->getConfigInstance();

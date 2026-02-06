@@ -5,9 +5,7 @@ namespace ContentEgg\application\admin;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\Config;
-use ContentEgg\application\Plugin;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\Plugin;;
 
 /**
  * AeIntegrationConfig class file
@@ -33,7 +31,7 @@ class AeIntegrationConfig extends Config
 
     public function add_admin_menu()
     {
-        \add_submenu_page(Plugin::slug, __('Affiliate Egg integration', 'content-egg') . ' &lsaquo; Content Egg', __('Affiliate Egg integration', 'content-egg'), 'manage_options', $this->page_slug(), array($this, 'settings_page'));
+        \add_submenu_page(Plugin::slug, __('Affiliate Egg integration', 'content-egg') . ' &lsaquo; Content Egg', __('AE Integration', 'content-egg'), 'manage_options', $this->page_slug(), array($this, 'settings_page'));
     }
 
     protected function options()

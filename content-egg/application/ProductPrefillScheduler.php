@@ -4,9 +4,7 @@ namespace ContentEgg\application;
 
 defined('\ABSPATH') || exit;
 
-use ContentEgg\application\models\PrefillQueueModel;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\models\PrefillQueueModel;;
 
 /**
  * ProductPrefillScheduler class file

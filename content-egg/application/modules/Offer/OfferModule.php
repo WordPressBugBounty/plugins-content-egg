@@ -10,8 +10,7 @@ use ContentEgg\application\components\LinkHandler;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ContentProduct;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * OfferModule class file

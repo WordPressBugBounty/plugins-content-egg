@@ -5,9 +5,7 @@ namespace ContentEgg\application\components\command;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\ModuleUpdateScheduler;
 use ContentEgg\application\components\ContentManager;
-use ContentEgg\application\components\stopwatch\Stopwatch;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\components\stopwatch\Stopwatch;;
 
 defined('\ABSPATH') || exit;
 

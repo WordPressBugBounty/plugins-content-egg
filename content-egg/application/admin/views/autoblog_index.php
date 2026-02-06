@@ -6,15 +6,17 @@
     </p>
 </div>
 <script type="text/javascript">
+    "use strict";
     var $j = jQuery.noConflict();
     $j(document).ready(function() {
-        $j('.run_avtoblogging').click(function() {
+        $j(document).on('click', '.run_avtoblogging', function() {
             $j.blockUI({
                 message: $j('#cegg_waiting_products')
             });
         });
     });
 </script>
+
 <?php
 $message = '';
 if ($table->current_action() == 'delete' && !empty($_GET['id']))

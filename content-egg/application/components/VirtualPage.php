@@ -1,8 +1,6 @@
 <?php
 
-namespace ContentEgg\application\components;
-
-use function ContentEgg\prnx;
+namespace ContentEgg\application\components;;
 
 defined('\ABSPATH') || exit;
 

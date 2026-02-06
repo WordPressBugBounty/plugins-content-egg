@@ -6,9 +6,7 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\Plugin;
 use ContentEgg\application\models\Model;
-use ContentEgg\application\helpers\TemplateHelper;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\helpers\TemplateHelper;;
 
 /**
  * MyListTable class file

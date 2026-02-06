@@ -68,7 +68,7 @@ class RelatedKeywordsModule extends ParserModule
 		}
 		catch (Exception $e)
 		{
-			throw new \Exception(strip_tags($e->getMessage()));
+			throw new \Exception(esc_html(wp_strip_all_tags($e->getMessage())));
 		}
 
 		if (!isset($results['suggestionGroups']) || !isset($results['suggestionGroups'][0]['searchSuggestions']))

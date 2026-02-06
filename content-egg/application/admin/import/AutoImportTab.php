@@ -13,9 +13,6 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\models\AutoImportRuleModel;
 use ContentEgg\application\Plugin;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * AutoImportTab class file
  *
@@ -222,7 +219,7 @@ class AutoImportTab extends AbstractTab
         check_admin_referer('cegg_autoimport', 'cegg_autoimport_nonce');
         if (! current_user_can('manage_options'))
         {
-            wp_die(__('Insufficient permissions.', 'content-egg'));
+            wp_die(esc_html__('Insufficient permissions.', 'content-egg'));
         }
 
         $action = sanitize_key($_POST['ai_action'] ?? '');
@@ -401,7 +398,7 @@ class AutoImportTab extends AbstractTab
 
         if (!$lines)
         {
-            wp_die(__('At least one keyword is required.', 'content-egg'));
+            wp_die(esc_html__('At least one keyword is required.', 'content-egg'));
         }
 
         // load existing objects

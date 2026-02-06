@@ -1,6 +1,6 @@
 <?php
 
-namespace ContentEgg\application\components;
+namespace ContentEgg\application\components;;
 
 defined('\ABSPATH') || exit;
 
@@ -56,6 +56,32 @@ abstract class AffiliateParserModuleConfig extends ParserModuleConfig
 			),
 			'default'          => 'visit',
 		);
+
+		$options['set_local_redirect'] = [
+			'title'       => esc_html__('Link Cloaking', 'content-egg'),
+			'description' => esc_html__('Route affiliate links through local redirect URLs', 'content-egg')
+				. '<p class="description">' . esc_html__('Note:', 'content-egg') . ' '
+				. esc_html__('After enabling, the plugin will index existing product links in the background. On larger sites this can take several minutes.', 'content-egg')
+				. '</p>',
+			'callback' => array($this, 'render_dropdown'),
+			'dropdown_options' => array(
+				'0' => __('Disabled', 'content-egg'),
+				'1' => __('Enabled', 'content-egg'),
+			),
+			'default'     => '0',
+			'validator'   => [
+				['call' => [$this, 'processLinkIndexBackfiller'], 'type' => 'filter'],
+			],
+			'section'     => 'default',
+		];
+
+		if (stripos($this->module_id, 'amazon') !== false)
+		{
+			$options['set_local_redirect']['description'] .=
+				'<p class="description">' . __('Warning:', 'content-egg') . ' ' .
+				__('Using local redirects for Amazon links can violate the Amazon Associates Program policies. Enable this only if you understand the risks.', 'content-egg') .
+				'</p>';
+		}
 
 		return
 			array_merge(

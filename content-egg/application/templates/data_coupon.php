@@ -200,33 +200,41 @@ TemplateHelper::addShopInfoOffcanvases($items, $params);
     ?>
 <?php endif; ?>
 
-<?php if ($this->isVisible('coupon_reveal')): ?>
+<?php if ($this->isVisible('coupon_reveal')) : ?>
     <script>
+        "use strict";
         document.addEventListener("DOMContentLoaded", function() {
-            var elements = document.querySelectorAll("div#<?php echo esc_attr($div_id); ?> .cegg_coupon_btn");
-            elements.forEach(function(elem) {
-                elem.addEventListener("click", clickHandler);
-            });
+            const elements = document.querySelectorAll("div#<?php echo esc_attr($div_id); ?> .cegg_coupon_btn");
 
-            function clickHandler(event) {
-                window.open(this.getAttribute("data-uri"), '_blank');
-                var advertiser_id = this.getAttribute("data-advertiser-id");
-                var btnElements = document.querySelectorAll("div#<?php echo esc_attr($div_id); ?> [data-advertiser-id='" + advertiser_id + "'] .cegg_coupon_btn");
-                btnElements.forEach(function(btnElem) {
-                    var btn_txt = btnElem.querySelector('.cegg_coupon_btn_txt');
-                    if (btn_txt) {
-                        btn_txt.style.visibility = "hidden";
-                        btn_txt.style.pointerEvents = "none";
+            const clickHandler = function(event) {
+                window.open(this.getAttribute("data-uri"), "_blank");
+
+                const advertiserId = this.getAttribute("data-advertiser-id");
+                const btnElements = document.querySelectorAll(
+                    "div#<?php echo esc_attr($div_id); ?> [data-advertiser-id='" + advertiserId + "'] .cegg_coupon_btn"
+                );
+
+                btnElements.forEach((btnElem) => {
+                    const btnTxt = btnElem.querySelector(".cegg_coupon_btn_txt");
+                    if (btnTxt) {
+                        btnTxt.style.visibility = "hidden";
+                        btnTxt.style.pointerEvents = "none";
                     }
-                    var code = btnElem.querySelector('.cegg_coupon_hidden_code');
+
+                    const code = btnElem.querySelector(".cegg_coupon_hidden_code");
                     if (code) {
                         code.innerHTML = code.getAttribute("data-code");
                         code.removeAttribute("data-code");
                         code.style.textAlign = "center";
                     }
+
                     btnElem.removeEventListener("click", clickHandler);
                 });
-            }
+            };
+
+            elements.forEach((elem) => {
+                elem.addEventListener("click", clickHandler);
+            });
         });
     </script>
 <?php endif; ?>

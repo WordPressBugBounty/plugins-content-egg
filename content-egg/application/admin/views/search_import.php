@@ -1,6 +1,6 @@
 <div
   class="cegg5-container"
-  ng-app="contentEggApp"
+  ng-app="contentEgg"
   ng-controller="SearchController as vm"
   <?php if (\ContentEgg\application\Plugin::isDevEnvironment()): ?>
   ng-init="vm.results = [
@@ -246,7 +246,7 @@
       <span class="visually-hidden"><?php esc_html_e('Loading…', 'content-egg'); ?></span>
     </div>
 
-    <div class="row g-3 row-cols-2 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5"
+    <div class="row g-3 row-cols-2 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6"
       ng-if="!vm.loading && vm.results.length"
       aria-live="polite">
 
@@ -272,7 +272,10 @@
 
           <!-- Image -->
           <div ng-show="item.img" class="ratio ratio-1x1">
-            <img class="card-img-top object-fit-scale rounded" ng-src="{{ item.img }}" />
+            <img
+              class="card-img-top object-fit-scale rounded"
+              ng-src="{{ item.img }}"
+              style="max-height: 250px; width: 100%; object-fit: contain;" />
           </div>
 
           <!-- Body -->
@@ -297,8 +300,8 @@
                   </del>
                 </div>
 
-                <div ng-if="item.extra && item.extra.IsPrimeEligible"
-                  class="text-primary pt-2 pt-md-0 small">PRIME</div>
+                <div ng-if="item.promo"
+                  class="text-success pt-2 pt-md-0 small">{{item.promo}}</div>
 
                 <div title="<?php esc_attr_e('Free Shipping', 'content-egg'); ?>"
                   ng-if="item.extra && item.extra.IsEligibleForSuperSaverShipping"
@@ -308,7 +311,7 @@
               </div>
             </div>
 
-            <div class="card-title fs-6 fw-normal lh-base cegg-title cegg-text-truncate mb-2">
+            <div class="card-title fw-normal lh-base cegg-title cegg-text-truncate mb-2">
               {{ item.title }}
             </div>
 

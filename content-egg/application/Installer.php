@@ -9,8 +9,8 @@ use ContentEgg\application\admin\import\AutoImportScheduler;
 use ContentEgg\application\admin\import\PresetRepository;
 use ContentEgg\application\admin\import\ProductImportScheduler;
 use ContentEgg\application\admin\LicConfig;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\models\LinkIndexModel;
 
 /**
  * Installer class file
@@ -74,7 +74,8 @@ class Installer
         {
             SystemScheduler::addScheduleEvent('weekly', time() + rand(259200, 604800));
         }
-        ModuleUpdateScheduler::addScheduleEvent('ten_min');
+
+        MaintenanceScheduler::activate();
         AutoblogScheduler::maybeAddScheduleEvent();
         ProductPrefillScheduler::maybeAddScheduleEvent();
         ProductImportScheduler::maybeAddScheduleEvent();
@@ -85,6 +86,7 @@ class Installer
 
     public static function deactivate()
     {
+        MaintenanceScheduler::deactivate();
         ModuleUpdateScheduler::clearScheduleEvent();
         AutoblogScheduler::clearScheduleEvent();
         ProductPrefillScheduler::clearScheduleEvent();
@@ -108,7 +110,7 @@ class Installer
 
         global $wp_version;
         if (version_compare(Plugin::wp_requires, $wp_version, '>'))
-            $errors[] = sprintf('You are using Wordpress %s. <em>%s</em> requires at least <strong>Wordpress %s</strong>.', $wp_version, $name[0], Plugin::wp_requires);
+            $errors[] = sprintf('You are using WordPress %s. <em>%s</em> requires at least <strong>WordPress %s</strong>.', $wp_version, $name[0], Plugin::wp_requires);
 
         $php_current_version = phpversion();
         if (version_compare($php_min_version, $php_current_version, '>'))
@@ -133,12 +135,13 @@ class Installer
             return;
 
         \delete_option(Plugin::slug . '_db_version');
-        if (Plugin::isEnvato())
-            \delete_option(Plugin::slug . '_env_install');
-        if (Plugin::isPro())
-            \delete_option(LicConfig::getInstance()->option_name());
+        \delete_option(Plugin::slug . '_env_install');
         \delete_option(Plugin::getShortSlug() . '_sys_status');
         \delete_option(Plugin::getShortSlug() . '_sys_deadline');
+        if (Plugin::isPro())
+        {
+            \delete_option(LicConfig::getInstance()->option_name());
+        }
     }
 
     public static function upgrade()
@@ -165,12 +168,21 @@ class Installer
         if ($db_version < 80)
             self::upgrade_v80();
 
+        if ($db_version < 83)
+            self::upgrade_v83();
+
+        if ($db_version < 86)
+            self::upgrade_v86();
+
+        if ($db_version < 88)
+            self::upgrade_v88();
+
         \update_option(Plugin::slug . '_db_version', self::dbVesrion());
     }
 
     private static function upgradeTables()
     {
-        $models = array('AutoblogModel', 'PriceHistoryModel', 'PriceAlertModel', 'ProductModel', 'PrefillQueueModel', 'ImportQueueModel', 'AutoImportRuleModel');
+        $models = array('AutoblogModel', 'PriceHistoryModel', 'PriceAlertModel', 'ProductModel', 'PrefillQueueModel', 'ImportQueueModel', 'AutoImportRuleModel', 'ProductMapModel', 'LinkIndexModel', 'LinkClicksDailyModel');
         $sql = '';
         foreach ($models as $model)
         {
@@ -212,6 +224,30 @@ class Installer
         PresetRepository::maybeInstallBuiltInPresets();
     }
 
+    private static function upgrade_v83()
+    {
+        MaintenanceScheduler::activate();
+    }
+
+    private static function upgrade_v86()
+    {
+        LocalRedirector::flushRules();
+
+        if (!wp_next_scheduled('cegg_link_index_backfill_once'))
+        {
+            wp_schedule_single_event(time() + 5, 'cegg_link_index_backfill_once', ['redirect', null]);
+        }
+    }
+
+    private static function upgrade_v88()
+    {
+        $module_ids = array_keys(ModuleManager::getInstance()->getContentModules(false));
+        foreach ($module_ids as $module_id)
+        {
+            LinkIndexModel::model()->deleteByModule($module_id);
+        }
+    }
+
     public function redirect_after_activation()
     {
         if (\get_option(Plugin::slug . '_do_activation_redirect', false))
@@ -236,7 +272,7 @@ class Installer
                 continue;
             }
 
-            if ($response['code'] >= 200 && $response['code'] < 300 && '' !== $response['body'])
+            if ($response['code'] >= 200 && $response['code'] <= 404 && '' !== $response['body'])
             {
                 return $response;
             }

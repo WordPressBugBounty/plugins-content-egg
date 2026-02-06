@@ -10,9 +10,6 @@ use ContentEgg\application\models\PrefillQueueModel;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\ProductPrefillScheduler;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * ProductPrefillController class file
  *
@@ -52,6 +49,24 @@ class ProductPrefillController
 
     public function handleAction()
     {
+
+        if (Plugin::isInactiveEnvato())
+        {
+            echo '<div class="wrap">';
+            echo '<h1>' . esc_html__('Product Prefill Tool', 'content-egg') . '</h1>';
+            echo '<div class="notice notice-error"><p>'
+                . esc_html__('You need to activate the plugin first to use the Product Prefill Tool.', 'content-egg')
+                . '</p></div>';
+            echo '</div>';
+
+            $activate_url = admin_url('admin.php?page=content-egg-lic');
+            echo '<p><a href="' . esc_url($activate_url) . '" class="button button-primary">'
+                . esc_html__('Activate now', 'content-egg') . '</a></p>';
+
+            echo '</div></div>';
+            return;
+        }
+
         if (!current_user_can('publish_posts'))
         {
             wp_die(
@@ -306,9 +321,9 @@ class ProductPrefillController
         $post_ids = get_transient($transient_key);
         delete_transient($transient_key);
 
-        if (!is_array($post_ids))
+        if (! is_array($post_ids))
         {
-            wp_die(__('Post queue expired or invalid.', 'content-egg'));
+            wp_die(esc_html__('Post queue expired or invalid.', 'content-egg'));
         }
 
         $config = $this->parsePrefillConfig();

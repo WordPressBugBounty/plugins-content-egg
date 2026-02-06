@@ -2,8 +2,6 @@
 
 use ContentEgg\application\components\ModuleCloneManager;
 
-use function ContentEgg\prn;
-
 defined('\ABSPATH') || exit; ?>
 <?php if (\ContentEgg\application\Plugin::isInactiveEnvato()) : ?>
     <div class="cegg-maincol">
@@ -50,13 +48,6 @@ defined('\ABSPATH') || exit; ?>
                 <?php if ($module->isDeprecated()) : ?>
                     <div class="cegg-warning">
 
-                        <?php if ($module->getId() == 'Amazon') : ?>
-                            <?php esc_html_e('WARNING:', 'content-egg'); ?>
-                            <?php echo sprintf(__('Amazon PA-API v4 <a target="_blank" href="%s"> is deprecated</a>.', 'content-egg'), 'https://webservices.amazon.com/paapi5/documentation/faq.html'); ?>
-                            <?php echo sprintf(__('Only <a target="_blank" href="%s">Content Egg Pro</a> has support for the new PA-API v5.', 'content-egg'), 'https://www.keywordrush.com/contentegg/pricing'); ?>
-                            <?php esc_html_e('Please', 'content-egg'); ?> <a target="_blank" href="https://ce-docs.keywordrush.com/modules/affiliate/amazon#why-amazon-module-is-not-available-in-ce-free-version"><?php esc_html_e('read more...', 'content-egg'); ?></a>
-                        <?php endif; ?>
-
                         <?php if ($module->getId() != 'Amazon' && $module->getId() != 'AmazonNoApi') : ?>
                             <strong>
                                 <?php esc_html_e('WARNING:', 'content-egg'); ?>
@@ -65,14 +56,6 @@ defined('\ABSPATH') || exit; ?>
                             </strong>
                         <?php endif; ?>
 
-                        <?php if ($module->getId() == 'AmazonNoApi') : ?>
-                            <strong>
-                                <?php esc_html_e('WARNING:', 'content-egg'); ?>
-
-                                The AmazonNoAPI module is currently not fully operational. We are actively seeking solutions. For more information, please visit <a target="_blank" href="https://ce-docs.keywordrush.com/modules/affiliate/amazon-no-api-module">this links</a>.
-
-                            </strong>
-                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
 
@@ -152,10 +135,12 @@ defined('\ABSPATH') || exit; ?>
                         <ul class="ce-feed-info" style="margin-top:20px;">
                             <?php if ($last_import) : ?>
                                 <li>
-                                    <?php printf(
+                                    <?php
+                                    printf(
                                         esc_html__('Total products: %s', 'content-egg'),
-                                        number_format_i18n($product_count)
-                                    ); ?>
+                                        esc_html(number_format_i18n($product_count))
+                                    );
+                                    ?>
 
                                 </li>
                                 <li>

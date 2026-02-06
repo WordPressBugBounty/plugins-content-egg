@@ -374,16 +374,6 @@ class AmazonConfig extends AffiliateParserModuleConfig
 	public static function getDefaultLocale()
 	{
 		return 'us';
-
-		// @todo: Fix error: Maximum function nesting level of '100' reached, aborting!
-		/*
-		  $lang = GeneralConfig::getInstance()->option('lang');
-		  if (array_key_exists($lang, self::getLocalesList()))
-		  return $lang;
-		  else
-		  return 'us';
-		 *
-		 */
 	}
 
 	public static function getActiveLocalesList()

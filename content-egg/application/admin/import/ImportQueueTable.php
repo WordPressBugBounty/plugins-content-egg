@@ -6,8 +6,7 @@ use ContentEgg\application\admin\MyListTable;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TextHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 defined('\ABSPATH') || exit;
 
@@ -106,25 +105,39 @@ class ImportQueueTable extends MyListTable
 
     public function column_post_id(array $item): string
     {
-        $post_id = (int) ($item['post_id'] ?? 0);
-        if (! $post_id)
+        $post_id        = isset($item['post_id']) ? (int) $item['post_id'] : 0;
+        $source_post_id = isset($item['source_post_id']) ? (int) $item['source_post_id'] : 0;
+
+        if (!$post_id)
         {
             return '—';
         }
 
-        $post = get_post($post_id);
-        if (! $post)
+        $badge = '';
+        if ($source_post_id > 0)
         {
-            return sprintf('<span class="text-muted">#%d</span>', $post_id);
+            $badge_title = sprintf(__('Bridge import from post #%d', 'content-egg'), $source_post_id);
+            $badge = sprintf(
+                ' <span class="badge bg-light text-muted border ms-1 align-middle" title="%s">%s</span>',
+                esc_attr($badge_title),
+                esc_html__('Bridge', 'content-egg')
+            );
+        }
+
+        $post = get_post($post_id);
+        if (!$post)
+        {
+            return sprintf('<span class="text-muted">#%d</span>%s', $post_id, $badge);
         }
 
         $edit  = get_edit_post_link($post_id);
         $perma = get_permalink($post_id);
 
         return sprintf(
-            '<a href="%s">%s</a><br><small><a href="%s" target="_blank" class="text-muted">#%d</a></small>',
+            '<a href="%s">%s</a>%s<br><small><a href="%s" target="_blank" class="text-muted">#%d</a></small>',
             esc_url($edit),
             esc_html(get_the_title($post_id) ?: __('(no title)', 'content-egg')),
+            $badge,
             esc_url($perma),
             $post_id
         );

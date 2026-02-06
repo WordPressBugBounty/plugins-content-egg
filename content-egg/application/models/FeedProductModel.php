@@ -6,6 +6,8 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TextHelper;
 
+use function ContentEgg\prnx;
+
 /**
  * FeedProductModel class file
  *
@@ -37,20 +39,35 @@ abstract class FeedProductModel extends Model
 
     public function searchByUrl($url, $partial_match = false, $limit = 1)
     {
-        $like = $this->getDb()->esc_like($url);
-        if ($partial_match)
-        {
-            $like .= '%';
-        }
+        $db    = $this->getDb();
+        $table = $this->tableName();
 
-        if (!$partial_match)
+        $limit = (int) $limit;
+        if ($limit < 1)
         {
             $limit = 1;
         }
 
-        $sql = $this->getDb()->prepare('SELECT * FROM ' . $this->tableName() . ' WHERE orig_url LIKE %s LIMIT %d', $like, $limit);
+        $like = $db->esc_like($url);
 
-        return $this->getDb()->get_results($sql, \ARRAY_A);
+        if ($partial_match)
+        {
+            // STARTS WITH: only trailing %
+            $like .= '%';
+        }
+        else
+        {
+            // exact match => no wildcard, limit 1
+            $limit = 1;
+        }
+
+        $sql = $db->prepare(
+            "SELECT * FROM {$table} WHERE orig_url LIKE %s LIMIT %d",
+            $like,
+            $limit
+        );
+
+        return $db->get_results($sql, ARRAY_A);
     }
 
     public function searchByEan($ean, $limit = 10, $options = array())

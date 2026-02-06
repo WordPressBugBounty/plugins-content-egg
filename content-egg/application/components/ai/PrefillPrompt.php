@@ -5,9 +5,6 @@ namespace ContentEgg\application\components\ai;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\helpers\TextHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 defined('\ABSPATH') || exit;
 
 /**
@@ -384,7 +381,7 @@ class PrefillPrompt extends SystemPrompt
         if (json_last_error() !== JSON_ERROR_NONE)
         {
             throw new \RuntimeException(
-                'Invalid JSON from AI: ' . json_last_error_msg()
+                'Invalid JSON from AI: ' . esc_html(wp_strip_all_tags(json_last_error_msg()))
             );
         }
         if (
@@ -406,8 +403,8 @@ class PrefillPrompt extends SystemPrompt
             $promptId = $item['unique_id'];
             if (!isset($promptToOriginalMap[$promptId]))
             {
-                throw new \RuntimeException(
-                    "Unknown product ID {$promptId} in AI response."
+                throw new \Exception(
+                    'AI: Smart Groups error: ' . esc_html(wp_strip_all_tags($e->getMessage()))
                 );
             }
 

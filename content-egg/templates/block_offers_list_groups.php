@@ -5,12 +5,9 @@
  *
  */
 
-__('Sorted offers list with product images with grouped tabs', 'content-egg-tpl');
-
 use ContentEgg\application\helpers\TemplateHelper;
 
 defined('\ABSPATH') || exit;
-
 
 if (!$groups = TemplateHelper::getGroupsList($data, $groups))
 {

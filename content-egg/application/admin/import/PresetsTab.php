@@ -11,9 +11,6 @@ use ContentEgg\application\helpers\AdminHelper;
 use ContentEgg\application\models\ImportQueueModel;
 use ContentEgg\application\Plugin;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 defined('ABSPATH') || exit;
 
 /**
@@ -237,11 +234,12 @@ class PresetsTab extends AbstractTab
     {
         if (! $id || get_post_type($id) !== PresetPostType::POST_TYPE)
         {
-            wp_die(__('Invalid preset ID.', 'content-egg'));
+            wp_die(esc_html__('Invalid preset ID.', 'content-egg'));
         }
+
         if (! current_user_can('delete_post', $id))
         {
-            wp_die(__('You do not have permission to delete this preset.', 'content-egg'));
+            wp_die(esc_html__('You do not have permission to delete this preset.', 'content-egg'));
         }
 
         check_admin_referer('cegg_delete_preset_' . $id);

@@ -2,9 +2,7 @@
 
 namespace ContentEgg\application\components;
 
-use ContentEgg\application\helpers\TextHelper;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\helpers\TextHelper;;
 
 defined('\ABSPATH') || exit;
 

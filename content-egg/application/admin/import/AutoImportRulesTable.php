@@ -7,8 +7,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\models\AutoImportRuleModel;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 defined('\ABSPATH') || exit;
 

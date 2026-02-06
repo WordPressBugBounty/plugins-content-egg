@@ -49,17 +49,18 @@ defined('\ABSPATH') || exit; ?>
         <tbody>
             <tr>
                 <td><?php esc_html_e('Pending', 'content-egg'); ?></td>
-                <td><?php echo number_format_i18n($stats['pending']); ?></td>
+                <td><?php echo esc_html(number_format_i18n($stats['pending'])); ?></td>
             </tr>
             <tr>
                 <td><?php esc_html_e('Done', 'content-egg'); ?></td>
-                <td><?php echo number_format_i18n($stats['done']); ?></td>
+                <td><?php echo esc_html(number_format_i18n($stats['done'])); ?></td>
             </tr>
             <tr>
                 <td><?php esc_html_e('Failed', 'content-egg'); ?></td>
-                <td><?php echo number_format_i18n($stats['failed']); ?></td>
+                <td><?php echo esc_html(number_format_i18n($stats['failed'])); ?></td>
             </tr>
         </tbody>
+
     </table>
 
     <?php if ($is_in_progress): ?>
@@ -129,15 +130,16 @@ defined('\ABSPATH') || exit; ?>
     }
 </style>
 
-<?php if ($is_in_progress && !Plugin::isDevEnvironment()): ?>
+<?php if ($is_in_progress && ! Plugin::isDevEnvironment()) : ?>
     <script>
-        setTimeout(function() {
+        "use strict";
+        setTimeout(() => {
             const url = new URL(window.location.href);
 
-            url.searchParams.delete('egg-notice');
-            url.searchParams.delete('egg-notice-level');
+            url.searchParams.delete("egg-notice");
+            url.searchParams.delete("egg-notice-level");
 
-            const paged = parseInt(url.searchParams.get('paged') || '1', 10);
+            const paged = parseInt(url.searchParams.get("paged") || "1", 10);
 
             window.history.replaceState({}, document.title, url.toString());
 
@@ -146,5 +148,4 @@ defined('\ABSPATH') || exit; ?>
             }
         }, 50000);
     </script>
-
 <?php endif; ?>

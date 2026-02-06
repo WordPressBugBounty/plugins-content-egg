@@ -5,10 +5,8 @@ namespace ContentEgg\application\components;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TextHelper;
-use ContentEgg\application\helpers\TemplateHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * LinkHandler class file
@@ -147,38 +145,218 @@ class LinkHandler
         return $url;
     }
 
+    /**
+     * Build URL by replacing template placeholders.
+     *
+     * @param string $url
+     * @param string $template
+     * @param array  $item
+     * @return string
+     */
     public static function getUrlTemplate($url, $template, $item = array())
     {
+        // --- Base (existing) placeholders - keep exact behavior for BC ---
         $template = str_replace('{{url}}', $url, $template);
         $template = str_replace('{{url_encoded}}', urlencode($url), $template);
         $template = str_replace('{{url_base64}}', base64_encode($url), $template);
 
         global $post;
 
-        if ($item)
+        // Resolve post_id & item id from $item or current post
+        $post_id = 0;
+        if (!empty($item) && isset($item['post_id']))
         {
-            if (isset($item['post_id']))
-                $post_id = $item['post_id'];
-            elseif (!empty($post))
-                $post_id = $post->ID;
-            else
-                $post_id = 0;
-            $template = str_replace('{{post_id}}', urlencode($post_id), $template);
+            $post_id = (int) $item['post_id'];
+        }
+        elseif (!empty($post) && isset($post->ID))
+        {
+            $post_id = (int) $post->ID;
+        }
 
-            if (!empty($item['unique_id']))
-                $template = str_replace('{{item_unique_id}}', urlencode($item['unique_id']), $template);
+        if ($post_id)
+        {
+            $template = str_replace('{{post_id}}', urlencode((string) $post_id), $template);
+        }
+
+        if (!empty($item) && !empty($item['unique_id']))
+        {
+            $template = str_replace('{{item_unique_id}}', urlencode((string) $item['unique_id']), $template);
         }
 
         if (!empty($post))
         {
-            $author_id = $post->post_author;
-            $user = \get_user_by('ID', $author_id);
-            $author_login = $user ? $user->data->user_login : '';
-            $template = str_replace('{{author_id}}', urlencode($author_id), $template);
+            $author_id    = (int) $post->post_author;
+            $user         = \get_user_by('ID', $author_id);
+            $author_login = $user ? (string) $user->data->user_login : '';
+            // Keep legacy placeholders URL-encoded (BC)
+            $template = str_replace('{{author_id}}', urlencode((string) $author_id), $template);
             $template = str_replace('{{author_login}}', urlencode($author_login), $template);
         }
 
+        // ==========================================================
+        // New placeholders (+ automatic _encoded, _base64, _slug, _subid)
+        // ==========================================================
+        $addVariants = static function (array &$map, string $key, $value): void
+        {
+            $val = (string) ($value ?? '');
+            $map['{{' . $key . '}}']          = $val;
+            $map['{{' . $key . '_encoded}}']  = $val === '' ? '' : urlencode($val);
+            $map['{{' . $key . '_base64}}']   = $val === '' ? '' : base64_encode($val);
+
+            // Slug only for non-URLs (BC with prior behavior)
+            if ($val !== '' && strpos($val, '://') === false)
+            {
+                $map['{{' . $key . '_slug}}'] = sanitize_title($val);
+            }
+
+            // NEW: SubID-safe variants (common-denominator length & encoding)
+            $defaultMax = (int) apply_filters('cegg_subid_default_max_len', 100);
+            $map['{{' . $key . '_subid}}']    = self::makeSubIdSafe($val, $defaultMax);
+            $map['{{' . $key . '_subid64}}']  = self::makeSubIdSafe($val, 64);
+            $map['{{' . $key . '_subid32}}']  = self::makeSubIdSafe($val, 32);
+        };
+
+        $repl = [];
+
+        // --- Item / Product fields (from $item example) ---
+        if (is_array($item))
+        {
+            if (isset($item['title']))         $addVariants($repl, 'item_title', (string) $item['title']);
+            if (!empty($item['manufacturer'])) $addVariants($repl, 'item_brand', (string) $item['manufacturer']);
+            if (!empty($item['sku']))          $addVariants($repl, 'item_sku',  (string) $item['sku']);
+            if (!empty($item['ean']))          $addVariants($repl, 'item_ean',  (string) $item['ean']);
+            if (!empty($item['upc']))          $addVariants($repl, 'item_upc',  (string) $item['upc']);
+            if (!empty($item['isbn']))         $addVariants($repl, 'item_isbn', (string) $item['isbn']);
+
+            if (isset($item['price']))         $repl['{{item_price}}']    = (string) $item['price'];
+            if (isset($item['currencyCode']))  $repl['{{item_currency}}'] = (string) $item['currencyCode'];
+
+            if (!empty($item['domain']))       $addVariants($repl, 'item_domain', (string) $item['domain']);
+            if (!empty($item['module_id']))    $addVariants($repl, 'item_module_id', (string) $item['module_id']);
+            if (!empty($item['group']))        $addVariants($repl, 'item_group', (string) $item['group']);
+        }
+
+        // --- Page / Post context ---
+        $post_obj   = $post_id ? get_post($post_id) : (is_object($post) ? $post : null);
+        $permalink  = ($post_obj && !is_wp_error($post_obj)) ? get_permalink($post_obj) : '';
+        $post_title = ($post_obj && !is_wp_error($post_obj)) ? (string) $post_obj->post_title : '';
+        $post_slug  = ($post_obj && !is_wp_error($post_obj)) ? (string) $post_obj->post_name  : '';
+        $post_type  = ($post_obj && !is_wp_error($post_obj)) ? (string) $post_obj->post_type  : '';
+
+        if ($post_title !== '') $addVariants($repl, 'post_title', $post_title);
+        if ($post_slug  !== '') $addVariants($repl, 'post_slug',  $post_slug);
+        if ($post_type  !== '') $addVariants($repl, 'post_type',  $post_type);
+        if ($permalink  !== '')
+        {
+            $addVariants($repl, 'post_url',          $permalink);
+            $addVariants($repl, 'post_url_relative', wp_make_link_relative($permalink));
+        }
+
+        if ($post_obj && isset($post_obj->post_author))
+        {
+            $display = get_the_author_meta('display_name', (int) $post_obj->post_author);
+            if (!empty($display)) $addVariants($repl, 'post_author', (string) $display);
+        }
+
+        if ($post_obj)
+        {
+            $post_date = get_the_date('Y-m-d', $post_obj);
+            if ($post_date) $repl['{{post_date}}'] = $post_date;
+        }
+
+        // --- Site / global ---
+        $repl['{{site_name}}']   = (string) get_bloginfo('name');
+        $home_host               = (string) wp_parse_url(home_url('/'), PHP_URL_HOST);
+        $repl['{{site_domain}}'] = $home_host ?: '';
+        $repl['{{site_locale}}'] = (string) get_locale();
+
+        // --- Time / utility ---
+        $now_ts                 = (int) current_time('timestamp'); // local
+        $repl['{{date}}']       = gmdate('Y-m-d', $now_ts + (int) get_option('gmt_offset') * HOUR_IN_SECONDS);
+        $repl['{{timestamp}}']  = (string) $now_ts;
+        if (function_exists('wp_generate_uuid4'))
+        {
+            $repl['{{uuid}}'] = wp_generate_uuid4();
+        }
+
+        $uid_for_hash          = is_array($item) && !empty($item['unique_id']) ? (string) $item['unique_id'] : '';
+        $hash_source           = $post_id . ':' . $uid_for_hash;
+        $repl['{{post_hash}}'] = substr(sha1($hash_source), 0, 8);
+
+        // Auto-variants for common text placeholders (already added via $addVariants)
+        $autoVariantKeys = [
+            'site_name',
+            'site_domain',
+            'post_title',
+            'post_slug',
+            'post_type',
+            'post_author',
+            'item_title',
+            'item_brand',
+            'item_sku',
+            'item_ean',
+            'item_upc',
+            'item_isbn',
+            'item_domain',
+            'item_module_id',
+            'item_group',
+            'post_url',
+            'post_url_relative',
+        ];
+        foreach ($autoVariantKeys as $k)
+        {
+            if (isset($repl['{{' . $k . '}}']))
+            {
+                $addVariants($repl, $k, $repl['{{' . $k . '}}']);
+            }
+        }
+
+        if (!empty($repl))
+        {
+            $template = strtr($template, $repl);
+        }
+
         return $template;
+    }
+
+    /**
+     * Produce a SubID-safe ASCII token (alnum + _ . -), collapse separators,
+     * trim, and cap to $maxLen. If truncated, append a short hash for stability.
+     * Defaults: 100 chars (common denominator across networks).
+     *
+     * @param string $value
+     * @param int    $maxLen
+     * @return string
+     */
+    private static function makeSubIdSafe(string $value, int $maxLen = 100): string
+    {
+        if ($maxLen <= 0) return '';
+
+        // Strip tags/entities; attempt transliteration to ASCII
+        $s = wp_strip_all_tags($value);
+        $s = html_entity_decode($s, ENT_QUOTES, 'UTF-8');
+        if (function_exists('iconv'))
+        {
+            $t = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s);
+            if ($t !== false) $s = $t;
+        }
+
+        // Keep [A-Za-z0-9_.-], collapse others to '-'
+        $s = preg_replace('/[^A-Za-z0-9_.-]+/', '-', (string) $s);
+        $s = preg_replace('/-+/', '-', $s);
+        $s = trim($s, '-._');
+
+        if ($s === '') $s = 'na';
+
+        // Cap length, append short hash if truncated
+        if (strlen($s) > $maxLen)
+        {
+            $hash = substr(md5($value), 0, 6);
+            $keep = max(0, $maxLen - (strlen($hash) + 1));
+            $s = ($keep > 0 ? substr($s, 0, $keep) . '-' : '') . $hash;
+        }
+
+        return $s;
     }
 
     public static function getRegexReplace($url, $regex)

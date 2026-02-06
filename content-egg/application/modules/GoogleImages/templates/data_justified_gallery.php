@@ -8,7 +8,7 @@ defined('\ABSPATH') || exit;
  *
  * @link: http://miromannino.github.io/Justified-Gallery/
  */
-__('Gallery', 'content-egg-tpl');
+
 ?>
 
 <?php wp_enqueue_style('egg-justified-gallery', ContentEgg\PLUGIN_RES . '/justified_gallery/justifiedGallery.min.css'); ?>

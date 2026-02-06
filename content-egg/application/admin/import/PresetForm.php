@@ -5,9 +5,7 @@ namespace ContentEgg\application\admin\import;
 use ContentEgg\application\admin\AdminNotice;
 use ContentEgg\application\admin\PluginAdmin;
 use ContentEgg\application\helpers\AdminHelper;
-use ContentEgg\application\Plugin;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\Plugin;;
 
 defined('ABSPATH') || exit;
 
@@ -59,15 +57,17 @@ class PresetForm
             'prompt2'             => '',
             'prompt3'             => '',
 
-            // Custom fields – provide five empty slots by default
+            // Custom fields – provide three empty slots by default
             'custom_fields'       => array_fill(0, 3, [
                 'key'   => '',
                 'value' => '',
             ]),
 
             // Flags
-            'avoid_duplicates'    => true,
-            'use_default'         => false,
+            'avoid_duplicates'      => true,
+            'avoid_duplicates_gtin' => false,
+            'use_default'           => false,
+            'make_canonical'        => false,
         ];
     }
 
@@ -128,13 +128,15 @@ class PresetForm
                     'value' => sanitize_text_field($field['value'] ?? ''),
                 ];
             }, array_values((array) $data['custom_fields'])),
-            'avoid_duplicates'   => ! empty($data['avoid_duplicates']),
-            'use_default'        => ! empty($data['use_default']),
+            'avoid_duplicates'          => ! empty($data['avoid_duplicates']),
+            'avoid_duplicates_gtin'     => ! empty($data['avoid_duplicates_gtin']),
+            'use_default'               => ! empty($data['use_default']),
+            'make_canonical'            => ! empty($data['make_canonical']),
         ];
     }
 
     /* ------------------------------------------------------------------
-       Render form. $id = 0  => add‑new mode
+       Render form. $id = 0  => add-new mode
     ------------------------------------------------------------------ */
     public static function render(int $id = 0, array $prefill = []): void
     {
@@ -171,11 +173,12 @@ class PresetForm
             ! wp_verify_nonce($_POST['cegg_preset_nonce'], 'cegg_save_preset')
         )
         {
-            wp_die(__('Invalid nonce.', 'content-egg'));
+            wp_die(esc_html__('Invalid nonce.', 'content-egg'));
         }
+
         if (! current_user_can('manage_options'))
         {
-            wp_die(__('You do not have permission to save presets.', 'content-egg'));
+            wp_die(esc_html__('You do not have permission to save presets.', 'content-egg'));
         }
 
         // 2) Gather raw input
@@ -186,7 +189,7 @@ class PresetForm
         // 3) Sanitize & validate via helper
         $clean = self::build_clean_array($raw);
 
-        // Force non‑admins to use themselves as author
+        // Force non-admins to use themselves as author
         if (! current_user_can('manage_options'))
         {
             $clean['author_id'] = get_current_user_id();

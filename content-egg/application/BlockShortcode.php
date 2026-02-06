@@ -8,7 +8,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\BlockTemplateManager;
 use ContentEgg\application\components\ShortcodeAtts;
 
-use function ContentEgg\prnx;
+use function ContentEgg\prn;;
 
 /**
  * BlockShortcode class file
@@ -66,7 +66,8 @@ class BlockShortcode extends EggShortcode
             if (!$tpl_manager->isTemplateExists($a['template']))
                 return;
 
-            if (!$template_file = $tpl_manager->getViewPath($a['template']))
+            $template_file = $tpl_manager->getViewPath($a['template']);
+            if (!$template_file)
                 return '';
 
             // Get supported modules for this tpl
@@ -103,8 +104,7 @@ class BlockShortcode extends EggShortcode
         else
             $module_ids = ModuleManager::getInstance()->getParserModulesIdList(true);
 
-        if ($supported_module_ids)
-            $module_ids = array_intersect($module_ids, $supported_module_ids);
+        $module_ids = array_intersect($module_ids, $supported_module_ids);
 
         if ($a['exclude_modules'])
             $module_ids = array_diff($module_ids, $a['exclude_modules']);

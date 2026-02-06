@@ -8,9 +8,6 @@ use ContentEgg\application\helpers\TemplateHelper;
 
 defined('\ABSPATH') || exit;
 
-
-__('Sorted list with store logos and shipping price', 'content-egg-tpl');
-
 $params['visible'][] = 'shipping_cost';
 $this->setParams($params);
 

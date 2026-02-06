@@ -13,13 +13,33 @@
     <?php endif; ?>
 
     <?php if (\ContentEgg\application\Plugin::isEnvato()) : ?>
-        <div class="cegg-box" style="margin-top: 95px;">
-            <h2><?php esc_html_e('Activate plugin', 'content-egg'); ?></h2>
-            <p><?php esc_html_e('To enjoy all the benefits of Content Egg Pro, please activate your copy of the plugin.', 'content-egg'); ?></p>
-            <p><?php esc_html_e('By activating your Content Egg license, you will unlock premium options, including direct plugin updates, access to the user panel, and official support.', 'content-egg'); ?></p>
-            <p>
-                <a class="button-cegg-banner2" href="<?php echo esc_url(\get_admin_url(\get_current_blog_id(), 'admin.php?page=content-egg-lic')); ?>"><?php esc_html_e('Activate', 'content-egg'); ?></a>
+        <?php
+        $url = \ContentEgg\application\Plugin::pluginPricingUrl('ce_activation_sidebar', 'envato_box');
+        ?>
+        <div class="cegg-box" style="margin-top: 95px; padding: 25px 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
+            <h2 style="margin-bottom: 10px;"><?php esc_html_e('Activate Your Plugin', 'content-egg'); ?></h2>
+            <p style="margin-bottom: 20px;">
+                <?php esc_html_e('Activate your license to enjoy premium features, automatic updates, and dedicated official support.', 'content-egg'); ?>
             </p>
+
+            <!-- Primary action -->
+            <p style="margin-bottom: 15px;">
+                <a class="button button-primary" href="<?php echo esc_url(get_admin_url(get_current_blog_id(), 'admin.php?page=content-egg-lic')); ?>">
+                    <?php esc_html_e('Activate Now', 'content-egg'); ?>
+                </a>
+            </p>
+
+            <!-- Secondary actions -->
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+                <a class="button button-secondary" href="<?php echo esc_url($url); ?>" target="_blank" rel="noopener noreferrer">
+                    <?php esc_html_e('Buy License', 'content-egg'); ?>
+                </a>
+                <a class="button button-secondary" href="https://www.keywordrush.com/bundles?utm_source=cepro&utm_medium=referral&utm_campaign=ce_activation_sidebar&utm_content=envato_bundle_box" target="_blank" rel="noopener noreferrer">
+                    <?php esc_html_e('Bundle Offers', 'content-egg'); ?>
+                </a>
+            </div>
         </div>
+
     <?php endif; ?>
+
 </div>

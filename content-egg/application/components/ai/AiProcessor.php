@@ -5,9 +5,6 @@ namespace ContentEgg\application\components\ai;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\helpers\TextHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 defined('\ABSPATH') || exit;
 
 /**
@@ -91,7 +88,9 @@ class AiProcessor
                 }
                 catch (\Exception $e)
                 {
-                    throw new \Exception('AI: Title generation error: ' . $e->getMessage());
+                    throw new \Exception(
+                        'AI: Title generation error: ' . esc_html(wp_strip_all_tags($e->getMessage()))
+                    );
                 }
             }
         }
@@ -128,7 +127,9 @@ class AiProcessor
                 }
                 catch (\Exception $e)
                 {
-                    throw new \Exception('AI: Description generation error: ' . $e->getMessage());
+                    throw new \Exception(
+                        'AI: Description generation error: ' . esc_html(wp_strip_all_tags($e->getMessage()))
+                    );
                 }
             }
         }
@@ -216,7 +217,9 @@ class AiProcessor
             }
             catch (\Exception $e)
             {
-                throw new \Exception('AI: Smart Groups error: ' . $e->getMessage());
+                throw new \Exception(
+                    'AI: Smart Groups error: ' . esc_html(wp_strip_all_tags($e->getMessage()))
+                );
             }
         }
 

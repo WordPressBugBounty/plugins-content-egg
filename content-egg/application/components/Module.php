@@ -9,8 +9,7 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\admin\PluginAdmin;
 use ContentEgg\application\Plugin;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * Module abstract class file
@@ -181,6 +180,11 @@ abstract class Module
 	public function getConfigInstance()
 	{
 		return ModuleManager::configFactory($this->getId());
+	}
+
+	public function option($opt_name, $default = null)
+	{
+		return $this->config($opt_name, $default);
 	}
 
 	public function config($opt_name, $default = null)

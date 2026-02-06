@@ -4,7 +4,7 @@ namespace ContentEgg\application\models;
 
 use ContentEgg\application\Plugin;
 
-use function ContentEgg\prnx;
+
 
 defined('\ABSPATH') || exit;
 
@@ -18,7 +18,6 @@ defined('\ABSPATH') || exit;
 
 class ImportQueueModel extends Model
 {
-
     const MAX_ATTEMPTS = 3;
     const STUCK_TIMEOUT = 15;
 
@@ -34,6 +33,7 @@ class ImportQueueModel extends Model
             id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             preset_id          BIGINT UNSIGNED NOT NULL,
             post_id            BIGINT UNSIGNED DEFAULT NULL,
+            source_post_id     BIGINT UNSIGNED DEFAULT NULL,
             category_id        BIGINT UNSIGNED DEFAULT NULL,
             payload            LONGTEXT        NULL,
             module_id          VARCHAR(64)     NOT NULL,
@@ -113,35 +113,54 @@ class ImportQueueModel extends Model
 
     /**
      * Add a pending job to queue.
+     *
+     * @param int         $preset_id
+     * @param string      $module_id
+     * @param array       $payload
+     * @param string      $keyword
+     * @param int|null    $category_id
+     * @param string|null $scheduled_at  MySQL datetime; if null, defaults to now()
+     * @param int|null    $source_post_id Optional WP post ID where enqueue was initiated
+     *
+     * @return int Inserted job ID or 0 on failure
      */
     public function enqueue(
         int     $preset_id,
         string  $module_id,
-        array   $payload      = [],
-        string  $keyword      = '',
-        ?int    $category_id  = null,
-        ?string $scheduled_at = null
+        array   $payload        = [],
+        string  $keyword        = '',
+        ?int    $category_id    = null,
+        ?string $scheduled_at   = null,
+        ?int    $source_post_id = null
     ): int
     {
-        // Encode payload to JSON
-        $json = $payload ? wp_json_encode($payload) : null;
-        // Extract unique_id from payload
-        $unique_id = $payload['unique_id'] ?? '';
+        $now       = current_time('mysql');
+        $json      = !empty($payload) ? wp_json_encode($payload, JSON_UNESCAPED_UNICODE) : null;
+        $unique_id = isset($payload['unique_id']) ? (string) $payload['unique_id'] : '';
 
         $data = [
-            'preset_id'     => $preset_id,
-            'module_id'     => $module_id,
-            'unique_id'     => $unique_id,
-            'payload'       => $json,
-            'keyword'       => $keyword,
-            'category_id'   => $category_id,
-            'status'        => 'pending',
-            'scheduled_at'  => $scheduled_at ?? current_time('mysql'),
-            'created_at'    => current_time('mysql'),
-            'updated_at'    => current_time('mysql'),
+            'preset_id'    => $preset_id,
+            'module_id'    => $module_id,
+            'unique_id'    => $unique_id,
+            'payload'      => $json,
+            'keyword'      => $keyword,
+            'category_id'  => $category_id,
+            'status'       => 'pending',
+            'scheduled_at' => $scheduled_at ?: $now,
+            'created_at'   => $now,
+            'updated_at'   => $now,
         ];
 
-        $this->getDb()->insert($this->tableName(), $data);
+        if (!empty($source_post_id))
+        {
+            $data['source_post_id'] = (int) $source_post_id;
+        }
+
+        $ok = $this->getDb()->insert($this->tableName(), $data);
+        if (!$ok)
+        {
+            return 0;
+        }
 
         return (int) $this->getDb()->insert_id;
     }

@@ -9,6 +9,7 @@ use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\helpers\ClickStatsHelper;
 
 /**
  * ProductTable class file
@@ -19,79 +20,132 @@ use ContentEgg\application\components\ModuleManager;
  */
 class ProductTable extends MyListTable
 {
+    public const per_page = 20;
 
-    const per_page = 15;
-
-    function get_columns()
+    public function get_columns()
     {
-        return
-            array(
-                'img' => '',
-                'title' => ProductModel::model()->getAttributeLabel('title'),
-                'module_id' => __('Module', 'content-egg'),
-                'stock_status' => ProductModel::model()->getAttributeLabel('stock_status'),
-                'price' => ProductModel::model()->getAttributeLabel('price'),
-                'last_update' => ProductModel::model()->getAttributeLabel('last_update'),
-            );
+        $cols = array(
+            'img'          => '',
+            'title'        => ProductModel::model()->getAttributeLabel('title'),
+            'module_id'    => __('Module', 'content-egg'),
+            'stock_status' => ProductModel::model()->getAttributeLabel('stock_status'),
+            'price'        => ProductModel::model()->getAttributeLabel('price'),
+            'last_update'  => ProductModel::model()->getAttributeLabel('last_update'),
+        );
+
+        if (ClickStatsHelper::isEnabled())
+        {
+            // Label adjusts to retention if < 30d (e.g., "Clicks (10d)")
+            $label30 = ClickStatsHelper::label30();
+            $cols['clicks_30d']   = sprintf(__('Clicks (%s)', 'content-egg'), $label30);
+            $cols['clicks_total'] = __('Clicks (Total)', 'content-egg');
+        }
+
+        return $cols;
     }
 
-    function column_img($item)
+    public function column_img($item)
     {
         echo '<a href="' . \esc_url(\get_edit_post_link($item['post_id'])) . '"><img class="attachment-thumbnail size-thumbnail wp-post-image" src="' . \esc_url($item['img']) . '" /></a>';
     }
 
-    function column_title($item)
+    public function column_title($item)
     {
         if (!trim($item['title']))
+        {
             $title = __('(no title)', 'content-egg');
+        }
         else
+        {
             $title = TextHelper::truncate($item['title'], 80);
+        }
 
         $edit_link = \get_edit_post_link($item['post_id']) . '#' . $item['module_id'] . '-' . $item['unique_id'];
         $actions = array(
             'post_id' => sprintf(__('Post ID: %d', 'content-egg'), $item['post_id']),
-            'view' => sprintf('<a href="%s">%s</a>', \get_post_permalink($item['post_id']), __('View', 'content-egg')),
-            'edit' => sprintf('<a href="%s">%s</a>', \esc_url($edit_link), __('Edit', 'content-egg')),
+            'view'    => sprintf('<a href="%s">%s</a>', \get_post_permalink($item['post_id']), __('View', 'content-egg')),
+            'edit'    => sprintf('<a href="%s">%s</a>', \esc_url($edit_link), __('Edit', 'content-egg')),
         );
-        if ($item['url'])
+        if (!empty($item['url']))
+        {
             $actions['goto'] = sprintf('<a target="_blank" href="%s">%s</a>', \esc_url($item['url']), __('Go to', 'content-egg'));
+        }
 
         return '<strong><a class="row-title" href="' . \esc_url($edit_link) . '">' . \esc_html($title) . '</a></strong>' .
             $this->row_actions($actions);
     }
 
-    function column_price($item)
+    public function column_clicks_30d($item)
     {
-        $res = (float) $item['price_old'] ? '<del>' . \wp_kses_post(TemplateHelper::formatPriceCurrency($item['price_old'], $item['currency_code'])) . '</del>' : '';
+        $agg = ClickStatsHelper::aggregatesForItem($item);
+        if (!$agg || $agg['d30'] === 0)
+        {
+            return '<span class="na">–</span>';
+        }
+
+        // Tooltip clarifies what the window is (e.g., "30d" or "10d" if retention=10)
+        $title = sprintf(
+            /* translators: %s is the retention-aware 30d label */
+            __('Clicks in the last %s', 'content-egg'),
+            ClickStatsHelper::label30()
+        );
+
+        return '<span title="' . esc_attr($title) . '">' . \number_format_i18n((int) ($agg['d30'] ?? 0)) . '</span>';
+    }
+
+    public function column_clicks_total($item)
+    {
+        $agg = ClickStatsHelper::aggregatesForItem($item);
+        if (!$agg || $agg['total'] === 0)
+        {
+            return '<span class="na">–</span>';
+        }
+
+        return \number_format_i18n((int) ($agg['total'] ?? 0));
+    }
+
+    public function column_price($item)
+    {
+        $res  = (float) $item['price_old'] ? '<del>' . \wp_kses_post(TemplateHelper::formatPriceCurrency($item['price_old'], $item['currency_code'])) . '</del>' : '';
         $res .= (float) $item['price'] ? '<ins>' . \wp_kses_post(TemplateHelper::formatPriceCurrency($item['price'], $item['currency_code'])) . '</ins>' : '<span class="na">&ndash;</span>';
         return $res;
     }
 
-    function column_stock_status($item)
+    public function column_stock_status($item)
     {
         if ($item['stock_status'] == ContentProduct::STOCK_STATUS_IN_STOCK)
+        {
             return '<mark class="instock">' . __('In stock', 'content-egg') . '</mark>';
+        }
         elseif ($item['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+        {
             return '<mark class="outofstock">' . __('Out of stock', 'content-egg') . '</mark>';
+        }
         elseif ($item['stock_status'] == ContentProduct::STOCK_STATUS_UNKNOWN)
+        {
             return '<span class="na">&ndash;</span>';
+        }
     }
 
-    function column_module_id($item)
+    public function column_module_id($item)
     {
         $module_id = $item['module_id'];
         if (!ModuleManager::getInstance()->moduleExists($module_id))
+        {
             return;
+        }
         $module = ModuleManager::getInstance()->factory($item['module_id']);
         $output = '<strong>' . esc_html($module->getName()) . '</strong>';
 
         if (!$module->isActive())
+        {
             $output .= '<br><mark class="inactive">' . esc_html(__('inactive', 'content egg')) . '</mark>';
+        }
 
         return $output;
     }
 
-    function column_last_update($item)
+    public function column_last_update($item)
     {
         if (empty($item['last_update']))
             return '<span class="na">&ndash;</span>';
@@ -119,20 +173,20 @@ class ProductTable extends MyListTable
         );
     }
 
-    function get_sortable_columns()
+    public function get_sortable_columns()
     {
         $sortable_columns = array(
-            'price' => array('price', true),
-            'title' => array('title', true),
-            'module_id' => array('module_id', true),
+            'price'        => array('price', true),
+            'title'        => array('title', true),
+            'module_id'    => array('module_id', true),
             'stock_status' => array('stock_status', true),
-            'last_update' => array('last_update', true),
+            'last_update'  => array('last_update', true),
         );
 
         return $sortable_columns;
     }
 
-    function get_bulk_actions()
+    public function get_bulk_actions()
     {
         return array();
     }

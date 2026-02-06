@@ -4,7 +4,7 @@ Tags: affiliate marketing, price comparison, csv import, ai content generation, 
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 9.0.2
+Stable tag: 10.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,6 +44,7 @@ AI Power: [www.keywordrush.com/toomuchniche](https://www.keywordrush.com/toomuch
 * WooCommerce sync and autoblogging
 * Automatic price updates with tracker & alerts
 * Monetize existing posts with product prefill
+* Clicks statistics reports
 * Add offers by keyword or product URL
 * Auto-insert affiliate IDs in links
 * Gutenberg blocks support for the block editor
@@ -66,19 +67,32 @@ Content Egg includes a special module to work with product feeds.
 
 = Content Egg PRO Version =
 
-Do you want to get even more? The Pro version offers numerous additional modules and extended features.
+**Unlock More Power with Content Egg PRO**
+Get access to advanced modules, integrations, and automation tools that take your affiliate workflow to the next level.
 
-**Modules of the Free Version:** CSV Feed, CJ Links, Coupon, GdeSlon, Google Images, Offer, Pixabay, Related Keywords, RSS Fetcher, Skimlinks Coupons, Sovrn, YouTube.
+**Free Version:**
+Includes `CSV-XML Feed`, `CJ Links`, `Coupon`, `GdeSlon`, `Google Images`, `Offer`, `Pixabay`, `Related Keywords`, `RSS Fetcher`, `Skimlinks Coupons`, `Sovrn`, `YouTube`.
 
-**Additional Modules of the PRO Version:** Aliexpress, Amazon, Amazon NoAPI, Avantlink, AWIN, BestBuy, Bol.com, CJ Products, CityAds.com, Clickbank, Daisycon, eBay, Envato, Flipkart, Impact Radius, Kelkoogroup, Kieskeurig.nl, Linkwise, Lomadee.com, Paytm.com, Pepperjam, Rakuten (LinkShare), Shareasale, Shopeeh, Walmart, Webgains.
+**PRO Adds Even More:**
+Includes `Aliexpress`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`, `Bol.com`, `CJ Products`, `CityAds.com`, `Coupang`, `Clickbank`, `Daisycon`, `eBay`, `Envato`, `Flipkart`, `Impact Radius`, `Kelkoogroup`, `Kieskeurig.nl`, `Linkwise`, `Lomadee.com`, `Paytm.com`, `Pepperjam`, `Rakuten (LinkShare)`, `Shopee`, `Walmart`, `Webgains`.
 
-Visit us at [www.keywordrush.com/contentegg](https://www.keywordrush.com/contentegg "Content Egg PRO")
+➡️ Visit us at [www.keywordrush.com/contentegg](https://www.keywordrush.com/contentegg "Content Egg PRO")
 
 = One-Click AI Product Import =
 
 No more copy-pasting product details. With Content Egg, you can import supplier data in one click and instantly turn it into SEO-friendly articles or WooCommerce products — ready to publish and monetize.
 
 [youtube https://www.youtube.com/watch?v=4EI_WLQaWPc]
+
+= Bridge Pages =
+
+Create clean, product-focused landing pages on your site before sending visitors to merchants. Bridge Pages keep users engaged longer, improve SEO with targeted keywords, and boost affiliate conversions.
+
+* **1-Click setup:** Instantly build from Content Egg offers.
+* **Flexible layouts:** Use as product, review, or comparison pages.
+* **SEO control:** Set global or post-specific canonical options.
+
+▶ [Watch Bridge Pages in action](https://www.youtube.com/watch?v=N4QbbYcBu_k)
 
 = Price Comparison Features =
 
@@ -175,6 +189,46 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 7. AI features
 
 == Changelog ==
+
+Got it — here’s your **single, clean list** in the exact requested format:
+
+= Version 10.1.0 =
+
+* New: SubID tracking parameters for the Feed module.
+* New: SubID option for the Awin module with dynamic placeholders.
+* New: Added support for syncing GTIN to WooCommerce native field.
+* New: Added “Avoid Duplicates by WooCommerce GTIN/EAN” import preset option.
+* New: The Price Comparison feature in Import Tools now also searches within the main module.
+* New: Feed module — added manual CSV Delimiter option for custom field separation.
+* New: Feed module — added manual CSV Enclosure option for defining text qualifiers.
+* Fix: Uninstall processing.
+
+= Version 10.0.0 =
+
+* New: Clicks Statistics dashboard.
+* New: Track Clicks With Redirect - record aggregated clicks for local redirect links.
+* New: Track Clicks Without Redirect - count clicks on direct affiliate links.
+* New: Local redirect links with human-readable product-title slugs.
+* New: Bridge Pages import from the post editor.
+* New: Safe placeholders to use for SubIDs/deeplinks.
+* New: Click Stats Retention (days) setting.
+* New: Redirect Status Code setting for local redirects.
+* New: “All Products” admin table - shows total clicks and last 30 days.
+* New: Post edit screen — per-product total and last 30 days clicks.
+* New: Deeplinks - support for advanced placeholders.
+* New: Preset option — make imported Bridge Pages canonical.
+* New: Frontend setting — link destination preference (affiliate vs bridge).
+* New: Shortcode parameter — link_target: affiliate|bridge|auto.
+* New: Products block option — Link Destination.
+* New: Products block option — Source Post ID.
+* New: Setting — Bridge Button Text.
+* New: Added `group_pick` shortcode parameter to select one product per group.
+* New: Feed module — added support for FTP and FTPS feed URLs.
+* New: Feed module — added support for GZIP archive format.
+* Improved: Feed modules are now used for automatic price comparison for Import tools.
+* Improved: Added extra parameters to GA4 events.
+* Improved: Feed module — added XML processor option.
+* Deprecated: ShareASale is shutting down and is fully transitioning to the Awin platform.
 
 = Version 9.0.2 =
 

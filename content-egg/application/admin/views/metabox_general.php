@@ -13,16 +13,17 @@ if (!$global_keyword = \get_post_meta($post->ID, '_cegg_global_autoupdate_keywor
 ?>
 
 <script>
+    "use strict";
     jQuery(document).ready(function($) {
 
-        jQuery('#cegg_update_lists, #cegg_update_prices').click(function(e) {
+        $(document).on('click', '#cegg_update_lists, #cegg_update_prices', function(e) {
             e.preventDefault();
             var this_btn = $(this);
-            jQuery('#cegg_update_lists, #cegg_update_prices, .button, .btn').attr('disabled', true);
+            $('#cegg_update_lists, #cegg_update_prices, .button, .btn').attr('disabled', true);
             var nonce = $('#contentegg_nonce').val();
-            jQuery('body').addClass('cegg_wait');
+            $('body').addClass('cegg_wait');
 
-            jQuery.ajax({
+            $.ajax({
                 type: "POST",
                 url: ajaxurl,
                 data: {
@@ -43,6 +44,7 @@ if (!$global_keyword = \get_post_meta($post->ID, '_cegg_global_autoupdate_keywor
         });
     });
 </script>
+
 <div class="row mt-3 pb-3">
     <div class="col">
 
@@ -139,19 +141,41 @@ if (!$global_keyword = \get_post_meta($post->ID, '_cegg_global_autoupdate_keywor
     </div>
 </div>
 
+<!-- Toast container -->
+<div id="cegg-toast-container"
+    class="toast-container position-fixed p-3 mb-3"
+    style="z-index:1000000;"></div>
+
+<style>
+    #cegg-toast-container {
+        right: calc(1rem + 280px);
+        bottom: 1rem;
+        z-index: 1000000;
+    }
+
+    @media (max-width: 782px) {
+        #cegg-toast-container {
+            bottom: .75rem;
+            right: .75rem;
+        }
+    }
+</style>
+
 <script>
+    "use strict";
     jQuery(document).ready(function() {
-        jQuery('.cegg-copy-button').click(function() {
+        jQuery(document).on('click', '.cegg-copy-button', function() {
             var copyButton = jQuery(this);
             var input = copyButton.siblings('.cegg-copy-input');
             var copyText = input.val();
+
             navigator.clipboard.writeText(copyText).then(function() {
                 var icon = copyButton.find('i');
                 icon.removeClass('bi-copy').addClass('bi-check');
+
                 setTimeout(function() {
                     icon.removeClass('bi-check').addClass('bi-copy');
                 }, 1000);
-
             });
         });
     });

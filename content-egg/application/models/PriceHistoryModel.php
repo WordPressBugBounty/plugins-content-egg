@@ -7,8 +7,7 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ContentProduct;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * PriceHistoryModel class file

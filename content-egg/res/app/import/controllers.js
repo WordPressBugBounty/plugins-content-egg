@@ -5,12 +5,12 @@
   'use strict';
 
   angular
-    .module('contentEggApp')
+    .module('contentEgg')
     .controller('SearchController', SearchController);
 
   SearchController.$inject = [
     '$q',
-    'ContentEggService',
+    'ProductImportService',
     'moduleMeta',
     'presetOptions',
     'postCatOptions',
@@ -20,7 +20,7 @@
 
   function SearchController(
     $q,
-    ContentEggService,
+    ProductImportService,
     moduleMeta,
     presetOptions,
     postCatOptions,
@@ -115,7 +115,7 @@
         keyword       : vm.form.keyword
       };
 
-      ContentEggService.search(vm.form.module, query)
+      ProductImportService.search(vm.form.module, query)
         .then(function (res) {
           if (res.data && res.data.error) {
             vm.error = res.data.error;
@@ -140,7 +140,7 @@
       vm.enqueueing[uid]   = true;
       vm.enqueueErrors[uid] = null;
 
-      ContentEggService.enqueue(product, vm.importSettings)
+      ProductImportService.enqueue(product, vm.importSettings)
         .then(function () {
           product._enqueued = true;
         })
@@ -175,7 +175,7 @@
       });
 
       // Build an array of per-item promises with concurrency limit (5 by default)
-      ContentEggService
+      ProductImportService
         .enqueueBulkWithLimit(batch, vm.importSettings, 5)
         .then(function (outcomes) {
           console.log(outcomes);

@@ -2,8 +2,7 @@
 
 namespace ContentEgg\application\helpers;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 defined('\ABSPATH') || exit;
 
@@ -201,11 +200,12 @@ class CurrencyHelper
             ),
             'TND' => array(
                 'currency_symbol' => 'DT',
-                'currency_pos' => 'right',
-                'thousand_sep' => ' ',
-                'decimal_sep' => '.',
-                'num_decimals' => 3,
-                'name' => 'Tunisian dinar',
+                'currency_pos'    => 'right',
+                //'thousand_sep'    => ' ',
+                'thousand_sep'    => '',
+                'decimal_sep'     => ',',
+                'num_decimals'    => 3,
+                'name'            => 'Tunisian dinar',
             ),
             'NGN' => array(
                 'currency_symbol' => '₦',
@@ -707,6 +707,7 @@ class CurrencyHelper
 
     public function numberFormat($number, $currency, $thousand_sep = null, $decimal_sep = null, $num_decimals = null)
     {
+
         if (!$thousand_sep)
         {
             $thousand_sep = $this->getValue($currency, 'thousand_sep', ',');

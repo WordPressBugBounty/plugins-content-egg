@@ -6,14 +6,10 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ContentManager;
-use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\FeaturedImage;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\helpers\ProductHelper;
-
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
 
 /**
  * AutoblogModel class file
@@ -236,7 +232,7 @@ class AutoblogModel extends Model
                 // module not found?
                 if (!isset($module_ids[$required_module]))
                 {
-                    throw new \Exception(sprintf(__('Required module %s will not run. The module is not configured or deleted.', 'content-egg'), $required_module));
+                    throw new \Exception(sprintf(esc_html__('Required module %s will not run. The module is not configured or deleted.', 'content-egg'), esc_html($required_module)));
                 }
 
                 unset($module_ids[$required_module]);
@@ -317,7 +313,7 @@ class AutoblogModel extends Model
             }
             elseif ($autoblog['required_modules'] && in_array($module_id, $autoblog['required_modules']))
             {
-                throw new \Exception(sprintf(__('Data was not found for required module %s.', 'content-egg'), $module_id));
+                throw new \Exception(sprintf(esc_html__('Data was not found for required module %s.', 'content-egg'), esc_html($module_id)));
             }
 
             // check min count modules
@@ -325,7 +321,7 @@ class AutoblogModel extends Model
             {
                 if (count($modules_data) + $count < $autoblog['min_modules_count'])
                 {
-                    throw new \Exception(sprintf(__('It does not reach the desired amount of data. Minimum required modules: %d.', 'content-egg'), $autoblog['min_modules_count']));
+                    throw new \Exception(sprintf(esc_html__('It does not reach the desired amount of data. Minimum required modules: %d.', 'content-egg'), (int) $autoblog['min_modules_count']));
                 }
             }
             $count--;
@@ -343,7 +339,7 @@ class AutoblogModel extends Model
             }
             if ($comments_count < (int) $autoblog['config']['min_comments_count'])
             {
-                throw new \Exception(sprintf(__('Total reviews found: %d. Minimum reviews required: %d.', 'content-egg'), $comments_count, $autoblog['config']['min_comments_count']));
+                throw new \Exception(sprintf(esc_html__('Total reviews found: %d. Minimum reviews required: %d.', 'content-egg'), (int) $comments_count, (int) $autoblog['config']['min_comments_count']));
             }
         }
 
@@ -353,13 +349,17 @@ class AutoblogModel extends Model
         // avoid EAN/ISBN duplicates
         if (GeneralConfig::getInstance()->option('sync_ean') == 'enabled')
         {
-            if (isset($autoblog['config']['avoid_duplicates']) && $autoblog['config']['avoid_duplicates'] == 'enabled' && $autoblog['post_type'] == 'product')
+            if (isset($autoblog['config']['avoid_duplicates']) && $autoblog['config']['avoid_duplicates'] === 'enabled' && $autoblog['post_type'] === 'product')
             {
-                if ($main_product['ean'] && self::isProductExistsByEan($main_product['ean']))
-                    throw new \Exception(sprintf(__('Product with EAN %s already exists.', 'content-egg'), $main_product['ean']));
+                if (! empty($main_product['ean']) && self::isProductExistsByEan($main_product['ean']))
+                {
+                    throw new \Exception(sprintf(esc_html__('Product with EAN %s already exists.', 'content-egg'), esc_html($main_product['ean'])));
+                }
 
-                if ($main_product['isbn'] && self::isProductExistsByIsbn($main_product['isbn']))
-                    throw new \Exception(sprintf(__('Product with ISBN %s already exists.', 'content-egg'), $main_product['isbn']));
+                if (! empty($main_product['isbn']) && self::isProductExistsByIsbn($main_product['isbn']))
+                {
+                    throw new \Exception(sprintf(esc_html__('Product with ISBN %s already exists.', 'content-egg'), esc_html($main_product['isbn'])));
+                }
             }
         }
 
@@ -483,7 +483,7 @@ class AutoblogModel extends Model
 
         if (!$post_id = \wp_insert_post($post))
         {
-            throw new \Exception(sprintf(__('Post can\'t be created. Unknown error.', 'content-egg'), $autoblog['min_modules_count']));
+            throw new \Exception(esc_html__('Post can\'t be created. Unknown error.', 'content-egg'));
         }
 
         // woocommerce product

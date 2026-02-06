@@ -4,9 +4,7 @@ namespace ContentEgg\application\components;
 
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\EggShortcode;
-use ContentEgg\application\components\ModuleManager;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\components\ModuleManager;;
 
 defined('\ABSPATH') || exit;
 

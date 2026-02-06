@@ -13,7 +13,6 @@ defined('\ABSPATH') || exit;
  */
 abstract class CEWidget extends \WP_Widget
 {
-
     public $name;
     protected $slug;
     protected $description;
@@ -216,23 +215,131 @@ abstract class CEWidget extends \WP_Widget
         }
     }
 
-    public function beforeWidget($args, $instance)
+    protected function beforeWidget($args, $instance)
     {
-        $raw_title = empty($instance['title']) ? '' : $instance['title'];
-        $sanitized_title = wp_kses_post($raw_title);
-        $title = apply_filters('widget_title', $sanitized_title, $instance, $this->id_base);
-        echo wp_kses_post($args['before_widget']);
-        if ($title)
+        // 1) Sanitize instance title (user input)
+        $raw_instance_title   = isset($instance['title']) ? $instance['title'] : '';
+        $clean_instance_title = wp_kses_post($raw_instance_title);
+
+        // 2) Allow devs to inject HTML via the standard filter
+        $filtered_title = apply_filters('widget_title', $clean_instance_title, $instance, $this->id_base);
+
+        // 3) Build allowlists
+        $allowed_wrappers = $this->allowed_wrapper_tags();
+        $allowed_title    = $this->allowed_title_tags();
+
+        // 4) Output (sanitize on echo)
+        $before_widget = isset($args['before_widget']) ? $args['before_widget'] : '';
+        echo wp_kses($before_widget, $allowed_wrappers);
+
+        if ('' !== trim($filtered_title))
         {
-            echo $args['before_title']
-                . $title
-                . $args['after_title'];
+            $before_title = isset($args['before_title']) ? $args['before_title'] : '';
+            $after_title  = isset($args['after_title'])  ? $args['after_title']  : '';
+
+            echo wp_kses($before_title, $allowed_wrappers);
+            echo wp_kses($filtered_title, $allowed_title);
+            echo wp_kses($after_title,  $allowed_wrappers);
         }
     }
 
-    public function afterWidget($args, $instance)
+    protected function afterWidget($args)
     {
+        $after = isset($args['after_widget']) ? $args['after_widget'] : '';
+        echo wp_kses($after, $this->allowed_wrapper_tags());
+    }
 
-        echo wp_kses_post($args['after_widget']);
+    protected function allowed_wrapper_tags()
+    {
+        $allowed = wp_kses_allowed_html('post');
+
+        foreach (array('div', 'span', 'section', 'aside', 'header', 'footer', 'nav', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6') as $tag)
+        {
+            $allowed[$tag] = array_merge(
+                isset($allowed[$tag]) ? $allowed[$tag] : array(),
+                array(
+                    'class' => true,
+                    'id'    => true,
+                    'title' => true,
+                    'role'  => true,
+                )
+            );
+        }
+
+        return $allowed;
+    }
+
+    protected function allowed_title_tags()
+    {
+        $allowed = wp_kses_allowed_html('post');
+
+        $allowed['svg'] = array(
+            'class'        => true,
+            'role'         => true,
+            'aria-hidden'  => true,
+            'focusable'    => true,
+            'width'        => true,
+            'height'       => true,
+            'viewbox'      => true,
+            'xmlns'        => true,
+            'fill'         => true,
+            'stroke'       => true,
+            'stroke-width' => true,
+        );
+        $allowed['g'] = array(
+            'fill'         => true,
+            'stroke'       => true,
+            'stroke-width' => true,
+        );
+        $allowed['path'] = array(
+            'd'               => true,
+            'fill'            => true,
+            'fill-rule'       => true,
+            'clip-rule'       => true,
+            'stroke'          => true,
+            'stroke-width'    => true,
+            'stroke-linecap'  => true,
+            'stroke-linejoin' => true,
+        );
+        $allowed['title'] = array();
+
+        return $allowed;
+    }
+
+    protected function allowed_form_tags()
+    {
+        $allowed = $this->allowed_wrapper_tags();
+
+        $allowed['form'] = array(
+            'action'     => true,
+            'method'     => true,
+            'class'      => true,
+            'id'         => true,
+            'role'       => true,
+            'novalidate' => true,
+            'enctype'    => true,
+        );
+        $allowed['label'] = array('for' => true, 'class' => true);
+        $allowed['input'] = array(
+            'type'        => true,
+            'name'        => true,
+            'value'       => true,
+            'id'          => true,
+            'class'       => true,
+            'placeholder' => true,
+            'checked'     => true,
+            'readonly'    => true,
+            'required'    => true,
+            'min'         => true,
+            'max'         => true,
+            'step'        => true,
+            'size'        => true,
+            'maxlength'   => true,
+        );
+        $allowed['button'] = array('type' => true, 'name' => true, 'value' => true, 'class' => true, 'id' => true);
+        $allowed['select'] = array('name' => true, 'id' => true, 'class' => true, 'multiple' => true, 'size' => true);
+        $allowed['option'] = array('value' => true, 'selected' => true);
+
+        return $allowed;
     }
 }

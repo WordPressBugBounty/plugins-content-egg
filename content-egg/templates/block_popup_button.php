@@ -10,7 +10,6 @@ use ContentEgg\application\helpers\TemplateHelper;
 
 defined('\ABSPATH') || exit;
 
-
 $item = TemplateHelper::selectItemByDescription($items);
 $modal_id = TemplateHelper::generateGlobalId('cegg-popup-');
 $modal_label = TemplateHelper::generateGlobalId('cegg-popup-label');

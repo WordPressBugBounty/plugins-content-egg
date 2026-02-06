@@ -89,6 +89,7 @@ if (!function_exists('cegg_price_alert_js')):
     {
 ?>
         <script>
+            "use strict";
             document.addEventListener('DOMContentLoaded', function() {
 
                 var forms = document.querySelectorAll('.cegg-price-alert-form');

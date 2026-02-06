@@ -5,8 +5,7 @@ namespace ContentEgg\application\components;
 use ContentEgg\application\components\ai\ContentHelper;
 use ContentEgg\application\helpers\TextHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 defined('\ABSPATH') || exit;
 

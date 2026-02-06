@@ -21,8 +21,21 @@ $selected_post_type = $def('post_type', reset($post_types));
 ?>
 
 <div class="wrap cegg5-container">
-    <h1 class="h3"><?php echo esc_html__('Product Prefill Tool', 'content-egg'); ?></h1>
-    <p class="description"><?php echo esc_html__('Use this tool to automatically add products to your existing posts.', 'content-egg'); ?></p>
+    <h1 class="h3">
+        <?php echo esc_html__('Product Prefill Tool', 'content-egg'); ?>
+        <a href="<?php echo esc_url('https://ce-docs.keywordrush.com/set-up-products/fill-tool'); ?>"
+            target="_blank" rel="noopener noreferrer"
+            class="link-secondary text-decoration-none small ms-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94" />
+            </svg>
+        </a>
+    </h1>
+    <p class="description text-muted">
+        <?php echo esc_html__('Use this tool to automatically add products to your existing posts.', 'content-egg'); ?>
+        <?php echo esc_html__('In the first step, you’ll filter posts for prefill. In the next step, you’ll configure your prefill settings.', 'content-egg'); ?>
+    </p>
 
     <h2 class="h5 mt-4"><?php echo esc_html__('Select Posts to Prefill', 'content-egg'); ?></h2>
 
@@ -192,18 +205,23 @@ $selected_post_type = $def('post_type', reset($post_types));
 
 <!-- JavaScript to toggle the correct category row on load & change -->
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const postTypeSelect = document.getElementById('post_type');
-        const categoryRowPost = document.getElementById('category-row-post');
-        const categoryRowProduct = document.getElementById('category-row-product');
+    "use strict";
+    document.addEventListener("DOMContentLoaded", () => {
+        const postTypeSelect = document.getElementById("post_type");
+        const categoryRowPost = document.getElementById("category-row-post");
+        const categoryRowProduct = document.getElementById("category-row-product");
 
-        function toggleCategoryRows() {
-            const selected = postTypeSelect.value;
-            categoryRowPost.style.display = (selected === 'post') ? '' : 'none';
-            categoryRowProduct.style.display = (selected === 'product') ? '' : 'none';
+        if (!postTypeSelect || !categoryRowPost || !categoryRowProduct) {
+            return;
         }
 
+        const toggleCategoryRows = () => {
+            const selected = postTypeSelect.value;
+            categoryRowPost.style.display = selected === "post" ? "" : "none";
+            categoryRowProduct.style.display = selected === "product" ? "" : "none";
+        };
+
         toggleCategoryRows();
-        postTypeSelect.addEventListener('change', toggleCategoryRows);
+        postTypeSelect.addEventListener("change", toggleCategoryRows);
     });
 </script>

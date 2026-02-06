@@ -272,7 +272,7 @@ table.wp-list-table .column-img {
 }
 
 table.wp-list-table .column-title {
-    width: 70%;
+    width: 50%;
 }
 
 table.wp-list-table .column-last_update {
@@ -542,4 +542,7 @@ body .cegg_nomargin_components .components-range-control .components-base-contro
 .cegg5-container .wp-list-table a {
   text-decoration: none;
   color: #0073aa;
+}
+.cegg-thumbnail-ratio {
+  --bs-aspect-ratio: calc(3 / 2.5 * 100%);
 }

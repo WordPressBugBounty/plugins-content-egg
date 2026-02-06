@@ -2,9 +2,7 @@
 
 namespace ContentEgg\application\libs;
 
-use ContentEgg\application\helpers\TextHelper;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\helpers\TextHelper;;
 
 /**
  * RestClient class file
@@ -201,10 +199,14 @@ class RestClient
 
     protected function _getResult($response)
     {
-        if (\is_wp_error($response))
+        if (is_wp_error($response))
         {
-            $error_mess = "HTTP request fails: " . $response->get_error_code() . " - " . $response->get_error_message() . '.';
-            throw new \Exception($error_mess);
+            $error_mess = sprintf(
+                'HTTP request fails: %s - %s.',
+                esc_html($response->get_error_code()),
+                esc_html($response->get_error_message())
+            );
+            throw new \Exception(esc_html($error_mess));
         }
 
         $this->myErrorHandler($response);
@@ -220,7 +222,7 @@ class RestClient
             $response_message = \wp_remote_retrieve_response_message($response);
             $error_mess = "HTTP request status fails: " . $response_code . " - " . $response_message . '.';
             $error_mess .= ' Server replay: ' . \wp_remote_retrieve_body($response);
-            throw new \Exception($error_mess, $response_code);
+            throw new \Exception(esc_html($error_mess), (int) $response_code);
         }
     }
 

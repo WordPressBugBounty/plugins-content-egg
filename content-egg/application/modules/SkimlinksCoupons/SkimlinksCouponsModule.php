@@ -77,7 +77,6 @@ class SkimlinksCouponsModule extends AffiliateParserModule
 			$options['offer_type'] = $this->config('offer_type');
 		}
 
-
 		$fields = array(
 			'merchant_id',
 			'country',
@@ -99,9 +98,8 @@ class SkimlinksCouponsModule extends AffiliateParserModule
 		}
 		if ($this->config('vertical'))
 		{
-			$options['vertical'] = (int) $options['vertical'];
+			$options['vertical'] = (int) $this->config('vertical');
 		}
-
 
 		$results = $this->getApiClient()->search($keyword, $options);
 		if (!is_array($results) || !isset($results['offers']))
@@ -157,7 +155,6 @@ class SkimlinksCouponsModule extends AffiliateParserModule
 			{
 				$content->code = $r['coupon_code'];
 			}
-
 
 			$content->extra = new ExtraDataSkimlinksCoupons;
 			ExtraDataSkimlinksCoupons::fillAttributes($content->extra, $r);

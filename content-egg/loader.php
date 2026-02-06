@@ -18,9 +18,7 @@ class AutoLoader
     const NS_CUSTOM_MODULES = 'ContentEggCustomModule';
 
     private static $base_dir;
-    private static $classMap = array(
-        //'ContentEgg\application\ContentEgg' => 'application/ContentEgg.php',
-    );
+    private static $classMap = array();
 
     public function __construct()
     {

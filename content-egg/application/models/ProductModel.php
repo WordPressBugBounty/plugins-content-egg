@@ -6,9 +6,7 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\ModuleManager;
-use ContentEgg\application\components\ContentProduct;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\components\ContentProduct;;
 
 /**
  * ProductModel class file
@@ -70,7 +68,7 @@ class ProductModel extends Model
 
     public function scanProducts()
     {
-        global $wpdb;                 // or $db = $this->getDb();
+        global $wpdb;
         $per_page  = 100;
         $meta_keys = $this->getCeMetaKeys();
 

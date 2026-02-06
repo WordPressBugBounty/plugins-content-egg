@@ -4,9 +4,7 @@ namespace ContentEgg\application\admin;
 
 defined('\ABSPATH') || exit;
 
-use ContentEgg\application\models\AutoblogModel;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\models\AutoblogModel;;
 
 /**
  * PrefillLogTable class file

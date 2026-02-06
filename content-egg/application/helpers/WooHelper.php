@@ -129,4 +129,72 @@ class WooHelper
 		\wp_update_attachment_metadata($attach_id, $attach_data);
 		return $attach_id;
 	}
+
+	/**
+	 * Return a product (parent) ID by GTIN/EAN, checking multiple meta keys:
+	 * - WooCommerce native: _global_unique_id
+	 * - "EAN for WooCommerce" plugin: _alg_ean
+	 *
+	 * If a matching variation is found, returns its parent product ID.
+	 * Returns 0 if not found.
+	 *
+	 * @param string $gtin
+	 * @return int
+	 */
+	public static function getProductIdByGtin($gtin)
+	{
+		$gtin = is_string($gtin) ? trim($gtin) : '';
+		if ($gtin === '')
+		{
+			return 0;
+		}
+
+		$gtin = apply_filters('cegg_wc_normalize_gtin', $gtin);
+
+		// Meta keys to search. First two cover Woo native + "EAN for WooCommerce".
+		$meta_keys = apply_filters(
+			'cegg_wc_gtin_meta_keys',
+			array('_global_unique_id', '_alg_ean')
+		);
+
+		// Build OR meta_query across all provided keys.
+		$meta_query = array('relation' => 'OR');
+		foreach ($meta_keys as $key)
+		{
+			$meta_query[] = array(
+				'key'     => $key,
+				'value'   => $gtin,
+				'compare' => '=',
+			);
+		}
+
+		$query = new \WP_Query(array(
+			'post_type'        => array('product', 'product_variation'),
+			'post_status'      => apply_filters(
+				'cegg_wc_identifier_post_status',
+				array('publish', 'private', 'draft', 'pending', 'future')
+			),
+			'posts_per_page'   => 1,
+			'fields'           => 'ids',
+			'no_found_rows'    => true,
+			'suppress_filters' => true,
+			'meta_query'       => $meta_query,
+		));
+
+		if (empty($query->posts))
+		{
+			return 0;
+		}
+
+		$found_id = (int) $query->posts[0];
+
+		// If the match is a variation, return its parent product ID.
+		if ('product_variation' === get_post_type($found_id))
+		{
+			$parent_id = (int) wp_get_post_parent_id($found_id);
+			return $parent_id > 0 ? $parent_id : $found_id;
+		}
+
+		return $found_id;
+	}
 }

@@ -47,7 +47,7 @@ $isAffiliateParser = $module->isAffiliateParser();
                     </div>
                 </div>
                 <div class="ps-0 col-lg-4 col-md-5 col-sm-12">
-                    <div class="input-group input-group-sm float-end" style="width: auto;">
+                    <div class="float-end">
 
                         <a class='btn btn-primary btn-sm' ng-click="addBlank('<?php echo esc_attr($module_id); ?>')"><i class="bi bi-plus-square"></i> <?php esc_html_e('Add coupon', 'content-egg'); ?></a>
 
@@ -61,13 +61,35 @@ $isAffiliateParser = $module->isAffiliateParser();
                     <?php //results
                     ?>
                     <div ng-model="models.<?php echo esc_attr($module_id); ?>.added" ui-sortable="sortableOptions" ng-if="models.<?php echo esc_attr($module_id); ?>.added.length" id="<?php echo \esc_attr($module->getId()); ?>" style="max-height: 600px;overflow-y: scroll;padding-right: 15px;">
-                        <div class="row egg-hover-row mt-2 pb-2 pt-2" ng-repeat="data in models.<?php echo esc_attr($module_id); ?>.added">
-                            <div class="col-md-1 col-xs-12 pe-0 text-center small" id="<?php echo \esc_attr($module->getId()); ?>-{{data.unique_id}}">
-                                <img ng-show="data.img" ng-src="{{data.img}}" class="img-thumbnail" style="max-height:75px;" />
-                                <div class="mt-1">
-                                    <span class="cegg-item-handle bg-light px-2 py-1" title="<?php esc_html_e('Sort', 'content-egg'); ?>">☰</span>
-                                    <span style="cursor: copy" class="bg-light px-2 py-1" title="<?php esc_html_e('Insert item ID into shortcode', 'content-egg'); ?>" ng-click="buildShortcode('<?php echo esc_attr($module_id); ?>', selectedTemplate_<?php echo esc_attr($module_id); ?>, selectedGroup_<?php echo esc_attr($module_id); ?>, data.unique_id);">id</span>
+                        <div class="row g-0 mb-3 pb-0 pe-1 pt-0" ng-repeat="data in models.<?php echo esc_attr($module_id); ?>.added" ng-class="{'bg-light': $even}">
+                            <div class="col-md-1 pe-1 col-xs-12 text-center small " id="<?php echo \esc_attr($module->getId()); ?>-{{data.unique_id}}">
+
+                                <div class="ratio cegg-thumbnail-ratio">
+                                    <img ng-src="{{data.img}}" class="img-thumbnail w-100 h-100" style="object-fit:contain;" />
+                                    <span class="badge text-bg-light position-absolute top-0 start-0 m-1"
+                                        style="width:auto; height:auto;">
+                                        {{$index + 1}}
+                                    </span>
                                 </div>
+                                <div class="container mt-1">
+                                    <div class="row g-1">
+
+                                        <div class="col-12">
+
+                                            <!-- Drag to reorder -->
+                                            <div
+                                                class="cegg-item-handle btn btn-outline-info btn-sm cegg-btn-xs"
+                                                style="cursor: move;"
+                                                title="<?php esc_html_e('Drag to reorder', 'content-egg'); ?>"
+                                                aria-label="<?php esc_attr_e('Drag to reorder', 'content-egg'); ?>">
+                                                <i class="bi bi-arrows-vertical"></i>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                </div>
+
                             </div>
                             <div class="col-md-9 col-xs-12">
                                 <div class="input-group input-group-sm">
@@ -91,16 +113,16 @@ $isAffiliateParser = $module->isAffiliateParser();
                                 <textarea type="text" placeholder="<?php esc_html_e('Description', 'content-egg'); ?>" rows="2" ng-model="data.description" class="form-control form-control-sm mt-1"></textarea>
 
                             </div>
-                            <div class="col-md-2 col-xs-12 border-start small">
-                                <span ng-show="data.last_update">
-                                    <i ng-show="data.stock_status == 1" class="bi bi-bag-check text-success" title="<?php echo esc_attr('In stock', 'content-egg'); ?>"></i>
-                                    <i ng-show=" data.stock_status==-1" class="bi bi-bag-dash-fill text-danger" title="<?php echo esc_attr('Out of stock', 'content-egg'); ?>"></i>
-                                    <abbr class="" title="<?php echo esc_attr('Last updated:', 'content-egg'); ?> {{data.last_update * 1000| date:'medium'}}">{{data.last_update * 1000| date:'shortDate'}}</abbr>
-                                </span>
+                            <div class="col-md-2 col-xs-12 small ps-2 ps-xl-3">
+                                <button class="btn-close float-end mt-1" aria-label="Close" ng-click="delete(data, '<?php echo esc_attr($module_id); ?>')" title="<?php esc_html_e('Remove', 'content-egg'); ?>"></button>
 
-                                <button class="btn-close float-end" aria-label="Close" ng-click="delete(data, '<?php echo esc_attr($module_id); ?>')" title="<?php esc_attr('Remove', 'content-egg'); ?>"></button>
+                                <div ng-show="data.last_update" class="mt-1">
+                                    <i ng-show="data.stock_status == 1" class="bi bi-bag-check text-success" title="<?php esc_html_e('In stock', 'content-egg'); ?>"></i>
+                                    <i ng-show="data.stock_status==-1" class="bi bi-bag-dash-fill text-danger" title="<?php esc_html_e('Out of stock', 'content-egg'); ?>"></i>
+                                    <abbr data-bs-toggle="tooltip" title="<?php echo esc_attr('Last updated:', 'content-egg'); ?> {{data.last_update * 1000| date:'medium'}}">{{data.last_update * 1000| date:'shortDate'}}</abbr>
+                                </div>
 
-                                <div class="small text-mutted mt-2 text-truncate" ng-show="data.url">
+                                <div class="small text-mutted mt-2 text-truncate">
                                     <a class="link-dark text-decoration-none" title="<?php echo esc_attr(__('Go to', 'content-egg')); ?>" href="{{data.url}}" target="_blank">
                                         <span ng-show="data.domain"><img src="https://www.google.com/s2/favicons?domain=https://{{data.domain}}"> {{data.domain}}</span><span ng-hide="data.domain"><?php esc_html_e('Go to ', 'content-egg'); ?></span>
                                         <sup><i class="bi bi-box-arrow-up-right"></i></sup>

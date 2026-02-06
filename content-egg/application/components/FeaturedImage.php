@@ -8,9 +8,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\helpers\ImageHelper;
 use ContentEgg\application\admin\GeneralConfig;
-use ContentEgg\application\components\ExternalFeaturedImage;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\components\ExternalFeaturedImage;;
 
 /**
  * FeaturedImage class file

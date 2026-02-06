@@ -7,8 +7,7 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ModuleManager;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * ModuleTemplateManager class file

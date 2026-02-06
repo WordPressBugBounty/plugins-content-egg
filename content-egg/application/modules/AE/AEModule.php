@@ -13,9 +13,6 @@ use ContentEgg\application\components\LinkHandler;
 use ContentEgg\application\components\ContentManager;
 use \Keywordrush\AffiliateEgg\ParserManager;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * AEModule class file
  *
@@ -167,7 +164,7 @@ class AEModule extends AffiliateParserModule
                 $message .= '. For more information please refer to https://ce-docs.keywordrush.com/modules/affiliate-egg-integration#avoid-getting-blocked';
             }
 
-            throw new \Exception($message, $code);
+            throw new \Exception(esc_html(wp_strip_all_tags($message)), (int) $code);
         }
 
         // 3. Parse products
@@ -218,6 +215,7 @@ class AEModule extends AffiliateParserModule
             $content->currency = TextHelper::currencyTyping($content->currencyCode);
             $content->manufacturer = $r['manufacturer'];
             $content->availability = $r['in_stock'];
+
             if ($r['in_stock'])
             {
                 $content->stock_status = ContentProduct::STOCK_STATUS_IN_STOCK;
@@ -290,6 +288,12 @@ class AEModule extends AffiliateParserModule
             {
                 $content->sku = $r['extra']['sku'];
                 unset($r['extra']['sku']);
+            }
+
+            if (isset($r['extra']['gtin']))
+            {
+                $content->ean = $r['extra']['gtin'];
+                unset($r['extra']['gtin']);
             }
 
             $content->extra->data = $r['extra'];

@@ -53,8 +53,9 @@
     </div>
 
     <script>
+        "use strict";
         jQuery(document).ready(function() {
-            jQuery("#form").submit(function() {
+            jQuery(document).on("submit", "#form", function() {
                 jQuery("#autoblog_submit").attr("disabled", true);
                 return true;
             });

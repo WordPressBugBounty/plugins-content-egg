@@ -18,9 +18,6 @@ use ContentEgg\application\helpers\WooHelper;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\WooIntegrator;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * Class ProductImportService
  *
@@ -132,13 +129,23 @@ class ProductImportService
         $presetPost = get_post($presetId);
         if (!$presetPost || $presetPost->post_status === 'trash')
         {
-            throw new \RuntimeException("Preset #{$presetId} does not exist.");
+            throw new \RuntimeException(
+                sprintf(
+                    'Preset #%s does not exist.',
+                    esc_html(sanitize_text_field($presetId))
+                )
+            );
         }
 
         $preset = PresetRepository::get($presetId);
         if (!$preset)
         {
-            throw new \RuntimeException("Preset meta missing for #{$presetId}");
+            throw new \RuntimeException(
+                sprintf(
+                    'Preset meta missing for #%s',
+                    esc_html(sanitize_text_field($presetId))
+                )
+            );
         }
 
         /* --------------------------------------------------------------
@@ -160,8 +167,8 @@ class ProductImportService
             {
                 throw new \RuntimeException(
                     sprintf(
-                        __('No products found for keyword "%s".', 'content-egg'),
-                        $row['keyword'] ?? 'unknown'
+                        esc_html__('No products found for keyword "%s".', 'content-egg'),
+                        esc_html($row['keyword'] ?? 'unknown')
                     )
                 );
             }
@@ -202,13 +209,53 @@ class ProductImportService
             }
         }
 
+        // Duplicate checks by GTIN/EAN (WooCommerce products only)
+        if (! empty($preset['post_type']) && $preset['post_type'] === 'product' && ! empty($preset['avoid_duplicates_gtin']))
+        {
+            $gtin_raw = '';
+            if (! empty($product['gtin']))
+            {
+                $gtin_raw = (string) $product['gtin'];
+            }
+            elseif (! empty($product['ean']))
+            {
+                $gtin_raw = (string) $product['ean'];
+            }
+
+            if ($gtin_raw !== '')
+            {
+                $gtin_sanitized  = sanitize_text_field($gtin_raw);
+                $gtin_normalized = apply_filters('cegg_wc_normalize_gtin', $gtin_sanitized);
+
+                if ($gtin_normalized !== '')
+                {
+                    $existing_post_id = WooHelper::getProductIdByGtin($gtin_normalized);
+                    if ($existing_post_id)
+                    {
+                        $msg = sprintf(
+                            __('Duplicate product found by GTIN/EAN (Post #%1$d, EAN: %2$s).', 'content-egg'),
+                            absint($existing_post_id),
+                            $gtin_sanitized
+                        );
+
+                        $this->queue->markFailed(
+                            $row['id'],
+                            $this->logger->format(['exception' => $msg]),
+                            microtime(true) - $this->startTime
+                        );
+                        return;
+                    }
+                }
+            }
+        }
+
         /* --------------------------------------------------------------
            2.1 Fetch price comparison products
         -------------------------------------------------------------- */
         $comparison_product_data = [];
         if (!empty($preset['price_comparison']) && $preset['price_comparison'] === 'enabled')
         {
-            $max = (int) \apply_filters('cegg_import_price_comparison_max_products', 3);
+            $max = (int) \apply_filters('cegg_import_price_comparison_max_products', 5);
             $comparison_product_data = $this->findPriceComparisonProducts($product, $max);
 
             if (!empty($comparison_product_data))
@@ -237,7 +284,56 @@ class ProductImportService
         $createdPostId = $this->createPostFromPreset($preset, $product, $row, $comparison_product_data);
 
         /* --------------------------------------------------------------
-           4. Update queue row – SUCCESS
+            4. Map bridge page
+        -------------------------------------------------------------- */
+        if (!empty($row['source_post_id']))
+        {
+            $target_post_id = (int) $createdPostId;
+            $source_post_id = (int) $row['source_post_id'];
+            $module_id      = isset($row['module_id']) ? (string) $row['module_id'] : '';
+            $unique_id      = isset($product['unique_id']) ? (string) $product['unique_id'] : '';
+
+            if ($target_post_id > 0 && $module_id !== '' && $unique_id !== '')
+            {
+                $map = \ContentEgg\application\models\ProductMapModel::model();
+
+                $makeCanonical = !empty($preset['make_canonical']) || !empty($row['make_canonical']);
+
+                if ($makeCanonical)
+                {
+                    // only canonical mapping
+                    try
+                    {
+                        $map->setCanonical($module_id, $unique_id, $target_post_id);
+                        $this->logger->notice(__('Canonical bridge mapping created.', 'content-egg'));
+                    }
+                    catch (\Throwable $e)
+                    {
+                        $this->logger->notice(
+                            sprintf(__('Failed to set canonical bridge mapping. Error: %s', 'content-egg'), $e->getMessage())
+                        );
+                    }
+                }
+                else
+                {
+                    // only per-post mapping
+                    try
+                    {
+                        $map->upsertMapping($module_id, $unique_id, $source_post_id, $target_post_id);
+                        $this->logger->notice(__('Per-post bridge mapping created.', 'content-egg'));
+                    }
+                    catch (\Throwable $e)
+                    {
+                        $this->logger->notice(
+                            sprintf(__('Failed to create bridge mapping. Error: %s', 'content-egg'), $e->getMessage())
+                        );
+                    }
+                }
+            }
+        }
+
+        /* --------------------------------------------------------------
+           5. Update queue row – SUCCESS
         -------------------------------------------------------------- */
         $this->queue->markDone($jobId, $createdPostId, $this->logger->format([
             'post_id'    => $createdPostId,
@@ -257,14 +353,14 @@ class ProductImportService
         if (!$moduleId)
         {
             throw new \RuntimeException(
-                __('No module ID provided.', 'content-egg')
+                esc_html__('No module ID provided.', 'content-egg')
             );
         }
 
         if (!$keyword)
         {
             throw new \RuntimeException(
-                __('No keyword provided.', 'content-egg')
+                esc_html__('No keyword provided.', 'content-egg')
             );
         }
 
@@ -295,12 +391,13 @@ class ProductImportService
 
     public function findPriceComparisonProducts(array $product, $max = 3)
     {
-        if (empty($product['module_id']))
+        if (empty($product['module_id']) || empty($product['unique_id']))
         {
             return [];
         }
 
         $current_module_id = $product['module_id'];
+        $current_unique_id = $product['unique_id'];
 
         $modules_settings = [
             'Amazon' => [
@@ -375,11 +472,16 @@ class ProductImportService
 
         foreach ($modules_settings as $module_id => $settings)
         {
-            if ($module_id == $current_module_id)
+            if ($module_id == $current_module_id && $settings['results'] == 1)
             {
                 unset($modules_settings[$module_id]);
                 continue;
             }
+            elseif ($module_id == $current_module_id && $settings['results'] > 1)
+            {
+                $modules_settings[$module_id]['results'] = $settings['results'] + 1;
+            }
+
             if (strstr($module_id, 'Amazon') && strstr($current_module_id, 'Amazon'))
             {
                 unset($modules_settings[$module_id]);
@@ -388,6 +490,19 @@ class ProductImportService
 
             $modules_settings[$module_id]['priority'] = ModuleManager::getInstance()->getModulePriority($module_id);
         }
+
+        // Add active feed modules
+        $feed_modules = ModuleManager::getInstance()->getActiveFeedModules();
+        foreach ($feed_modules as $module_id => $feed_module)
+        {
+            $modules_settings[$module_id] = [
+                'results' => $max,
+                'is_ean_search' => true,
+                'is_url_search' => false,
+                'priority' => $feed_module->config('module_priority'),
+            ];
+        }
+
         // Sorting by priority
         uasort($modules_settings, function ($a, $b)
         {
@@ -461,6 +576,10 @@ class ProductImportService
         $module_data = [];
         foreach ($results as $product)
         {
+            if ($product->module_id == $current_module_id && $product->unique_id == $current_unique_id)
+            {
+                continue;
+            }
 
             if (!isset($module_data[$product->module_id]))
             {
@@ -485,7 +604,7 @@ class ProductImportService
         )
         {
             throw new \RuntimeException(
-                __('AI content generation presets require the Pro version. Please upgrade to Content Egg Pro to use this preset.', 'content-egg')
+                esc_html__('AI content generation presets require the Pro version. Please upgrade to Content Egg Pro to use this preset.', 'content-egg')
             );
         }
 
@@ -494,7 +613,7 @@ class ProductImportService
         if ($isWoo && !\ContentEgg\application\helpers\WooHelper::isWooActive())
         {
             throw new \RuntimeException(
-                __('WooCommerce is not active. Please install and activate WooCommerce plugin.', 'content-egg')
+                esc_html__('WooCommerce is not active. Please install and activate WooCommerce plugin.', 'content-egg')
             );
         }
 
@@ -512,7 +631,7 @@ class ProductImportService
             if (! $this->isSysAiEnabled)
             {
                 throw new \RuntimeException(
-                    __('OpenAI integration is not enabled. Please add your OpenAI API key under Content Egg → Settings → AI → OpenAI API Key.', 'content-egg')
+                    esc_html__('OpenAI integration is not enabled. Please add your OpenAI API key under Content Egg → Settings → AI → OpenAI API Key.', 'content-egg')
                 );
             }
 
@@ -527,7 +646,7 @@ class ProductImportService
             $product = $this->productPrompt->craftProductData($product, $gen_fields);
 
             $this->logger->notice(sprintf(
-                __('AI product data generated: %s.', 'content-egg'),
+                esc_html__('AI product data generated: %s.', 'content-egg'),
                 join(', ', $gen_fields)
             ));
         }
@@ -538,7 +657,7 @@ class ProductImportService
             if (!(bool)GeneralConfig::getInstance()->option('ai_key'))
             {
                 throw new \RuntimeException(
-                    __('AI integration is not enabled. Please add your API key under Content Egg → Settings → AI → AI API Key.', 'content-egg')
+                    esc_html__('AI integration is not enabled. Please add your API key under Content Egg → Settings → AI → AI API Key.', 'content-egg')
                 );
             }
 
@@ -564,13 +683,17 @@ class ProductImportService
                     }
                     catch (\Exception $e)
                     {
-                        throw new \RuntimeException('AI: Post Title generation error: ' . $e->getMessage());
+                        throw new \RuntimeException(
+                            'AI: Post Title generation error: ' . esc_html($e->getMessage())
+                        );
                     }
 
-                    $this->logger->notice(sprintf(
-                        __('AI post title generated: %s.', 'content-egg'),
-                        $ai_title_method_key
-                    ));
+                    $this->logger->notice(
+                        sprintf(
+                            esc_html__('AI post title generated: %s.', 'content-egg'),
+                            esc_html($ai_title_method_key)
+                        )
+                    );
                 }
             }
 
@@ -585,7 +708,9 @@ class ProductImportService
                     }
                     catch (\Exception $e)
                     {
-                        throw new \RuntimeException('AI: Post Content generation error: ' . $e->getMessage());
+                        throw new \RuntimeException(
+                            'AI: Post Content generation error: ' . esc_html($e->getMessage())
+                        );
                     }
 
                     $this->logger->notice(sprintf(
@@ -606,7 +731,9 @@ class ProductImportService
                     }
                     catch (\Exception $e)
                     {
-                        throw new \RuntimeException('AI: Post Short Description generation error: ' . $e->getMessage());
+                        throw new \RuntimeException(
+                            'AI: Post Short Description generation error: ' . esc_html($e->getMessage())
+                        );
                     }
 
                     $this->logger->notice(sprintf(
@@ -667,7 +794,7 @@ class ProductImportService
         $postId = wp_insert_post($postArr, true);
         if (is_wp_error($postId))
         {
-            throw new \RuntimeException($postId->get_error_message());
+            throw new \RuntimeException(esc_html($postId->get_error_message()));
         }
 
         // ---------- 3.1 Set WooCommerce product data ----------
@@ -699,9 +826,6 @@ class ProductImportService
                     $product['woo_attr'] = 'true';
                 }
             }
-
-            // force sync
-            WooIntegrator::wooSync($product, $row['module_id'], $postId);
         }
 
         // ---------- 4. Categories ----------
@@ -783,6 +907,14 @@ class ProductImportService
         $group = apply_filters('cegg_import_product_group', self::PRODUCT_GROUP);
 
         ContentManager::saveData([$product], $product['module_id'], $postId, true, $group);
+
+        // Force sync now after content_egg_save_data fired
+        if ($isWoo)
+        {
+            $preparedData = ContentManager::dataPreviewPrepare([$product], $row['module_id'], $postId);
+            $syncProduct = reset($preparedData);
+            WooIntegrator::wooSync($syncProduct, $row['module_id'], $postId);
+        }
 
         foreach ($comparison_product_data as $mid => $data)
         {

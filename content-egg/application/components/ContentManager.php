@@ -13,9 +13,11 @@ use ContentEgg\application\helpers\CurrencyHelper;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\ImageProxy;
+use ContentEgg\application\LocalRedirect;
+use ContentEgg\application\LocalRedirector;
+use ContentEgg\application\models\ProductMapModel;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * ContentManager class file
@@ -306,13 +308,23 @@ class ContentManager
 
     public static function getViewData($module_id, $post_id, $params = array())
     {
+        // Build cache key; include link_target when explicitly provided
+        $linkTarget = strtolower((string)($params['link_target'] ?? ''));
+
         $data_id = $post_id . '-' . $module_id;
+        if ($linkTarget !== '')
+        {
+            $data_id .= '-lt:' . $linkTarget;
+        }
+
         if (!isset(self::$_view_data[$data_id]))
         {
             $data = self::getData($post_id, $module_id);
 
             if (!is_array($data))
-                $data = array();
+            {
+                $data = [];
+            }
 
             $data = self::dataPreviewPrepare($data, $module_id, $post_id, $params);
 
@@ -406,7 +418,12 @@ class ContentManager
             {
                 if (isset($d['url']))
                 {
-                    $data[$key]['url'] = \add_query_arg($params['add_query_arg'], $data[$key]['url']);
+                    $add_query_arg = [];
+                    foreach ($params['add_query_arg'] as $k => $v)
+                    {
+                        $add_query_arg[$k] = LinkHandler::getUrlTemplate('', $v, $data[$key]);
+                    }
+                    $data[$key]['url'] = \add_query_arg($add_query_arg, $data[$key]['url']);
                 }
             }
         }
@@ -434,126 +451,163 @@ class ContentManager
     {
         $is_ssl = \is_ssl();
 
+        if (!is_array($data) || empty($data))
+        {
+            return [];
+        }
+
         foreach ($data as $key => $d)
         {
-            if ($module_id == 'Amazon' && !empty($d['extra']['IsEligibleForSuperSaverShipping']))
-                $data[$key]['shipping_cost'] = '0.00';
-
+            // totals
             if (isset($d['shipping_cost']) && isset($d['price']))
-                $data[$key]['total_price'] = (float) $data[$key]['price'] + (float) $data[$key]['shipping_cost'];
-            elseif (isset($d['price']))
-                $data[$key]['total_price'] = (float) $data[$key]['price'];
-            else
-                $data[$key]['total_price'] = '';
-
-            if (!empty($data[$key]['title']))
             {
-                // replace non-breaking space
-                $data[$key]['title'] = str_replace("\xc2\xa0", ' ', $data[$key]['title']);
+                $data[$key]['total_price'] = (float) $d['price'] + (float) $d['shipping_cost'];
+            }
+            elseif (isset($d['price']))
+            {
+                $data[$key]['total_price'] = (float) $d['price'];
+            }
+            else
+            {
+                $data[$key]['total_price'] = '';
             }
 
-            if (empty($data[$key]['extra']) || !is_array($data[$key]['extra']))
+            // title cleanup
+            if (!empty($d['title']))
+            {
+                $data[$key]['title'] = str_replace("\xC2\xA0", ' ', (string) $d['title']); // replace &nbsp;
+            }
+
+            // ensure extra is array
+            if (empty($d['extra']) || !is_array($d['extra']))
             {
                 $data[$key]['extra'] = array();
             }
 
-            // domain fix && logo
-            if (empty($d['extra']['domain']) && isset($d['domain']))
+            // sync domain/logo between root and extra
+            if (empty($data[$key]['extra']['domain']) && !empty($d['domain']))
             {
                 $data[$key]['extra']['domain'] = $d['domain'];
             }
-            elseif (empty($d['domain']) && isset($d['extra']['domain']))
+            elseif (empty($d['domain']) && !empty($d['extra']['domain']))
             {
                 $data[$key]['domain'] = $d['extra']['domain'];
             }
-            if (empty($d['extra']['logo']) && isset($d['logo']))
+
+            if (empty($data[$key]['extra']['logo']) && !empty($d['logo']))
             {
                 $data[$key]['extra']['logo'] = $d['logo'];
             }
-            elseif (empty($d['logo']) && isset($d['extra']['logo']))
+            elseif (empty($d['logo']) && !empty($d['extra']['logo']))
             {
                 $data[$key]['logo'] = $d['extra']['logo'];
             }
 
-            // https fix for all images
-            if ($is_ssl && isset($data[$key]['img']))
+            // SSL image fix
+            if ($is_ssl && !empty($d['img']))
             {
-                $data[$key]['img'] = str_replace('http://', '//', $d['img']);
+                $data[$key]['img'] = str_replace('http://', '//', (string) $d['img']);
             }
 
+            // percentage saved
             if (isset($d['percentageSaved']))
             {
-                $d['percentageSaved'] = (float) $d['percentageSaved'];
-                if (!$d['percentageSaved'] || $d['percentageSaved'] < 0 || $d['percentageSaved'] >= 100)
+                $p = (float) $d['percentageSaved'];
+                if ($p <= 0 || $p >= 100)
                 {
-                    $d['percentageSaved'] = 0;
+                    $p = 0.0;
                 }
-                $data[$key]['percentageSaved'] = round($d['percentageSaved']);
+                $data[$key]['percentageSaved'] = (int) round($p);
             }
 
+            // rating from extra fallback
             if (empty($d['rating']) && isset($d['extra']['data']['rating']))
             {
                 $data[$key]['rating'] = $d['extra']['data']['rating'];
             }
-            if (!empty($data[$key]['startDate']))
+
+            // coupon dates sanity
+            if (!empty($d['startDate']))
             {
-                if (date('Y', $data[$key]['startDate']) < 2023 || date('Y', $data[$key]['startDate']) > 2050)
+                $y = (int) date('Y', (int) $d['startDate']);
+                if ($y < 2023 || $y > 2050)
+                {
                     $data[$key]['startDate'] = '';
+                }
             }
-            if (!empty($data[$key]['endDate']))
+            if (!empty($d['endDate']))
             {
-                if (date('Y', $data[$key]['endDate']) < 2023 || date('Y', $data[$key]['endDate']) > 2050)
+                $y = (int) date('Y', (int) $d['endDate']);
+                if ($y < 2023 || $y > 2050)
+                {
                     $data[$key]['endDate'] = '';
+                }
             }
 
-            if (isset($d['price']) && isset($d['priceOld']) && (float)$d['price'] == (float)$d['priceOld'])
+            // price old equal to price -> zero
+            if (isset($d['price']) && isset($d['priceOld']) && (float) $d['price'] === (float) $d['priceOld'])
+            {
                 $data[$key]['priceOld'] = 0;
+            }
 
+            // rating clamp [0..5], round to halves, sync ratingDecimal
             if (isset($data[$key]['rating']))
             {
-                $data[$key]['rating'] = (float) $data[$key]['rating'];
-                if ($data[$key]['rating'] < 0 || $data[$key]['rating'] > 5)
+                $r = (float) $data[$key]['rating'];
+                if ($r < 0 || $r > 5)
                 {
-                    $data[$key]['rating'] = 0;
+                    $r = 0.0;
                 }
-                $data[$key]['rating'] = round(($data[$key]['rating'] * 2) / 2);
+                $data[$key]['rating'] = round(($r * 2)) / 2;
+            }
+            if (empty($data[$key]['ratingDecimal']) && !empty($data[$key]['rating']))
+            {
+                $data[$key]['ratingDecimal'] = $data[$key]['rating'];
+            }
+            if (empty($data[$key]['rating']) && !empty($data[$key]['ratingDecimal']))
+            {
+                $data[$key]['rating'] = (int) round((float) $data[$key]['ratingDecimal']);
             }
 
-            if (empty($data[$key]['ratingDecimal']) && !empty($data[$key]['rating']))
-                $data[$key]['ratingDecimal'] = $data[$key]['rating'];
-
-            if (empty($data[$key]['rating']) && !empty($data[$key]['ratingDecimal']))
-                $data[$key]['rating'] = round($data[$key]['ratingDecimal']);
-
-            $description = $data[$key]['description'];
+            // badge extraction (mutates description)
+            $description = isset($data[$key]['description']) ? (string) $data[$key]['description'] : '';
             if ($badge_data = self::getBadgeFromDescription($description))
             {
                 list($badge, $color) = $badge_data;
-                $data[$key]['badge'] = $badge;
+                $data[$key]['badge']       = $badge;
                 $data[$key]['badge_color'] = $color;
             }
             $data[$key]['description'] = $description;
 
+            // numbered titles
             $data[$key]['number'] = 999;
-            $number = TemplateHelper::getNumberFromTitle($data[$key]['title']);
+            $number = TemplateHelper::getNumberFromTitle($data[$key]['title'] ?? '');
             if ($number !== false)
             {
-                $data[$key]['title'] = TemplateHelper::fixNumberedTitle($data[$key]['title']);
+                $data[$key]['title']  = TemplateHelper::fixNumberedTitle($data[$key]['title']);
                 $data[$key]['number'] = $number;
             }
-            if (!empty($data[$key]['order_num']))
-                $data[$key]['number'] = $data[$key]['order_num'];
+            if (!empty($d['order_num']))
+            {
+                $data[$key]['number'] = $d['order_num'];
+            }
 
-            $data[$key]['post_id'] = $post_id;
+            // meta
+            $data[$key]['post_id']   = $post_id;
             $data[$key]['module_id'] = $module_id;
+
+            // Amazon shipping
+            if ($module_id === 'Amazon' && !empty($d['extra']['IsEligibleForSuperSaverShipping']))
+            {
+                $data[$key]['shipping_cost'] = '0.00';
+            }
         }
 
-        // image proxy
+        // image proxy / normalization
         self::preparePoductImages($data);
 
-        // local redirect & other
+        // module
         $module = ModuleManager::getInstance()->factory($module_id);
-
         if (!$module)
         {
             return [];
@@ -561,7 +615,90 @@ class ContentManager
 
         if ($module->isParser())
         {
+            // 1) Module-specific prepare
             $data = $module->viewDataPrepare($data);
+
+            // 2) Decide link destination preference (shortcode param wins; 'auto' falls back to global)
+            $linkPref = isset($params['link_target']) ? strtolower(trim((string) $params['link_target'])) : 'auto';
+            if (!in_array($linkPref, array('affiliate', 'bridge', 'auto'), true))
+            {
+                $linkPref = 'auto';
+            }
+            if ($linkPref === 'auto')
+            {
+                $linkPref = GeneralConfig::getInstance()->option('link_destination', 'affiliate'); // 'affiliate' | 'bridge'
+                if (!in_array($linkPref, array('affiliate', 'bridge'), true))
+                {
+                    $linkPref = 'affiliate';
+                }
+            }
+
+            // 3) Apply Bridge URLs only if requested
+            if ($linkPref === 'bridge')
+            {
+                $data = self::applyBridgeUrlsForModuleFrontend($data, $module->getId(), (int) $post_id);
+            }
+
+            // 4) Post-process links (cashback / local redirect) when needed
+            $doCashback = (GeneralConfig::getInstance()->option('cashback_integration') === 'enabled')
+                && class_exists('\CashbackTracker\application\Plugin');
+
+            $doRedirect = (bool) $module->config('set_local_redirect');
+
+            if ($doCashback || $doRedirect)
+            {
+                foreach ($data as $key => $d)
+                {
+                    if (!is_array($d))
+                    {
+                        continue;
+                    }
+
+                    // If Bridge is active and we have a bridge_url, do not touch the URL
+                    if ($linkPref === 'bridge' && !empty($d['bridge_url']))
+                    {
+                        if (empty($data[$key]['aff_url']) && !empty($d['url']))
+                        {
+                            $data[$key]['aff_url'] = (string) $d['url'];
+                        }
+                        continue;
+                    }
+
+                    if (empty($d['url']))
+                    {
+                        continue;
+                    }
+
+                    $finalUrl = (string) $d['url'];
+
+                    // Cashback first
+                    if ($doCashback)
+                    {
+                        $finalUrl = \CashbackTracker\application\components\DeeplinkGenerator::maybeAddTracking($finalUrl);
+                    }
+
+                    // Local redirect (preserve raw affiliate in aff_url)
+                    if ($doRedirect)
+                    {
+                        if (empty($data[$key]['aff_url']))
+                        {
+                            $data[$key]['aff_url'] = $finalUrl;
+                        }
+                        $tmp        = $d;
+                        $tmp['url'] = $finalUrl;
+                        $data[$key]['url'] = LocalRedirector::localUrlForItem($tmp);
+                    }
+                    else
+                    {
+                        // No redirect; set processed URL back
+                        $data[$key]['url'] = $finalUrl;
+                        if (!isset($data[$key]['aff_url']))
+                        {
+                            $data[$key]['aff_url'] = $finalUrl;
+                        }
+                    }
+                }
+            }
         }
 
         return \apply_filters('cegg_view_data_prepare', $data, $module_id, $post_id, $params);
@@ -1084,7 +1221,8 @@ class ContentManager
             }
 
             if (!\apply_filters('cegg_disable_multiple_keywords', false))
-                $keywords = explode(',', $keyword, 30);
+                // split on commas with no spaces around them
+                $keywords = preg_split('/(?<!\s),(?!\s)/', (string)$keyword, 30);
             else
                 $keywords = array($keyword);
         }
@@ -1223,5 +1361,199 @@ class ContentManager
         }
 
         return true;
+    }
+
+    /**
+     * FRONTEND: apply Bridge links to items for a single module.
+     *
+     * Sets:
+     *  - aff_url    : previous affiliate URL (or null if absent)
+     *  - bridge_url : permalink to mapped Bridge Page (publish only) or null
+     *  - url        : bridge_url when available; otherwise keep original
+     *
+     * Self-link guard: if resolved target equals $source_post_id, do not apply bridge_url.
+     *
+     * @param array     $items          Array of item arrays (each must have 'unique_id')
+     * @param string    $module_id      e.g. 'Amazon'
+     * @param int|null  $source_post_id Current post context; null/<=0 => canonical-only
+     * @return array
+     */
+    public static function applyBridgeUrlsForModuleFrontend(array $items, string $module_id, ?int $source_post_id): array
+    {
+        if ($module_id === '' || empty($items))
+        {
+            return $items;
+        }
+
+        // 1) Collect unique_ids in iteration order
+        $unique_ids = [];
+        foreach ($items as $it)
+        {
+            if (is_array($it) && !empty($it['unique_id']))
+            {
+                $unique_ids[] = (string) $it['unique_id'];
+            }
+        }
+        if (!$unique_ids)
+        {
+            return $items;
+        }
+
+        // 2) Resolve best target per item (per-post override, then canonical)
+        $map          = ProductMapModel::model();
+        $bestByUnique = $map->resolveTargetsForModule($module_id, $unique_ids, $source_post_id);
+
+        // Normalize keys even if nothing to apply
+        if (!$bestByUnique)
+        {
+            foreach ($items as $k => $it)
+            {
+                if (!is_array($it)) continue;
+                $items[$k]['aff_url']    = isset($it['url']) ? $it['url'] : (isset($it['orig_url']) ? $it['orig_url'] : null);
+                $items[$k]['bridge_url'] = null;
+            }
+            return $items;
+        }
+
+        // 3) Prefetch published permalinks once
+        $target_ids = array_values(array_unique(array_map('intval', $bestByUnique)));
+        $permalinks = [];
+        if ($target_ids)
+        {
+            $posts = get_posts([
+                'post__in'         => $target_ids,
+                'post_type'        => 'any',
+                'post_status'      => 'publish',
+                'numberposts'      => -1,
+                'orderby'          => 'post__in',
+                'suppress_filters' => false,
+            ]);
+            foreach ($posts as $p)
+            {
+                /** @var \WP_Post $p */
+                $permalinks[$p->ID] = get_permalink($p);
+            }
+        }
+
+        // 4) Apply to each item
+        foreach ($items as $k => $it)
+        {
+            if (!is_array($it) || empty($it['unique_id']))
+            {
+                continue;
+            }
+
+            // Always capture the pre-bridge affiliate URL
+            $origAffiliate        = isset($it['url']) ? $it['url'] : (isset($it['orig_url']) ? $it['orig_url'] : null);
+            $items[$k]['aff_url'] = $origAffiliate;
+
+            $u = (string) $it['unique_id'];
+
+            // Defaults
+            $items[$k]['bridge_url'] = null;
+
+            if (!isset($bestByUnique[$u]))
+            {
+                continue; // no mapping; keep original url
+            }
+
+            $targetId = (int) $bestByUnique[$u];
+
+            // Self-link guard (do not link a page to itself)
+            if (!empty($source_post_id) && $targetId === (int) $source_post_id)
+            {
+                continue;
+            }
+
+            // Only use published targets
+            if (!isset($permalinks[$targetId]))
+            {
+                continue;
+            }
+
+            $bridgeUrl = $permalinks[$targetId];
+
+            // Apply Bridge link
+            $items[$k]['bridge_url'] = $bridgeUrl;
+            $items[$k]['url']        = $bridgeUrl;
+            // Note: we intentionally do NOT expose target_post_id / is_canonical here (frontend-fast path)
+        }
+
+        return $items;
+    }
+
+    /**
+     * ADMIN: annotate items with Bridge target meta (no URL changes).
+     *
+     * Sets (only when mapping exists & is applicable):
+     *  - target_post_id        : int
+     *  - is_canonical_bridge   : bool (true if canonical mapping used)
+     *
+     * Self-link guard: if resolved target equals $source_post_id, do not set metadata.
+     *
+     * @param array     $items          Array of item arrays (each must have 'unique_id')
+     * @param string    $module_id      e.g. 'Amazon'
+     * @param int|null  $source_post_id Current post context; null/<=0 => canonical-only
+     * @return array
+     */
+    public static function applyBridgeMetaForModuleAdmin(array $items, string $module_id, ?int $source_post_id): array
+    {
+        if ($module_id === '' || empty($items))
+        {
+            return $items;
+        }
+
+        // 1) Collect unique_ids in iteration order
+        $unique_ids = [];
+        foreach ($items as $it)
+        {
+            if (is_array($it) && !empty($it['unique_id']))
+            {
+                $unique_ids[] = (string) $it['unique_id'];
+            }
+        }
+        if (!$unique_ids)
+        {
+            return $items;
+        }
+
+        // 2) Detailed resolve with origin
+        // Returns: [ uid => ['target_post_id' => int, 'is_canonical' => bool] ]
+        $map     = ProductMapModel::model();
+        $resolved = $map->resolveTargetsForModuleWithOrigin($module_id, $unique_ids, $source_post_id);
+        if (!$resolved)
+        {
+            return $items; // nothing to annotate
+        }
+
+        // 3) Apply annotations; do not mutate URLs
+        foreach ($items as $k => $it)
+        {
+            if (!is_array($it) || empty($it['unique_id']))
+            {
+                continue;
+            }
+
+            $u = (string) $it['unique_id'];
+            if (!isset($resolved[$u]))
+            {
+                continue;
+            }
+
+            $targetId    = (int) $resolved[$u]['target_post_id'];
+            $isCanonical = (bool) $resolved[$u]['is_canonical'];
+
+            // Self-link guard
+            if (!empty($source_post_id) && $targetId === (int) $source_post_id)
+            {
+                continue;
+            }
+
+            // Annotate
+            $items[$k]['target_post_id']       = $targetId;
+            $items[$k]['is_canonical_bridge']  = $isCanonical;
+        }
+
+        return $items;
     }
 }

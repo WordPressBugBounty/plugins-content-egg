@@ -1,8 +1,6 @@
 <?php
 
-namespace ContentEgg\application\components\ai;
-
-use function ContentEgg\prnx;
+namespace ContentEgg\application\components\ai;;
 
 defined('\ABSPATH') || exit;
 
@@ -99,7 +97,7 @@ class OpenAiClient extends AiClient
 			if (isset($data['error']['metadata']['raw']))
 				$errorMessage .= ' | Raw metadata: ' . $data['error']['metadata']['raw'];
 
-			throw new \Exception($errorMessage);
+			throw new \Exception(esc_html($errorMessage));
 		}
 
 		if (!isset($data['choices'][0]['message']['content']))

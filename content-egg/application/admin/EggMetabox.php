@@ -11,10 +11,8 @@ use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\components\ContentCoupon;
 use ContentEgg\application\components\ExtraData;
 use ContentEgg\application\components\LManager;
+use ContentEgg\application\helpers\ClickStatsHelper;
 use ContentEgg\application\Plugin;
-
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
 
 /**
  * EggMetabox class file
@@ -34,7 +32,6 @@ class EggMetabox
             return;
 
         \add_action('wp_ajax_cegg_update_products', array($this, 'ajaxUpdateProducts'));
-
         \add_action('add_meta_boxes', array($this, 'addMetabox'));
         \add_action('save_post', array($this, 'saveMeta'));
     }
@@ -63,7 +60,7 @@ class EggMetabox
         $this->metadataInit();
         $title = 'Content Egg';
         if (Plugin::isFree())
-            $title .= '&nbsp;&nbsp;&nbsp;<a target="_blank" href="' . Plugin::pluginSiteUrl() . '">' . __('Upgrade to PRO Version', 'content-egg') . '</a>';
+            $title .= '&nbsp;&nbsp;&nbsp;<a target="_blank" href="' . \ContentEgg\application\Plugin::pluginPricingUrl('ce_metabox', 'go_pro_link') . '">' . __('Go PRO', 'content-egg') . '</a>';
         else
             $title .= ' Pro';
 
@@ -109,19 +106,21 @@ class EggMetabox
         // scroll to #module-product_id
         echo '
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        setTimeout(function() {
-            if (window.location.hash) {
-                var element = document.getElementById(window.location.hash.substring(1));
-                console.log(element);
-                if (element) {
-                    element.scrollIntoView();
-                }
+"use strict";
+document.addEventListener("DOMContentLoaded", function() {
+    setTimeout(function() {
+        if (window.location.hash) {
+            var element = document.getElementById(window.location.hash.substring(1));
+            console.log(element);
+            if (element) {
+                element.scrollIntoView();
             }
-        }, 500);
-    });
+        }
+    }, 500);
+});
 </script>
 ';
+
         echo '</div>';
         echo '</div>';
     }
@@ -135,37 +134,72 @@ class EggMetabox
     {
         global $post;
 
-        $modules = ModuleManager::getInstance()->getModules(true);
+        $post_id      = isset($post->ID) ? (int) $post->ID : 0;
+        $modules      = ModuleManager::getInstance()->getModules(true);
+        $statsEnabled = ClickStatsHelper::isEnabled();
+
+        // Warm link-id cache once for this post to speed up lookups
+        if ($statsEnabled && $post_id > 0)
+        {
+            ClickStatsHelper::warmCacheForPost($post_id);
+        }
 
         // modules data
         $init_data = array();
         $init_productGroups = array();
         foreach ($modules as $module)
         {
-            $post_meta = ContentManager::getData($post->ID, $module->getId());
+            $module_id = $module->getId();
+            $post_meta = ContentManager::getData($post_id, $module_id);
 
             if (!$post_meta || !is_array($post_meta))
                 continue;
+
+            $post_meta = ContentManager::applyBridgeMetaForModuleAdmin($post_meta, $module_id, $post_id, true);
 
             foreach ($post_meta as $key => $meta)
             {
                 if (!empty($meta['description']) && !TextHelper::isHtmlTagDetected($meta['description']))
                     $post_meta[$key]['description'] = TextHelper::br2nl($meta['description']);
 
-                if ($module->getId() == 'Coupon')
+                if ($module_id === 'Coupon')
                 {
                     if (!empty($post_meta[$key]['startDate']))
                         $post_meta[$key]['startDate'] *= 1000;
                     if (!empty($post_meta[$key]['endDate']))
                         $post_meta[$key]['endDate'] *= 1000;
                 }
-                if (!empty($meta['group']) && !in_array($meta['group'], $init_productGroups))
+
+                if (!empty($meta['group']) && !in_array($meta['group'], $init_productGroups, true))
                     $init_productGroups[] = $meta['group'];
+
+                // ---- Click stats enrichment ------------------------------------
+                // Always set numeric fields; UI will hide badges if zero.
+                $post_meta[$key]['_clicks_30d'] = 0;
+                $post_meta[$key]['_clicks']     = 0;
+
+                if ($statsEnabled && !empty($meta['unique_id']))
+                {
+                    $link_id = ClickStatsHelper::linkIdForTriplet(
+                        $post_id,
+                        (string) $module_id,
+                        (string) $meta['unique_id']
+                    );
+
+                    if ($link_id > 0)
+                    {
+                        $agg = ClickStatsHelper::aggregatesForLink($link_id);
+                        $post_meta[$key]['_clicks_30d'] = (int) ($agg['d30']  ?? 0);
+                        $post_meta[$key]['_clicks']     = (int) ($agg['total'] ?? 0);
+                    }
+                }
+                // -----------------------------------------------------------------
             }
-            $init_data[$module->getId()] = array_values($post_meta);
+
+            $init_data[$module_id] = array_values($post_meta);
         }
 
-        $init_productGroups = \apply_filters('cegg_static_product_groups', $init_productGroups, $post->ID);
+        $init_productGroups = \apply_filters('cegg_static_product_groups', $init_productGroups, $post_id);
         $init_productGroups = array_values(array_unique($init_productGroups));
 
         $this->addAppParam('initData', $init_data);
@@ -178,12 +212,12 @@ class EggMetabox
         {
             if (!$module->isParser())
                 continue;
-            $keywords_meta = \get_post_meta($post->ID, ContentManager::META_PREFIX_KEYWORD . $module->getId(), true);
+            $keywords_meta = \get_post_meta($post_id, ContentManager::META_PREFIX_KEYWORD . $module->getId(), true);
             if (!$keywords_meta)
                 continue;
             $init_keywords[$module->getId()] = $keywords_meta;
 
-            $update_params_meta = \get_post_meta($post->ID, ContentManager::META_PREFIX_UPDATE_PARAMS . $module->getId(), true);
+            $update_params_meta = \get_post_meta($post_id, ContentManager::META_PREFIX_UPDATE_PARAMS . $module->getId(), true);
             if (!$update_params_meta)
                 continue;
             $init_updateParams[$module->getId()] = $update_params_meta;
@@ -230,12 +264,13 @@ class EggMetabox
 
         // ContentEgg angular application
         \wp_enqueue_style('contentegg-admin', \ContentEgg\PLUGIN_RES . '/css/admin.css', null, '' . Plugin::version());
-        // \wp_enqueue_script('angular-ui-bootstrap', \ContentEgg\PLUGIN_RES . '/app/vendor/angular-ui-bootstrap/ui-bootstrap-tpls-2.5.0.min.js', array('angularjs'), Plugin::version);
         \wp_enqueue_script('angular-sortable', \ContentEgg\PLUGIN_RES . '/app/vendor/angular-sortable.js', array('angularjs', 'jquery-ui-core', 'jquery-ui-widget', 'jquery-ui-mouse', 'jquery-ui-sortable'), Plugin::version);
         \wp_enqueue_script('angular-ui-tinymce', \ContentEgg\PLUGIN_RES . '/app/vendor/angular-tinymce.js', array('angularjs', 'wp-tinymce'), Plugin::version);
         \wp_enqueue_script('tinymce-code', \ContentEgg\PLUGIN_RES . '/app/vendor/tinymce-code/plugin.min.js', array('wp-tinymce'), Plugin::version);
         \wp_register_script('contentegg-metabox-app', \ContentEgg\PLUGIN_RES . '/app/app.js', array('angularjs'), Plugin::version());
         \wp_enqueue_script('contentegg-metabox-service', \ContentEgg\PLUGIN_RES . '/app/ModuleService.js', array('contentegg-metabox-app'), Plugin::version());
+        \wp_enqueue_script('cegg-import-service', PluginAdmin::res('app/import/service.js'), ['contentegg-metabox-app'], Plugin::version(), true);
+        \wp_enqueue_script('cegg-toast-service', PluginAdmin::res('app/bs-toast.service.js'), ['contentegg-metabox-app'], Plugin::version(), true);
 
         // Bootstrap
         \wp_enqueue_style('cegg-bootstrap-admin', \ContentEgg\PLUGIN_RES . '/admin/bootstrap/css/bootstrap.css', array(), Plugin::version());
@@ -245,6 +280,7 @@ class EggMetabox
         // ContentEgg application params
         $this->addAppParam('active_modules', ModuleManager::getInstance()->getModulesIdList(true));
         $this->addAppParam('nonce', \wp_create_nonce('contentegg-metabox'));
+        $this->addAppParam('importNonce', \wp_create_nonce('cegg_import'));
 
         \wp_localize_script('contentegg-metabox-app', 'contentegg_params', $this->getAppParams());
     }
@@ -354,20 +390,51 @@ class EggMetabox
         }
     }
 
-    private function dataPrepare($data)
+    private function dataPrepare($data): array
     {
-        if (!is_array($data))
-            return array();
-        foreach ($data as $i => $d)
+        if (!is_array($data) || empty($data))
         {
-            foreach ($d as $key => $value)
+            return [];
+        }
+
+        foreach ($data as $i => &$row)
+        {
+            if (!is_array($row))
             {
-                if ($key == 'description' && !TextHelper::isHtmlTagDetected($value))
-                    $data[$i][$key] = TextHelper::nl2br($value);
-                if ($key == 'price')
-                    $data[$i][$key] = (float) $value;
+                unset($data[$i]);
+                continue;
+            }
+
+            // dinamic fields
+            $row['aff_url'] = null;
+            $row['bridge_url'] = null;
+            $row['target_post_id'] = null;
+
+            if (isset($row['description']) && is_string($row['description']))
+            {
+                $desc = trim($row['description']);
+                if ($desc !== '' && !TextHelper::isHtmlTagDetected($desc))
+                {
+                    $desc = str_replace(["\r\n", "\r"], "\n", $desc);
+                    $row['description'] = TextHelper::nl2br($desc);
+                }
+                else
+                {
+                    $row['description'] = $desc;
+                }
+            }
+
+            if (array_key_exists('price', $row))
+            {
+                $row['price'] = (float)$row['price'];
+            }
+            if (array_key_exists('priceOld', $row))
+            {
+                $row['priceOld'] = (float)$row['priceOld'];
             }
         }
+        unset($row);
+
         return $data;
     }
 

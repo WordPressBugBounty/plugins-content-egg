@@ -7,8 +7,7 @@ defined('\ABSPATH') || exit;
 use  ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\vendor\parsedown\Parsedown;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * ContentHelper class file

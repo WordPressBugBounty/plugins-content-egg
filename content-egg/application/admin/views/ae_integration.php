@@ -23,7 +23,7 @@
                                 __('<a href="%1$s" target="_blank" rel="noopener">Affiliate Egg</a> is another plugin offered by our team for adding affiliate products to your website. The key advantages of Affiliate Egg include:', 'content-egg'),
                                 ['a' => ['href' => [], 'target' => [], 'rel' => []]]
                             ),
-                            esc_url('https://www.keywordrush.com/affiliateegg')
+                            esc_url('https://www.keywordrush.com/affiliateegg?utm_source=cegg&utm_medium=referral&utm_campaign=ce_ae_integration&utm_content=ae_integration_link')
                         );
                         ?>
                     </p>
@@ -46,7 +46,7 @@
                     </p>
 
                     <a
-                        href="<?php echo esc_url('https://ce-docs.keywordrush.com/modules/affiliate-egg-integration'); ?>"
+                        href="<?php echo esc_url('https://www.keywordrush.com/affiliateegg?utm_source=cegg&utm_medium=referral&utm_campaign=ce_ae_integration&utm_content=ae_integration_link'); ?>"
                         target="_blank"
                         rel="noopener"
                         class="btn btn-outline-primary">
@@ -60,7 +60,18 @@
             <div>
                 <b><?php esc_html_e('Follow these steps to get started', 'content-egg'); ?>:</b>
                 <ol>
-                    <li><?php echo sprintf(__('Install and activate <a target="_blank" href="%s">Affiliate Egg Pro</a>', 'content-egg'), 'https://www.keywordrush.com/affiliateegg'); ?></li>
+                    <li>
+                        <?php
+                        echo wp_kses(
+                            sprintf(
+                                /* translators: %s: URL to Affiliate Egg Pro website */
+                                __('Install and activate <a target="_blank" href="%s">Affiliate Egg Pro</a>', 'content-egg'),
+                                esc_url('https://www.keywordrush.com/affiliateegg')
+                            ),
+                            array('a' => array('href' => array(), 'target' => array()))
+                        );
+                        ?>
+                    </li>
                 </ol>
             </div>
         <?php else : ?>

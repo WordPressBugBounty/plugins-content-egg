@@ -10,8 +10,7 @@ use ContentEgg\application\helpers\WooHelper;
 use ContentEgg\application\ImageProxy;
 use ContentEgg\application\WooIntegrator;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * ExternalFeaturedImage class file

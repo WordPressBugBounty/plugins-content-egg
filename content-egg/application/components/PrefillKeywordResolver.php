@@ -4,9 +4,7 @@ namespace ContentEgg\application\components;
 
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ai\PrefillPrompt;
-use ContentEgg\application\models\PrefillQueueModel;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\models\PrefillQueueModel;;
 
 defined('\ABSPATH') || exit;
 

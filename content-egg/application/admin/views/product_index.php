@@ -6,9 +6,10 @@
     </p>
 </div>
 <script type="text/javascript">
+    "use strict";
     var $j = jQuery.noConflict();
     $j(document).ready(function() {
-        $j('#btn_scan_products').click(function() {
+        $j(document).on('click', '#btn_scan_products', function() {
             $j.blockUI({
                 message: $j('#cegg_waiting_products')
             });
@@ -71,3 +72,15 @@ $message = '';
     </div>
     <?php include('_promo_box.php'); ?>
 <?php endif; ?>
+
+<style>
+    table.wp-list-table .column-clicks_30d {
+        text-align: left !important;
+        width: 8ch;
+    }
+
+    table.wp-list-table .column-clicks_total {
+        text-align: left !important;
+        width: 8ch;
+    }
+</style>

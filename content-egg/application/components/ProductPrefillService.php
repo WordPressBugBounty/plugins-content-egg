@@ -12,9 +12,6 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\models\PrefillQueueModel;
 use ContentEgg\application\Plugin;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * ProductPrefillService class file
  *
@@ -110,14 +107,23 @@ class ProductPrefillService
         $row = $this->queue->findByPostId($post_id);
         if (!$row || empty($row['config_key']))
         {
-            throw new \RuntimeException("Missing queue config for post ID {$post_id}");
+            throw new \RuntimeException(
+                esc_html(sprintf('Missing queue config for post ID %d', (int) $post_id))
+            );
         }
 
         $config = get_transient($row['config_key']);
 
         if (!is_array($config))
         {
-            throw new \RuntimeException("Prefill config not found or expired for key: {$row['config_key']}");
+            throw new \RuntimeException(
+                esc_html(
+                    sprintf(
+                        'Prefill config not found or expired for key: %s',
+                        wp_strip_all_tags($row['config_key'])
+                    )
+                )
+            );
         }
 
         $keyword_source = $config['keyword_source'] ?? 'post_title';
@@ -130,7 +136,9 @@ class ProductPrefillService
         $post = get_post($post_id);
         if (!$post || $post->post_status === 'trash')
         {
-            throw new \RuntimeException("Post not found or is in trash: ID {$post_id}");
+            throw new \RuntimeException(
+                esc_html(sprintf('Post not found or is in trash: ID %d', (int) $post_id))
+            );
         }
 
         // 3. Validate modules

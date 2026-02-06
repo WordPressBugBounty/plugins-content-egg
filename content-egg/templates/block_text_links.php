@@ -11,9 +11,7 @@ use ContentEgg\application\helpers\TextHelper;
 
 defined('\ABSPATH') || exit;
 
-
 ?>
-
 <div class="container px-0 mb-5 pt-2 text-body" <?php $this->colorMode(); ?>>
     <ul>
         <?php
@@ -25,8 +23,8 @@ defined('\ABSPATH') || exit;
                 <?php TemplateHelper::title($item, '', 'span', $params); ?>
                 <?php TemplateHelper::closeATag(); ?>
 
-                <?php if ($this->isVisible('price')): ?>
-                    <strong class="c<?php TemplateHelper::priceClass($item); ?>">
+                <?php if (!empty($item['price']) && $this->isVisible('price')): ?>
+                    <strong class="<?php TemplateHelper::priceClass($item); ?>">
                         &mdash; <?php TemplateHelper::price($item); ?>
                     </strong>
 

@@ -2,8 +2,9 @@
 
 namespace ContentEgg\application\components;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+use ContentEgg\application\models\LinkIndexModel;
+
+
 
 defined('\ABSPATH') || exit;
 
@@ -87,13 +88,7 @@ abstract class ParserModuleConfig extends ModuleConfig
                 'default' => '',
                 'section' => 'default',
             ),
-            'set_local_redirect' => [
-                'title'       => esc_html__('Link Cloaking', 'content-egg'),
-                'description' => esc_html__('Enable local 301 redirects for affiliate links', 'content-egg'),
-                'callback'    => [$this, 'render_checkbox'],
-                'default'     => 0,
-                'section'     => 'default',
-            ],
+
             'ttl' => array(
                 'title'       => __('Update by Keyword', 'content-egg'),
                 'description' => __('Cache lifetime in seconds. After this period, content will be updated if a keyword is set for updating. Set to \'0\' to disable updates.', 'content-egg'),
@@ -205,6 +200,49 @@ abstract class ParserModuleConfig extends ModuleConfig
     public function saveModuleName($value)
     {
         ModuleName::getInstance()->saveName($this->getModuleId(), $value);
+        return $value;
+    }
+
+    public function processLinkIndexBackfiller($value)
+    {
+        $old = (string) $this->option('set_local_redirect');
+        $new = (string) $value;
+
+        if ($new === $old)
+        {
+            return $value;
+        }
+
+        $moduleId = (string) $this->getModuleId();
+
+        if (!(bool) $value)
+        {
+            // DISABLING: cancel pending redirect backfills for this module and schedule async deletion
+            while ($ts = wp_next_scheduled('cegg_link_index_backfill_once', ['redirect', [$moduleId]]))
+            {
+                wp_unschedule_event($ts, 'cegg_link_index_backfill_once', ['redirect', [$moduleId]]);
+            }
+            while ($ts = wp_next_scheduled('cegg_link_index_delete_module', [$moduleId]))
+            {
+                wp_unschedule_event($ts, 'cegg_link_index_delete_module', [$moduleId]);
+            }
+            if (!wp_next_scheduled('cegg_link_index_delete_module', [$moduleId]))
+            {
+                wp_schedule_single_event(time() + 60, 'cegg_link_index_delete_module', [$moduleId]);
+            }
+            return $value;
+        }
+
+        // ENABLING: cancel pending deletions and schedule a redirect backfill for this module
+        while ($ts = wp_next_scheduled('cegg_link_index_delete_module', [$moduleId]))
+        {
+            wp_unschedule_event($ts, 'cegg_link_index_delete_module', [$moduleId]);
+        }
+        if (!wp_next_scheduled('cegg_link_index_backfill_once', ['redirect', [$moduleId]]))
+        {
+            wp_schedule_single_event(time() + 15, 'cegg_link_index_backfill_once', ['redirect', [$moduleId]]);
+        }
+
         return $value;
     }
 }

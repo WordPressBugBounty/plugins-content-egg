@@ -6,8 +6,6 @@
  *
  */
 
-__('Price comparison widget', 'content-egg-tpl');
-
 use ContentEgg\application\helpers\TemplateHelper;
 
 defined('\ABSPATH') || exit;

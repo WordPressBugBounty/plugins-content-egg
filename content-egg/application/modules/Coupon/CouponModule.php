@@ -8,8 +8,7 @@ use ContentEgg\application\components\AffiliateParserModule;
 use ContentEgg\application\admin\PluginAdmin;
 use ContentEgg\application\helpers\TextHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * OfferModule class file

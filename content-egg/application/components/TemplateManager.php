@@ -9,9 +9,6 @@ use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\Plugin;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * TemplateManager class file
  *
@@ -210,8 +207,12 @@ abstract class TemplateManager
     {
         if (!is_file($view_path) || !is_readable($view_path))
         {
-            throw new \Exception('View file "' . $view_path . '" does not exist.');
-        }
+            throw new \Exception(
+                sprintf(
+                    esc_html__('View file "%s" does not exist.', 'content-egg'),
+                    esc_html($view_path)
+                )
+            );        }
 
         $_data = array_merge($this->last_render_data, $_data);
         extract($_data, EXTR_PREFIX_SAME, 'data');

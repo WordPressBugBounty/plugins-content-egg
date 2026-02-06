@@ -5,8 +5,7 @@ namespace ContentEgg\application\helpers;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ModuleManager;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 defined('\ABSPATH') || exit;
 

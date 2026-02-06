@@ -6,8 +6,7 @@ use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TextHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 defined('\ABSPATH') || exit;
 

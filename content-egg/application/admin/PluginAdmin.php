@@ -15,11 +15,11 @@ use ContentEgg\application\components\LManager;
 use ContentEgg\application\components\ReviewNotice;
 use ContentEgg\application\components\FeaturedImage;
 use ContentEgg\application\Installer;
+use ContentEgg\application\LinkIndexScheduler;
 use ContentEgg\application\ModuleUpdateScheduler;
 use ContentEgg\application\SystemScheduler;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * PluginAdmin class file
@@ -75,6 +75,7 @@ class PluginAdmin
             new ProductImportController;
             new ProductPrefillController;
             new ProductController;
+            new ClicksStatsController;
             new EggMetabox;
             new ModuleApi;
             new FeaturedImage;

@@ -31,7 +31,10 @@ defined('\ABSPATH') || exit; ?>
         </div>
     <?php endif; ?>
 
-    <?php echo $table->display(); ?>
+    <?php
+    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Safe output from WP_List_Table::display().
+    echo $table->display();
+    ?>
 </div>
 
 <style>

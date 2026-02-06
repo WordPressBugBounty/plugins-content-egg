@@ -9,9 +9,7 @@ use ContentEgg\application\libs\viglink\ViglinkApi;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\admin\PluginAdmin;
 use ContentEgg\application\helpers\TextHelper;
-use ContentEgg\application\components\LinkHandler;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\components\LinkHandler;;
 
 /**
  * ViglinkModule class file

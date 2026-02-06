@@ -8,9 +8,6 @@ use ContentEgg\application\helpers\TemplateHelper;
 
 defined('\ABSPATH') || exit;
 
-
-__('Grid with prices', 'content-egg-tpl');
-
 TemplateHelper::addShopInfoOffcanvases($items, $params);
 
 ?>

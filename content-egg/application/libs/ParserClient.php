@@ -1,8 +1,6 @@
 <?php
 
-namespace ContentEgg\application\libs;
-
-use function ContentEgg\prnx;
+namespace ContentEgg\application\libs;;
 
 defined('\ABSPATH') || exit;
 
@@ -135,10 +133,10 @@ class ParserClient
 
 	protected function getResult($response)
 	{
-		if (\is_wp_error($response))
+		if (is_wp_error($response))
 		{
-			$error_mess = "HTTP request fails: " . $response->get_error_code() . " - " . $response->get_error_message() . '.';
-			throw new \Exception($error_mess);
+			$error_mess = 'HTTP request fails: ' . esc_html($response->get_error_code()) . ' - ' . esc_html($response->get_error_message()) . '.';
+			throw new \Exception(esc_html($error_mess));
 		}
 
 		$response_code = (int) \wp_remote_retrieve_response_code($response);
@@ -147,7 +145,7 @@ class ParserClient
 		{
 			$response_message = \wp_remote_retrieve_response_message($response);
 			$error_mess       = "HTTP request status fails: " . $response_code . " - " . $response_message . '.';
-			throw new \Exception($error_mess, $response_code);
+			throw new \Exception(esc_html($error_mess), (int) $response_code);
 		}
 
 		return \wp_remote_retrieve_body($response);

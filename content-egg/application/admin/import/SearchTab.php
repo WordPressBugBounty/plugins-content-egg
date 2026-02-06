@@ -6,9 +6,7 @@ use ContentEgg\application\admin\import\AbstractTab;
 use ContentEgg\application\admin\PluginAdmin;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\WooHelper;
-use ContentEgg\application\Plugin;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\Plugin;;
 
 defined('ABSPATH') || exit;
 

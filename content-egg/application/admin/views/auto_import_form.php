@@ -198,6 +198,7 @@ defined('ABSPATH') || exit; ?>
 </div>
 
 <script>
+    "use strict";
     document.addEventListener('DOMContentLoaded', () => {
         const textarea = document.getElementById('keywords');
         if (textarea) {

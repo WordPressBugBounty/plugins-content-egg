@@ -22,7 +22,7 @@ class ModulePrompt extends SystemPrompt
         'id'            => 'The unique identifier',
         'title'         => 'Product name',
         'description'   => 'Product description',
-        'affiliate link' => 'Affiliate URL',
+        'affiliate link' => 'Affiliate URL. If Affiliate URL is not available, use the direct product URL',
         'image link'    => 'Product image URL',
         'price'         => 'Product price. It can include a currency symbol/code or be a numeric value',
         'sale price'    => 'Sale price if applicable. It can include a currency symbol/code or be a numeric value',
@@ -105,7 +105,9 @@ class ModulePrompt extends SystemPrompt
         $decoded = json_decode($responseJson, true);
         if (json_last_error() !== JSON_ERROR_NONE)
         {
-            throw new \RuntimeException('Invalid JSON from AI: ' . json_last_error_msg());
+            throw new \RuntimeException(
+                'Invalid JSON from AI: ' . esc_html(wp_strip_all_tags(json_last_error_msg()))
+            );
         }
 
         return $decoded;
@@ -250,7 +252,9 @@ EXAMPLE;
         $decoded = json_decode($responseJson, true);
         if (json_last_error() !== JSON_ERROR_NONE)
         {
-            throw new \RuntimeException('Invalid JSON from AI: ' . json_last_error_msg());
+            throw new \RuntimeException(
+                'Invalid JSON from AI: ' . esc_html(wp_strip_all_tags(json_last_error_msg()))
+            );
         }
 
         return $decoded;

@@ -87,7 +87,7 @@ class AdminNotice
         if (!empty($_GET[self::GET_ID_PARAM]))
         {
             $id = intval(wp_unslash($_GET[self::GET_ID_PARAM]));
-            $message = str_replace('%%ID%%', $id, $message);
+            $message = str_replace('%%ID%%', (string)$id, $message);
         }
 
         return $message;

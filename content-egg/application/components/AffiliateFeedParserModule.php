@@ -6,14 +6,9 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\helpers\CsvSettingsDetector;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\Plugin;
-use \ContentEgg\application\vendor\XmlStringStreamer\Parser\StringWalker;
-use \ContentEgg\application\vendor\XmlStringStreamer\Stream\File;
-use \ContentEgg\application\vendor\XmlStringStreamer\XmlStringStreamer;
-
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
 
 /**
  * AffiliateFeedParserModule abstract class file
@@ -82,7 +77,17 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         return $errors;
     }
 
+    public function isCompressedFeed(): bool
+    {
+        return $this->isZippedFeed() || $this->isGzipFeed();
+    }
+
     public function isZippedFeed()
+    {
+        return false;
+    }
+
+    public function isGzipFeed()
     {
         return false;
     }
@@ -153,9 +158,15 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             $this->setLastImportDate(time() * -1); // set in progress flag
             $this->maybeCreateProductTable();
 
-            if (!$this->product_model->isTableExists())
-                throw new \Exception(sprintf('Table %s does not exist', $this->product_model->tableName()));
-
+            if (! $this->product_model->isTableExists())
+            {
+                throw new \Exception(
+                    sprintf(
+                        esc_html__('Table %s does not exist', 'content-egg'),
+                        esc_html($this->product_model->tableName())
+                    )
+                );
+            }
             $this->importProducts($this->getFeedUrl());
 
             return true;
@@ -212,9 +223,11 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
     /**
      * Download (and—if zipped—unzip) a feed in the most memory-efficient way.
      *
+     * Supports: http, https, ftp, ftps (incl. anonymous and file at root like /feed.xml).
+     *
      * @param string $feed_url
      * @return string Absolute path to the downloaded (or extracted) file.
-     * @throws Exception On failure to download or extract.
+     * @throws \Exception On failure to download or extract.
      */
     protected function downloadFeed(string $feed_url): string
     {
@@ -223,43 +236,341 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             require_once ABSPATH . 'wp-admin/includes/file.php';
         }
 
-        $tmp_file = \download_url($feed_url, 900);
-        if (\is_wp_error($tmp_file))
+        $scheme = strtolower((string) parse_url($feed_url, PHP_URL_SCHEME));
+
+        // 1) Stream-download (HTTP(S) via WP; FTP(S) via our helper)
+        if ($scheme === 'ftp' || $scheme === 'ftps')
         {
-            $this->setLastImportDate(0);
-            throw new \Exception(sprintf(
-                'Failed to download feed URL: %s',
-                $tmp_file->get_error_message()
-            ));
+            $tmp_file = $this->downloadViaFtp($feed_url, 900);
+            if (! $tmp_file)
+            {
+                $this->setLastImportDate(0);
+                throw new \Exception('Failed to download FTP/FTPS feed (unknown error).');
+            }
+        }
+        else
+        {
+            $tmp_file = \download_url($feed_url, 900);
+            if (\is_wp_error($tmp_file))
+            {
+                $this->setLastImportDate(0);
+                throw new \Exception(
+                    sprintf(
+                        esc_html__('Failed to download feed URL: %s', 'content-egg'),
+                        esc_html($tmp_file->get_error_message())
+                    )
+                );
+            }
         }
 
-        // 3) If it’s not a ZIP, return the downloaded path
-        if (! $this->isZippedFeed())
+        // 2) If no archive handling, return as-is
+        if (! $this->isCompressedFeed())
         {
             return $tmp_file;
         }
 
-        // 4) ZIP → extract
-        $dest_dir = trailingslashit($this->getDatafeedDir())
-            . wp_unique_filename($this->getDatafeedDir(), basename($tmp_file) . '-unzipped-dir');
-
-        $result = $this->unzipSingleFeed($tmp_file, $dest_dir);
-        if (is_wp_error($result))
+        // 3) ZIP → extract
+        if ($this->isZippedFeed())
         {
+            $dest_dir = trailingslashit($this->getDatafeedDir())
+                . wp_unique_filename($this->getDatafeedDir(), basename($tmp_file) . '-unzipped-dir');
+
+            $result = $this->unzipSingleFeed($tmp_file, $dest_dir);
+            if (is_wp_error($result))
+            {
+                @unlink($tmp_file);
+                $this->setLastImportDate(0);
+                throw new \Exception(
+                    sprintf(
+                        esc_html__('Unable to unzip feed archive: %s', 'content-egg'),
+                        esc_html($result->get_error_message())
+                    )
+                );
+            }
+
             @unlink($tmp_file);
-            $this->setLastImportDate(0);
-            throw new \Exception(sprintf(
-                'Unable to unzip feed archive: %s',
-                $result->get_error_message()
-            ));
+            $this->rmdir = $dest_dir; // keep for later cleanup
+            return $result;
         }
 
-        // 5) Cleanup the original downloaded ZIP
+        // 3) GZ → decompress to a sibling file and return it
+        if ($this->isGzipFeed())
+        {
+            try
+            {
+                $out = $this->gunzipToFile($tmp_file); // see helper below
+                return $out;
+            }
+            catch (\Throwable $e)
+            {
+                @unlink($tmp_file);
+                $this->setLastImportDate(0);
+                throw new \Exception(
+                    'Unable to gunzip feed: ' . esc_html(wp_strip_all_tags($e->getMessage()))
+                );
+            }
+        }
+    }
+
+    /**
+     * Download via FTP/FTPS to a temp file, streaming to disk.
+     * Tries: cURL → PHP FTP extension → FTP stream wrapper (FTP only).
+     *
+     * @param string $ftp_url  ftp://user:pass@host/path/file.xml or ftps://...
+     * @param int    $timeout  Total timeout (seconds)
+     * @return string Absolute path to temp file.
+     * @throws \Exception
+     */
+    protected function downloadViaFtp(string $ftp_url, int $timeout = 900): string
+    {
+        if (! function_exists('wp_tempnam'))
+        {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+
+        $parts = parse_url($ftp_url);
+        if (! $parts || empty($parts['host']))
+        {
+            throw new \Exception(
+                esc_html__('Invalid FTP/FTPS URL.', 'content-egg')
+            );
+        }
+
+        // Normalize path (support `/feed.xml` and deeper paths). Must point to a file.
+        $path = isset($parts['path']) ? (string) $parts['path'] : '';
+        if ($path === '' || substr($path, -1) === '/')
+        {
+            $safe = $this->redactUrlCredentials($ftp_url);
+            throw new \Exception(
+                sprintf(
+                    esc_html__('FTP URL must point to a file (got: %s).', 'content-egg'),
+                    esc_html($safe)
+                )
+            );
+        }
+
+        // Create temp file
+        $tmp_file = \wp_tempnam($ftp_url);
+        if (! $tmp_file || ! is_writable($tmp_file))
+        {
+            throw new \Exception('Could not create a temporary file for FTP download.');
+        }
+
+        $errors = [];
+
+        // --- TRY 1: cURL (supports FTP + FTPS; best option) ---
+        if (function_exists('curl_init'))
+        {
+            $fh = @fopen($tmp_file, 'wb');
+            if (! $fh)
+            {
+                @unlink($tmp_file);
+                throw new \Exception('Failed opening temp file for writing (FTP).');
+            }
+
+            $ch = curl_init();
+            $ua = 'ContentEgg/FTPDownloader (+' . home_url('/') . ')';
+
+            $connectTimeout = min(30, max(5, (int) floor($timeout / 3)));
+
+            $curlopts = [
+                CURLOPT_URL            => $ftp_url,
+                CURLOPT_FILE           => $fh,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS      => 2,
+                CURLOPT_CONNECTTIMEOUT => $connectTimeout,
+                CURLOPT_TIMEOUT        => $timeout,
+                CURLOPT_USERAGENT      => $ua,
+                CURLOPT_NOPROGRESS     => true,
+                CURLOPT_TRANSFERTEXT   => false, // binary
+            ];
+
+            // Passive is default, but enforce if supported
+            if (defined('CURLOPT_FTP_USE_EPSV'))
+            {
+                $curlopts[CURLOPT_FTP_USE_EPSV] = true;
+            }
+
+            curl_setopt_array($ch, $curlopts);
+            $ok    = curl_exec($ch);
+            $errno = curl_errno($ch);
+            $err   = curl_error($ch);
+            curl_close($ch);
+            fclose($fh);
+
+            if ($ok && $errno === 0 && @filesize($tmp_file) > 0)
+            {
+                return $tmp_file;
+            }
+
+            // Cleanup and fall through to next method
+            @unlink($tmp_file);
+            $errors[] = $err ? 'cURL: ' . $err : 'cURL transfer error';
+
+            // Recreate temp file for next attempt
+            $tmp_file = \wp_tempnam($ftp_url);
+            if (! $tmp_file)
+            {
+                throw new \Exception('Could not re-create a temporary file after cURL failure.');
+            }
+        }
+
+        // --- TRY 2: PHP FTP extension (FTP + FTPS via ftp_ssl_connect) ---
+        if (function_exists('ftp_connect') || function_exists('ftp_ssl_connect'))
+        {
+            $scheme = strtolower(isset($parts['scheme']) ? (string) $parts['scheme'] : 'ftp');
+
+            $host  = (string) $parts['host'];
+            $port  = isset($parts['port'])
+                ? (int) $parts['port']
+                : ($scheme === 'ftps' ? 21 /* explicit TLS default */ : 21);
+
+            $user  = isset($parts['user']) ? rawurldecode((string) $parts['user']) : 'anonymous';
+            $pass  = isset($parts['pass']) ? rawurldecode((string) $parts['pass']) : 'anonymous@';
+
+            // Connect
+            if ($scheme === 'ftps' && function_exists('ftp_ssl_connect'))
+            {
+                $conn = @ftp_ssl_connect($host, $port, min($timeout, 30));
+            }
+            else
+            {
+                $conn = @ftp_connect($host, $port, min($timeout, 30));
+            }
+
+            if ($conn)
+            {
+                if (function_exists('ftp_set_option') && defined('FTP_TIMEOUT_SEC'))
+                {
+                    @ftp_set_option($conn, FTP_TIMEOUT_SEC, max(5, min($timeout, 90)));
+                }
+
+                if (@ftp_login($conn, $user, $pass))
+                {
+                    @ftp_pasv($conn, true);
+                    // Download (binary)
+                    $ok = @ftp_get($conn, $tmp_file, $path, defined('FTP_BINARY') ? FTP_BINARY : 2);
+                    @ftp_close($conn);
+
+                    if ($ok && @filesize($tmp_file) > 0)
+                    {
+                        return $tmp_file;
+                    }
+                    else
+                    {
+                        $errors[] = 'FTP extension: transfer failed';
+                    }
+                }
+                else
+                {
+                    @ftp_close($conn);
+                    $errors[] = 'FTP extension: authentication failed';
+                }
+            }
+            else
+            {
+                $errors[] = 'FTP extension: unable to connect';
+            }
+
+            @unlink($tmp_file);
+            $tmp_file = \wp_tempnam($ftp_url);
+            if (! $tmp_file)
+            {
+                throw new \Exception('Could not re-create a temporary file after FTP extension failure.');
+            }
+        }
+
+        // --- TRY 3: FTP stream wrapper (FTP only; no FTPS support) ---
+        $scheme = strtolower(isset($parts['scheme']) ? (string) $parts['scheme'] : 'ftp');
+        if (
+            $scheme === 'ftp'
+            && filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOLEAN)
+            && in_array('ftp', (array) @stream_get_wrappers(), true)
+        )
+        {
+            $in = @fopen($ftp_url, 'rb', false);
+            if ($in)
+            {
+                $out = @fopen($tmp_file, 'wb');
+                if ($out)
+                {
+                    $copied = @stream_copy_to_stream($in, $out);
+                    @fclose($in);
+                    @fclose($out);
+                    if ($copied !== false && $copied > 0)
+                    {
+                        return $tmp_file;
+                    }
+                    $errors[] = 'FTP wrapper: copy failed';
+                }
+                else
+                {
+                    @fclose($in);
+                    $errors[] = 'FTP wrapper: cannot open temp file for writing';
+                }
+            }
+            else
+            {
+                $errors[] = 'FTP wrapper: cannot open remote stream';
+            }
+        }
+        else
+        {
+            if ($scheme === 'ftp')
+            {
+                $errors[] = 'FTP wrapper not available';
+            }
+            else
+            { // ftps
+                $errors[] = 'FTPS not supported by PHP stream wrapper';
+            }
+        }
+
         @unlink($tmp_file);
 
-        // 6) Store for later cleanup, return the extracted file path
-        $this->rmdir = $dest_dir;
-        return $result;
+        $safeUrl = $this->redactUrlCredentials($ftp_url);
+        $msg = implode('; ', array_filter($errors));
+        throw new \Exception(
+            sprintf(
+                esc_html__('Failed to download %s: %s', 'content-egg'),
+                esc_html($safeUrl),
+                esc_html($msg ?: 'no supported method available')
+            )
+        );
+    }
+
+    /**
+     * Redact credentials in a URL (user:pass@host → ***:***@host).
+     *
+     * @param string $url
+     * @return string
+     */
+    protected function redactUrlCredentials(string $url): string
+    {
+        $parts = parse_url($url);
+        if (! $parts)
+        {
+            return $url;
+        }
+
+        $scheme = isset($parts['scheme']) ? $parts['scheme'] . '://' : '';
+        $auth   = '';
+        if (! empty($parts['user']))
+        {
+            $auth = '***';
+            if (! empty($parts['pass']))
+            {
+                $auth .= ':***';
+            }
+            $auth .= '@';
+        }
+        $host  = isset($parts['host']) ? $parts['host'] : '';
+        $port  = isset($parts['port']) ? ':' . $parts['port'] : '';
+        $path  = isset($parts['path']) ? $parts['path'] : '';
+        $query = isset($parts['query']) ? '?' . $parts['query'] : '';
+        $frag  = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';
+
+        return $scheme . $auth . $host . $port . $path . $query . $frag;
     }
 
     /**
@@ -425,24 +736,53 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
     protected function processFeedCsv($file)
     {
-        $encoding = $this->config('encoding', 'UTF-8');
-        $csv_settings = $this->detectCsvSettings($file);
-        $delimiter = $csv_settings['delimiter'];
-        $enclosure = $csv_settings['enclosure'];
+        $encoding      = $this->config('encoding', 'UTF-8');
         $in_stock_only = $this->config('in_stock', false);
 
-        $handle = fopen($file, 'r');
+        // Read optional manual overrides
+        $custom_csv_delimiter = $this->config('csv_delimiter', 'auto'); // 'auto', "\t", ';', ',', '|'
+        $custom_csv_enclosure = $this->config('csv_enclosure', 'auto'); // 'auto', '"', "'", 'none'
 
+        // Decide delimiter and enclosure:
+        // If BOTH are set (non-auto), skip detection entirely.
+        if ($custom_csv_delimiter !== 'auto' && $custom_csv_enclosure !== 'auto')
+        {
+            $delimiter = (string) $custom_csv_delimiter;
+            $enclosure = ($custom_csv_enclosure === 'none') ? "\0" : (string) $custom_csv_enclosure;
+        }
+        else
+        {
+            // Detect once
+            $csv_settings = $this->detectCsvSettings($file);
+
+            // Apply overrides individually (if any)
+            $delimiter = ($custom_csv_delimiter !== 'auto')
+                ? (string) $custom_csv_delimiter
+                : $csv_settings['delimiter'];
+
+            if ($custom_csv_enclosure === 'none')
+            {
+                $enclosure = "\0";
+            }
+            else
+            {
+                $enclosure = ($custom_csv_enclosure !== 'auto')
+                    ? (string) $custom_csv_enclosure
+                    : $csv_settings['enclosure'];
+            }
+        }
+
+        // Open file AFTER deciding settings
+        $handle = fopen($file, 'r');
         if (!$handle)
         {
             $this->setLastImportError('Cannot open CSV file.');
             return;
         }
 
-        $fields   = [];
-        $products = [];
-
-        $inserted = 0;
+        $fields    = [];
+        $products  = [];
+        $inserted  = 0;
 
         $skipped = [
             'invalid_column_count' => 0,
@@ -451,7 +791,9 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             'out_of_stock'         => 0,
         ];
 
-        while (($data = fgetcsv($handle, 0, $delimiter, $enclosure)) !== false)
+        $escape = '\\';
+
+        while (($data = fgetcsv($handle, null, $delimiter, $enclosure, $escape)) !== false)
         {
             $data = self::convertEncoding($data, $encoding);
 
@@ -463,6 +805,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 continue;
             }
 
+            // Trim spaces and plain quotes around values (keeps inner quotes)
             $data = array_map(static fn($item) => trim((string)$item, " '"), $data);
 
             // ignore unnamed columns
@@ -490,7 +833,6 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                     ++$skipped['exception'];
                     continue;
                 }
-
                 $this->setLastImportError($e->getMessage());
                 fclose($handle);
                 return;
@@ -545,99 +887,6 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         }
 
         fclose($handle);
-    }
-
-    protected function processFeedXml($file)
-    {
-        $uniqueNode = $this->getProductNode($file, 'xml');
-
-        if (!$uniqueNode)
-        {
-            $uniqueNode = 'product';
-        }
-
-        $streamer = \ContentEgg\application\vendor\XmlStringStreamer\XmlStringStreamer::createUniqueNodeParser($file, array('uniqueNode' => $uniqueNode));
-        $in_stock_only = $this->config('in_stock', false);
-
-        $i = 0;
-        $products = array();
-
-        libxml_use_internal_errors(true);
-
-        $encoding = $this->config('encoding', 'UTF-8');
-
-        while ($node_string = $streamer->getNode())
-        {
-            if ($encoding != 'UTF-8')
-            {
-                $node_string = iconv($encoding, 'UTF-8//TRANSLIT//IGNORE', $node_string);
-            }
-
-            $node = simplexml_load_string($node_string);
-            if ($node === false)
-            {
-                $err_mess = 'Unable to load XML source.';
-                if ($error = libxml_get_last_error())
-                {
-                    $err_mess .= $error->message;
-                }
-
-                $this->setLastImportError($err_mess);
-
-                return;
-            }
-
-            $data = $this->mapXmlData($node);
-
-            try
-            {
-                $product = $this->feedProductPrepare($data);
-            }
-            catch (\Exception $e)
-            {
-                if ($i > 0)
-                {
-                    continue;
-                }
-
-                $this->setLastImportError($e->getMessage());
-
-                return;
-            }
-
-            if (!$product)
-            {
-                continue;
-            }
-
-            if (!empty($product['ean']))
-            {
-                $product['ean'] = TextHelper::fixEan($product['ean']);
-            }
-
-            if ($in_stock_only && $product['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
-            {
-                continue;
-            }
-
-            $products[] = $product;
-            $i++;
-            if ($i % static::MULTIPLE_INSERT_ROWS == 0)
-            {
-                $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
-                $products = array();
-            }
-        }
-
-        if ($i == 0)
-        {
-            $this->setLastImportError('Product node not found in the feed.');
-        }
-
-        if ($products)
-        {
-            $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
-        }
     }
 
     protected function processFeedJson($file)
@@ -718,6 +967,407 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             }
             $i++;
         }
+        if ($products)
+        {
+            $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
+        }
+    }
+
+    /**
+     * Process a feed XML file using a selectable XML processor.
+     */
+    protected function processFeedXml($file)
+    {
+        $processor = (string) $this->config('xml_processor', 'XmlStringStreamer');
+        if ($processor === 'XmlReader')
+        {
+            $this->processFeedXmlReader($file);
+        }
+        else
+        {
+            // Default (and back-compat)
+            $this->processFeedXmlStreamer($file);
+        }
+    }
+
+    /** ===========================
+     *  Shared small helpers
+     *  ===========================
+     */
+
+    /** Sanitize a node’s XML string to avoid libxml choking on bad bytes */
+    protected function cleanXmlString($xml)
+    {
+        // Strip UTF-8 BOM if present
+        $xml = preg_replace('/^\xEF\xBB\xBF/', '', $xml);
+        // Remove non-printable control chars (keep newline & tab)
+        $xml = preg_replace('/[^\P{C}\n\t]/u', '', $xml);
+        // Ensure valid UTF-8 (repairs broken sequences)
+        $xml = mb_convert_encoding($xml, 'UTF-8', 'UTF-8');
+        return trim($xml);
+    }
+
+    /** Libxml flags we’ll use in both paths */
+    protected function getLibxmlFlags()
+    {
+        $flags = 0;
+        if (defined('LIBXML_NOCDATA'))
+        {
+            $flags |= LIBXML_NOCDATA;
+        }
+        if (defined('LIBXML_NONET'))
+        {
+            $flags |= LIBXML_NONET;
+        }
+        if (defined('LIBXML_PARSEHUGE'))
+        {
+            $flags |= LIBXML_PARSEHUGE;
+        }
+        return $flags;
+    }
+
+    /** Identify real top-level product nodes (skip inner <URL><product>) */
+    protected function isTopLevelProductNode(\SimpleXMLElement $n)
+    {
+        // Most “product” entries in these feeds have @product_id
+        return isset($n['product_id']) && (string)$n['product_id'] !== '';
+    }
+
+    /** =======================================
+     *  XmlStringStreamer implementation (hardened)
+     *  ======================================= */
+    protected function processFeedXmlStreamer($file)
+    {
+        if (!is_string($file) || !is_readable($file) || filesize($file) < 16)
+        {
+            $this->setLastImportError('Feed file is empty or unreadable.');
+            return;
+        }
+
+        $uniqueNode = $this->getProductNode($file, 'xml');
+        if (!$uniqueNode)
+        {
+            $uniqueNode = 'product';
+        }
+
+        // Create the streamer
+        $streamer = \ContentEgg\application\vendor\XmlStringStreamer\XmlStringStreamer::createUniqueNodeParser(
+            $file,
+            array('uniqueNode' => $uniqueNode)
+        );
+
+        $in_stock_only = (bool) $this->config('in_stock', false);
+        $encoding      = (string) $this->config('encoding', 'UTF-8');
+        $xmlFlags      = $this->getLibxmlFlags();
+
+        libxml_use_internal_errors(true);
+
+        $i = 0;
+        $products = array();
+
+        while ($node_string = $streamer->getNode())
+        {
+            // Encoding normalization (optional)
+            if ($encoding !== 'UTF-8')
+            {
+                $converted = @iconv($encoding, 'UTF-8//TRANSLIT//IGNORE', $node_string);
+                if ($converted !== false)
+                {
+                    $node_string = $converted;
+                }
+            }
+
+            // Clean bytes
+            $node_string = $this->cleanXmlString($node_string);
+            if ($node_string === '')
+            {
+                continue;
+            }
+
+            libxml_clear_errors();
+            $node = @simplexml_load_string($node_string, 'SimpleXMLElement', $xmlFlags);
+
+            if ($node === false)
+            {
+                $error = libxml_get_last_error();
+                $msg   = $error ? trim($error->message) : 'unknown XML error';
+
+                // If the chunk contains multiple siblings → wrap and iterate
+                if ($error && stripos($msg, 'extra content at the end of the document') !== false)
+                {
+                    libxml_clear_errors();
+                    $wrapped = '<__ce_wrapper>' . $node_string . '</__ce_wrapper>';
+                    $root    = @simplexml_load_string($wrapped, 'SimpleXMLElement', $xmlFlags);
+
+                    if ($root !== false)
+                    {
+                        // Prefer only elements that look like top-level products
+                        $candidates = $root->xpath('./' . $uniqueNode . '[@product_id]');
+                        if ($candidates === false || $candidates === null)
+                        {
+                            // Fallback: iterate all named nodes; we’ll filter below
+                            $candidates = $root->{$uniqueNode};
+                        }
+
+                        foreach ($candidates as $n)
+                        {
+                            if (!$n instanceof \SimpleXMLElement)
+                            {
+                                continue;
+                            }
+                            // Skip inner URL/product, etc.
+                            if ($uniqueNode === 'product' && !$this->isTopLevelProductNode($n))
+                            {
+                                continue;
+                            }
+
+                            $data = $this->mapXmlData($n);
+
+                            try
+                            {
+                                $product = $this->feedProductPrepare($data);
+                            }
+                            catch (\Exception $e)
+                            {
+                                if ($i > 0)
+                                {
+                                    continue;
+                                }
+                                $this->setLastImportError($e->getMessage());
+                                return;
+                            }
+
+                            if (!$product)
+                            {
+                                continue;
+                            }
+                            if (!empty($product['ean']))
+                            {
+                                $product['ean'] = TextHelper::fixEan($product['ean']);
+                            }
+                            if ($in_stock_only && $product['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+                            {
+                                continue;
+                            }
+
+                            $products[] = $product;
+                            $i++;
+                            if ($i % static::MULTIPLE_INSERT_ROWS == 0)
+                            {
+                                $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
+                                $products = array();
+                            }
+                        }
+                        // Done with this chunk
+                        continue;
+                    }
+                }
+
+                // Hard failure for this chunk
+                $this->setLastImportError(
+                    'Unable to load XML source. ' . $msg
+                        . ' (line ' . (int)($error ? $error->line : 0) . ', col ' . (int)($error ? $error->column : 0) . ')'
+                );
+                return;
+            }
+
+            // Normal single-node path; guard against inner URL/product when uniqueNode is 'product'
+            if ($uniqueNode === 'product' && !$this->isTopLevelProductNode($node))
+            {
+                continue;
+            }
+
+            $data = $this->mapXmlData($node);
+
+            try
+            {
+                $product = $this->feedProductPrepare($data);
+            }
+            catch (\Exception $e)
+            {
+                if ($i > 0)
+                {
+                    continue;
+                }
+                $this->setLastImportError($e->getMessage());
+                return;
+            }
+
+            if (!$product)
+            {
+                continue;
+            }
+            if (!empty($product['ean']))
+            {
+                $product['ean'] = TextHelper::fixEan($product['ean']);
+            }
+            if ($in_stock_only && $product['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+            {
+                continue;
+            }
+
+            $products[] = $product;
+            $i++;
+            if ($i % static::MULTIPLE_INSERT_ROWS == 0)
+            {
+                $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
+                $products = array();
+            }
+        }
+
+        if ($i == 0)
+        {
+            $this->setLastImportError('Product node not found in the feed.');
+        }
+
+        if ($products)
+        {
+            $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
+        }
+    }
+
+    /** ==================================
+     *  XmlReader implementation (robust)
+     *  ================================== */
+    protected function processFeedXmlReader($file)
+    {
+        if (!is_string($file) || !is_readable($file) || filesize($file) < 16)
+        {
+            $this->setLastImportError('Feed file is empty or unreadable.');
+            return;
+        }
+
+        $uniqueNode = $this->getProductNode($file, 'xml');
+        if (!$uniqueNode)
+        {
+            $uniqueNode = 'product';
+        }
+
+        $in_stock_only = (bool) $this->config('in_stock', false);
+        $encoding      = (string) $this->config('encoding', 'UTF-8');
+        $xmlFlags      = $this->getLibxmlFlags();
+
+        libxml_use_internal_errors(true);
+
+        $reader = new \XMLReader();
+        $openFlags = 0;
+        if (defined('LIBXML_NONET'))
+        {
+            $openFlags |= LIBXML_NONET;
+        }
+        if (defined('LIBXML_PARSEHUGE'))
+        {
+            $openFlags |= LIBXML_PARSEHUGE;
+        }
+
+        if (!$reader->open($file, null, $openFlags))
+        {
+            $this->setLastImportError('Unable to open XML file for streaming.');
+            return;
+        }
+
+        $i = 0;
+        $products = array();
+
+        while ($reader->read())
+        {
+            if ($reader->nodeType !== \XMLReader::ELEMENT || $reader->name !== $uniqueNode)
+            {
+                continue;
+            }
+
+            // Skip nested <URL><product> when unique node is 'product'
+            if ($uniqueNode === 'product')
+            {
+                $productId = $reader->getAttribute('product_id');
+                if ($productId === null || $productId === '')
+                {
+                    // Fast-forward past this nested element
+                    if ($reader->isEmptyElement)
+                    {
+                        continue;
+                    }
+                    $reader->next($uniqueNode);
+                    continue;
+                }
+            }
+
+            $nodeXml = $reader->readOuterXML();
+            if ($nodeXml === false || $nodeXml === '')
+            {
+                continue;
+            }
+
+            if ($encoding !== 'UTF-8')
+            {
+                $converted = @iconv($encoding, 'UTF-8//TRANSLIT//IGNORE', $nodeXml);
+                if ($converted !== false)
+                {
+                    $nodeXml = $converted;
+                }
+            }
+
+            $nodeXml = $this->cleanXmlString($nodeXml);
+
+            libxml_clear_errors();
+            $node = @simplexml_load_string($nodeXml, 'SimpleXMLElement', $xmlFlags);
+            if ($node === false)
+            {
+                $err = libxml_get_last_error();
+                // Skip bad product but keep importing others
+                $this->setLastImportError('Unable to load XML source for a product: ' . ($err ? trim($err->message) : 'unknown'));
+                continue;
+            }
+
+            $data = $this->mapXmlData($node);
+
+            try
+            {
+                $product = $this->feedProductPrepare($data);
+            }
+            catch (\Exception $e)
+            {
+                if ($i > 0)
+                {
+                    continue;
+                }
+                $this->setLastImportError($e->getMessage());
+                $reader->close();
+                return;
+            }
+
+            if (!$product)
+            {
+                continue;
+            }
+
+            if (!empty($product['ean']))
+            {
+                $product['ean'] = TextHelper::fixEan($product['ean']);
+            }
+
+            if ($in_stock_only && $product['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+            {
+                continue;
+            }
+
+            $products[] = $product;
+            $i++;
+
+            if ($i % static::MULTIPLE_INSERT_ROWS == 0)
+            {
+                $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
+                $products = array();
+            }
+        }
+
+        $reader->close();
+
+        if ($i == 0)
+        {
+            $this->setLastImportError('Product node not found in the feed.');
+        }
+
         if ($products)
         {
             $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
@@ -885,65 +1535,11 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         return $datafeed_dir;
     }
+
     protected function detectCsvSettings($file)
     {
-        $delimiters = [';' => 0, ',' => 0, "\t" => 0, '|' => 0];
-        $enclosures = ['"' => 0, "'" => 0];
-
-        $handle = fopen($file, "r");
-        if (!$handle)
-        {
-            return ['delimiter' => ',', 'enclosure' => '"']; // fallback
-        }
-
-        $sampleLines = [];
-        for ($i = 0; $i < 5 && !feof($handle); $i++)
-        {
-            $line = fgets($handle);
-            if ($line !== false)
-            {
-                $sampleLines[] = $line;
-            }
-        }
-        fclose($handle);
-
-        // Evaluate delimiters
-        foreach ($delimiters as $delimiter => &$count)
-        {
-            $totalFields = 0;
-            foreach ($sampleLines as $line)
-            {
-                $fields = str_getcsv($line, $delimiter);
-                $totalFields += count($fields);
-            }
-            $count = $totalFields;
-        }
-
-        $bestDelimiter = array_search(max($delimiters), $delimiters);
-
-        // Evaluate enclosures
-        foreach ($enclosures as $enclosure => &$count)
-        {
-            $totalMatches = 0;
-            foreach ($sampleLines as $line)
-            {
-                $matches = substr_count($line, $enclosure);
-                $totalMatches += $matches;
-            }
-            $count = $totalMatches;
-        }
-
-        // Prefer '"' if tied or not found
-        $bestEnclosure = array_search(max($enclosures), $enclosures);
-        if (!$bestEnclosure)
-        {
-            $bestEnclosure = '"';
-        }
-
-        return [
-            'delimiter' => $bestDelimiter,
-            'enclosure' => $bestEnclosure,
-        ];
+        $detector = new CsvSettingsDetector();
+        return $detector->detect($file);
     }
 
     public function fatalHandler()
@@ -961,7 +1557,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         $message = $error['message'];
         if (strstr($message, 'Allowed memory size'))
         {
-            $message .= '. ' . sprintf(__('Your data feed is too large and cannot be imported. Use a smaller feed or increase <a target="_blank" href="%s">WP_MAX_MEMORY_LIMIT</a>.', 'content-egg'), 'https://wordpress.org/support/article/editing-wp-config-php/#increasing-memory-allocated-to-php');
+            $message .= '. ' . __('Your data feed is too large and cannot be imported. Use a smaller feed or increase WP_MAX_MEMORY_LIMIT.', 'content-egg');
         }
 
         $this->setLastImportError($message);
@@ -1091,46 +1687,240 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         return $data;
     }
 
-    function detectLikelyProductNode(string $filePath, string $format, int $sampleCount = 100): ?string
+    /**
+     * Detect the most likely product node name by sampling the first-level children
+     * of the XML root. Honors the "xml_processor" option: XmlReader or XmlStringStreamer.
+     *
+     * @param string $filePath
+     * @param string $format     Expected 'xml'; others return null.
+     * @param int    $sampleCount How many first-level child elements to sample before deciding.
+     * @return string|null
+     */
+    public function detectLikelyProductNode(string $filePath, string $format, int $sampleCount = 100): ?string
     {
-        $stream = new File($filePath);
-        $parser = new StringWalker();
-        $streamer = new XmlStringStreamer($parser, $stream);
-
-        $childNameCounts = [];
-
-        while ($node = $streamer->getNode())
+        if (strtolower($format) !== 'xml' || !is_readable($filePath))
         {
-            $xml = @simplexml_load_string($node);
-            if (!$xml)
-            {
-                continue;
-            }
+            return null;
+        }
 
-            foreach ($xml->children() as $child)
+        $processor = (string) $this->config('xml_processor', 'XmlStringStreamer');
+
+        if ($processor === 'XmlReader' && class_exists('\XMLReader'))
+        {
+            return $this->detectProductNodeWithXmlReader($filePath, $sampleCount);
+        }
+
+        // Fallback to streamer (default/back-compat)
+        return $this->detectProductNodeWithStreamer($filePath, $sampleCount);
+    }
+
+    /**
+     * XmlReader-based detector: counts element names at depth=1 (direct children of root).
+     */
+    protected function detectProductNodeWithXmlReader(string $filePath, int $sampleCount): ?string
+    {
+        $counts = [];
+
+        libxml_use_internal_errors(true);
+
+        $reader = new \XMLReader();
+        $flags  = 0;
+        if (defined('LIBXML_NONET'))
+        {
+            $flags |= LIBXML_NONET;
+        }
+        if (defined('LIBXML_PARSEHUGE'))
+        {
+            $flags |= LIBXML_PARSEHUGE;
+        }
+
+        if (!$reader->open($filePath, null, $flags))
+        {
+            return null;
+        }
+
+        // Move to the root element
+        while ($reader->read() && $reader->nodeType !== \XMLReader::ELEMENT)
+        { /* skip */
+        }
+        if ($reader->nodeType !== \XMLReader::ELEMENT)
+        {
+            $reader->close();
+            return null;
+        }
+        $rootDepth = $reader->depth; // usually 0
+
+        // Count direct children of root (depth = rootDepth + 1)
+        while ($reader->read())
+        {
+            if ($reader->nodeType === \XMLReader::ELEMENT && $reader->depth === $rootDepth + 1)
             {
-                $name = $child->getName();
-                if (!isset($childNameCounts[$name]))
+                $name = $reader->name;
+                if (!isset($counts[$name]))
                 {
-                    $childNameCounts[$name] = 0;
+                    $counts[$name] = 0;
                 }
-                $childNameCounts[$name]++;
-            }
+                $counts[$name]++;
 
-            // Stop early if we have enough data
-            $totalSampled = array_sum($childNameCounts);
-            if ($totalSampled >= $sampleCount)
+                // stop early
+                $total = array_sum($counts);
+                if ($total >= $sampleCount)
+                {
+                    break;
+                }
+            }
+            // Fast-exit when we leave the root scope
+            if ($reader->depth < $rootDepth)
             {
                 break;
             }
         }
 
-        if (empty($childNameCounts))
+        $reader->close();
+
+        if (!$counts)
         {
             return null;
         }
 
-        arsort($childNameCounts);
-        return array_key_first($childNameCounts); // Most common tag name
+        arsort($counts);
+        return array_key_first($counts);
+    }
+
+    /**
+     * XmlStringStreamer-based detector: samples nodes and counts their direct child names.
+     * Back-compat path when XmlReader is not selected/available.
+     */
+    protected function detectProductNodeWithStreamer(string $filePath, int $sampleCount): ?string
+    {
+        // Using the vendor streamer directly (generic walker; we don't yet know the unique node)
+        $stream  = new \ContentEgg\application\vendor\XmlStringStreamer\Stream\File($filePath);
+        $parser  = new \ContentEgg\application\vendor\XmlStringStreamer\Parser\StringWalker();
+        $streamer = new \ContentEgg\application\vendor\XmlStringStreamer\XmlStringStreamer($parser, $stream);
+
+        libxml_use_internal_errors(true);
+
+        $counts = [];
+
+        while ($node = $streamer->getNode())
+        {
+            // Be tolerant of bad bytes
+            $node = $this->cleanXmlStringForDetection($node);
+
+            $xml = @simplexml_load_string(
+                $node,
+                'SimpleXMLElement',
+                (defined('LIBXML_NONET') ? LIBXML_NONET : 0) | (defined('LIBXML_PARSEHUGE') ? LIBXML_PARSEHUGE : 0)
+            );
+            if (!$xml)
+            {
+                continue;
+            }
+
+            // Count direct children of this element (works when node is the root or a large container)
+            foreach ($xml->children() as $child)
+            {
+                $name = $child->getName();
+                if (!isset($counts[$name]))
+                {
+                    $counts[$name] = 0;
+                }
+                $counts[$name]++;
+            }
+
+            // Stop early if enough samples gathered
+            $total = array_sum($counts);
+            if ($total >= $sampleCount)
+            {
+                break;
+            }
+        }
+
+        if (!$counts)
+        {
+            return null;
+        }
+
+        arsort($counts);
+        return array_key_first($counts);
+    }
+
+    /**
+     * Light sanitizer for detection (avoid libxml choking during sampling).
+     */
+    protected function cleanXmlStringForDetection(string $xml): string
+    {
+        // Strip UTF-8 BOM
+        $xml = preg_replace('/^\xEF\xBB\xBF/', '', $xml);
+        // Remove non-printable control chars except \n and \t
+        $xml = preg_replace('/[^\P{C}\n\t]/u', '', $xml);
+        // Ensure valid UTF-8
+        $xml = mb_convert_encoding($xml, 'UTF-8', 'UTF-8');
+        return trim($xml);
+    }
+
+    /**
+     * Decompress a .gz file to a sibling file (streamed, low-memory).
+     * Returns the decompressed file path. Deletes the original .gz on success.
+     *
+     * @throws \Exception
+     */
+    protected function gunzipToFile(string $gz_path): string
+    {
+        if (!file_exists($gz_path) || !is_readable($gz_path))
+        {
+            throw new \Exception('GZIP file does not exist or is not readable.');
+        }
+        if (!function_exists('gzopen'))
+        {
+            throw new \Exception('zlib is not available on this PHP installation.');
+        }
+
+        $dir = dirname($gz_path);
+        $base = basename($gz_path);
+        $out  = preg_replace('/\.gz$/i', '', $base);
+        if (!$out || $out === $base)
+        {
+            $out = $base . '.out';
+        }
+        $out_path = trailingslashit($dir) . $out;
+
+        $in = @gzopen($gz_path, 'rb');
+        if (!$in)
+        {
+            throw new \Exception('Unable to open gzip file for reading.');
+        }
+        $fh = @fopen($out_path, 'wb');
+        if (!$fh)
+        {
+            @gzclose($in);
+            throw new \Exception('Unable to open output file for gzip decompression.');
+        }
+
+        // Stream in chunks to avoid memory spikes
+        while (!gzeof($in))
+        {
+            $buf = gzread($in, 131072); // 128 KiB
+            if ($buf === false)
+            {
+                @gzclose($in);
+                @fclose($fh);
+                @unlink($out_path);
+                throw new \Exception('Gzip read error.');
+            }
+            if (fwrite($fh, $buf) === false)
+            {
+                @gzclose($in);
+                @fclose($fh);
+                @unlink($out_path);
+                throw new \Exception('Gzip write error.');
+            }
+        }
+
+        @gzclose($in);
+        @fclose($fh);
+        @unlink($gz_path); // remove the .gz source
+
+        return $out_path;
     }
 }

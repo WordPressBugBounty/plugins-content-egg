@@ -19,7 +19,6 @@ defined('\ABSPATH') || exit;
  */
 class DataRestController extends \WP_REST_Controller
 {
-
     protected $namespace = 'cegg/v1/data';
 
     const VERSION = 1;

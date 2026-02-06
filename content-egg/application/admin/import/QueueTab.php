@@ -8,9 +8,7 @@ use ContentEgg\application\admin\import\ProductImportScheduler;
 use ContentEgg\application\admin\import\ProductImportService;
 use ContentEgg\application\helpers\AdminHelper;
 use ContentEgg\application\models\ImportQueueModel;
-use ContentEgg\application\Plugin;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\Plugin;;
 
 defined('ABSPATH') || exit;
 

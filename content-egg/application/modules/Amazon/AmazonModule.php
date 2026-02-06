@@ -655,19 +655,6 @@ class AmazonModule extends AffiliateParserModule
 			$extra   = json_decode(json_encode($extra), false);
 		}
 
-		// Parent ASIN do not have offers. Return first(???) Offer From Item Variations
-		// @link: http://docs.aws.amazon.com/AWSECommerceService/latest/DG/ItemsThatDoNotHaveOffers.html
-		/*
-		  if (!isset($r['Offers']['Offer']) && isset($r['Variations']) && isset($r['Variations']['Item']))
-		  {
-		  if (!isset($r['Variations']['Item'][0]) && isset($r['Variations']['Item']['ASIN']))
-		  $r['Variations']['Item'] = array($r['Variations']['Item']);
-		  $r['Offers'] = $r['Variations']['Item'][0]['Offers'];
-		  // $r['OfferSummary'] = $r['VariationSummary'];
-		  }
-		 *
-		 */
-
 		// VariationSummary only for parent products
 		if (!$content->price && isset($r['VariationSummary']))
 		{

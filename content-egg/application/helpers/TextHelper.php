@@ -2,9 +2,6 @@
 
 namespace ContentEgg\application\helpers;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 defined('\ABSPATH') || exit;
 
 /**
@@ -408,8 +405,21 @@ class TextHelper
 
     public static function parsePriceAmount(string $money): float
     {
-        // 1. Keep only digits, dots and commas.
-        $clean = preg_replace('/[^\d.,]+/u', '', $money);
+        // 1. Keep only digits, dots, commas and minus sign.
+        $clean = preg_replace('/[^\d.,-]+/u', '', $money);
+
+        if ($clean === null || $clean === '')
+        {
+            return 0.0;
+        }
+
+        // 2. Detect and strip leading minus.
+        $negative = false;
+        if ($clean[0] === '-')
+        {
+            $negative = true;
+            $clean = substr($clean, 1);
+        }
 
         if ($clean === '')
         {
@@ -419,38 +429,74 @@ class TextHelper
         $lastDot   = strrpos($clean, '.');
         $lastComma = strrpos($clean, ',');
 
-        // 2. Decide which (if any) mark is the decimal separator.
+        // 3. Decide which (if any) mark is the decimal separator.
         $decimalSep = null;
+
         if ($lastDot !== false && $lastComma !== false)
         {
+            // Both present: whichever comes last is almost always the decimal separator.
             $decimalSep = ($lastDot > $lastComma) ? '.' : ',';
         }
-        elseif ($lastDot !== false)
+        else
         {
-            $decimalSep = self::decideSingleSeparator($clean, '.', $lastDot);
-        }
-        elseif ($lastComma !== false)
-        {
-            $decimalSep = self::decideSingleSeparator($clean, ',', $lastComma);
+            // Only one type of separator is present: need heuristics.
+            $sep = null;
+            $pos = null;
+
+            if ($lastDot !== false)
+            {
+                $sep = '.';
+                $pos = $lastDot;
+            }
+            elseif ($lastComma !== false)
+            {
+                $sep = ',';
+                $pos = $lastComma;
+            }
+
+            if ($sep !== null && $pos !== null)
+            {
+                $digitsAfter = strlen($clean) - $pos - 1;
+
+                /**
+                 * Heuristic:
+                 *  - 0 digits after: separator is thousands (e.g. "1." → 1).
+                 *  - 1–2 digits after: treat as decimal (e.g. "10,5", "10.50").
+                 *  - ≥3 digits after: treat as thousands (e.g. "10,000", "1.234").
+                 */
+                if ($digitsAfter > 0 && $digitsAfter <= 2)
+                {
+                    $decimalSep = $sep;
+                }
+            }
         }
 
-        // 3. Strip thousands marks & normalize decimal to dot.
+        // 4. Strip thousands separators & normalize decimal to dot.
         if ($decimalSep === '.')
         {
+            // Dot is decimal, commas are thousands.
             $number = str_replace(',', '', $clean);
         }
         elseif ($decimalSep === ',')
         {
+            // Comma is decimal, dots are thousands.
             $number = str_replace('.', '', $clean);
             $number = str_replace(',', '.', $number);
         }
         else
         {
+            // No decimal separator: remove all separators, treat as integer.
             $number = str_replace([',', '.'], '', $clean);
         }
 
-        // 4. Cast and round to 2 decimal places.
-        return round((float)$number, 2);
+        // 5. Cast and round to 2 decimal places.
+        $value = (float) $number;
+        if ($negative)
+        {
+            $value = -$value;
+        }
+
+        return round($value, 2);
     }
 
     protected static function decideSingleSeparator(string $str, string $sep, int $pos): ?string

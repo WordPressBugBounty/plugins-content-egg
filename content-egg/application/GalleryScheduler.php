@@ -5,8 +5,7 @@ namespace ContentEgg\application;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\helpers\WooHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 defined('\ABSPATH') || exit;
 

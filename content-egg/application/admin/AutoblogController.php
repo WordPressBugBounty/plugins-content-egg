@@ -9,8 +9,7 @@ use ContentEgg\application\models\AutoblogModel;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\AutoblogScheduler;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * AutoblogController class file
@@ -78,7 +77,7 @@ class AutoblogController
     public function add_admin_menu()
     {
         \add_submenu_page(Plugin::slug, __('Autoblogging', 'content-egg') . ' &lsaquo; Content Egg', __('Autoblogging', 'content-egg'), 'manage_options', self::slug, array($this, 'actionIndex'));
-        \add_submenu_page(null, __('Add autoblogging', 'content-egg') . ' &lsaquo; Content Egg', __('Add autoblogging', 'content-egg'), 'manage_options', 'content-egg-autoblog-edit', array($this, 'actionUpdate'));
+        \add_submenu_page('', __('Add autoblogging', 'content-egg') . ' &lsaquo; Content Egg', __('Add autoblogging', 'content-egg'), 'manage_options', 'content-egg-autoblog-edit', array($this, 'actionUpdate'));
         \add_submenu_page('options.php', __('Add autoblogging - bulk mode', 'content-egg') . ' &lsaquo; Content Egg', __('Add autoblogging - bulk mode', 'content-egg'), 'manage_options', 'content-egg-autoblog-edit--batch', array($this, 'actionUpdate'));
     }
 

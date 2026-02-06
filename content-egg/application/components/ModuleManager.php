@@ -10,9 +10,6 @@ use \ContentEgg\application\admin\AeIntegrationConfig;
 use \ContentEgg\application\components\LManager;
 use \ContentEgg\application\helpers\ArrayHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * ModuleManager class file
  *
@@ -304,9 +301,10 @@ class ModuleManager
             else
                 $module_class = "\\ContentEgg\\application\\modules\\" . $path_prefix . "\\" . $path_prefix . 'Module';
 
-            if (class_exists($module_class, true) === false)
-                throw new \Exception("Unable to load module class: '{$module_class}'.");
-
+            if (! class_exists($module_class, true))
+            {
+                throw new \Exception('Unable to load module class: "' . esc_html($module_class) . '".');
+            }
             try
             {
                 $module = new $module_class($module_id);
@@ -316,9 +314,10 @@ class ModuleManager
                 return false;
             }
 
-            if (!($module instanceof \ContentEgg\application\components\Module))
-                throw new \Exception("The module '{$module_id}' must inherit from Module.");
-
+            if (! ($module instanceof \ContentEgg\application\components\Module))
+            {
+                throw new \Exception('The module "' . esc_html($module_id) . '" must inherit from Module.');
+            }
             if (Plugin::isFree() && !$module->isFree())
                 return false;
 
@@ -331,9 +330,9 @@ class ModuleManager
     public static function parserFactory($module_id)
     {
         $module = self::factory($module_id);
-        if (!($module instanceof \ContentEgg\application\components\ParserModule))
+        if (! ($module instanceof \ContentEgg\application\components\ParserModule))
         {
-            throw new \Exception("The parser module '{$module_id}' must inherit from ParserModule.");
+            throw new \Exception('The parser module "' . esc_html($module_id) . '" must inherit from ParserModule.');
         }
 
         return $module;
@@ -356,7 +355,7 @@ class ModuleManager
 
             if (class_exists($config_class, true) === false)
             {
-                throw new \Exception("Unable to load module config class: '{$config_class}'.");
+                throw new \Exception('Unable to load module config class: "' . esc_html($config_class) . '".');
             }
 
             $config = $config_class::getInstance($module_id);
@@ -365,14 +364,14 @@ class ModuleManager
             {
                 if (!($config instanceof \ContentEgg\application\components\ParserModuleConfig))
                 {
-                    throw new \Exception("The parser module config '{$config_class}' must inherit from ParserModuleConfig.");
+                    throw new \Exception('The parser module config "' . esc_html($config_class) . '" must inherit from ParserModuleConfig.');
                 }
             }
             else
             {
                 if (!($config instanceof \ContentEgg\application\components\ModuleConfig))
                 {
-                    throw new \Exception("The module config '{$config_class}' must inherit from ModuleConfig.");
+                    throw new \Exception('The module config "' . esc_html($config_class) . '" must inherit from ModuleConfig.');
                 }
             }
 
@@ -826,5 +825,41 @@ class ModuleManager
         }
 
         return $feed_modules;
+    }
+
+    public function getParsersWithRedirects($only_active = true)
+    {
+        $parsers = array();
+        foreach ($this->getAffiliateParsers($only_active) as $module)
+        {
+            if ((bool)$module->config('set_local_redirect'))
+            {
+                $parsers[$module->getId()] = $module;
+            }
+        }
+
+        return $parsers;
+    }
+
+    public function getContentModules($only_active = true)
+    {
+        $modules = $this->getConfigurableModules();
+        $results = array();
+        foreach ($modules as $module)
+        {
+            if ($only_active && !$module->isActive())
+            {
+                continue;
+            }
+
+            if ($module->isAffiliateParser())
+            {
+                continue;
+            }
+
+            $results[$module->getId()] = $module;
+        }
+
+        return $results;
     }
 }

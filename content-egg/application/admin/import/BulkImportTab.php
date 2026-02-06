@@ -9,9 +9,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\AdminHelper;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\helpers\WooHelper;
-use ContentEgg\application\models\ImportQueueModel;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\models\ImportQueueModel;;
 
 defined('ABSPATH') || exit;
 
@@ -99,7 +97,7 @@ class BulkImportTab extends AbstractTab
     {
         if (! current_user_can('manage_options'))
         {
-            wp_die(__('You do not have permission to perform this action.', 'content-egg'));
+            wp_die(esc_html__('You do not have permission to perform this action.', 'content-egg'));
         }
 
         /* 1) Validate + sanitise ------------------------------------------------ */
@@ -113,7 +111,7 @@ class BulkImportTab extends AbstractTab
         $preset      = PresetRepository::get($preset_id);
         if (! $preset)
         {
-            wp_die(__('Invalid preset selected.', 'content-egg'));
+            wp_die(esc_html__('Invalid preset selected.', 'content-egg'));
         }
 
         // Category: choose post or Woo depending on preset type

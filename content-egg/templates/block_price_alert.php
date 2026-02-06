@@ -4,8 +4,6 @@
  * Module Types: PRODUCT
  */
 
-__('Price drop alert', 'content-egg-tpl');
-
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 

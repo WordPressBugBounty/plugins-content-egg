@@ -34,6 +34,8 @@ class ContentProduct extends Content
 	public $reviewsCount;
 	public $availability;
 	public $orig_url;
+	public $bridge_url;
+	public $aff_url;
 	public $ean;
 	public $promo;
 	public $upc;

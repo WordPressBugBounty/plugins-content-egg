@@ -8,10 +8,6 @@ use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\AffiliateFeedParserModuleConfig;
 use ContentEgg\application\helpers\CurrencyHelper;
 use ContentEgg\application\helpers\TextHelper;
-use ContentEgg\application\Plugin;
-
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
 
 /**
  * FeedConfig class file
@@ -88,8 +84,9 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                     [
                         'call'    => [$this, 'validateFeedUrl'],
                         'when'    => 'is_active',
-                        'message' => __('Please enter a valid feed URL (must start with http:// or https://).', 'content-egg'),
+                        'message' => __('Please enter a valid feed URL. Supported schemes: http://, https://, ftp://, ftps://.', 'content-egg'),
                     ],
+
                 ],
             ],
             'feed_format' => array(
@@ -103,12 +100,13 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                 'default' => 'csv',
             ),
             'archive_format' => array(
-                'title' => __('Archive format', 'content-egg') . '**',
-                'description' => $zip_notice,
-                'callback' => array($this, 'render_dropdown'),
+                'title'            => __('Archive format', 'content-egg') . '**',
+                'description'      => $zip_notice,
+                'callback'         => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
                     'none' => __('None', 'content-egg'),
-                    'zip' => 'ZIP',
+                    'zip'  => 'ZIP',
+                    'gz'   => __('GZIP (.gz)', 'content-egg'),
                 ),
                 'default' => 'none',
             ),
@@ -187,6 +185,17 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                 ],
                 'default' => '43200.',
             ],
+            'tracking_params' => array(
+                'title'       => __('SubID tracking parameters', 'content-egg') . '**',
+                'description' => sprintf(
+                    __('Append one or more query parameters for affiliate SubID tracking (e.g., clickref, subId1). Use name=value pairs separated by "&". Dynamic placeholders are supported (e.g., {{post_id}}, {{item_unique_id}}). Examples: <code>clickref={{post_id}}</code> (Awin), <code>subId1=mysite1&subId2={{post_id}}</code> (Impact). <a href="%s" target="_blank">See placeholder guide</a>.', 'content-egg'),
+                    'https://ce-docs.keywordrush.com/features/subid-tracking'
+                ),
+                'callback'    => array($this, 'render_input'),
+                'default'     => '',
+                'validator'   => array('trim'),
+            ),
+
             'deeplink' => array(
                 'title' => __('Deeplink', 'content-egg'),
                 'description' => __('Enable this option only if your feed does not include affiliate links.', 'content-egg'),
@@ -215,6 +224,46 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                 'default'     => true,
                 'section'     => 'default',
             ],
+            'csv_delimiter' => [
+                'title'            => __('CSV Delimiter', 'content-egg'),
+                'description'      => __('Overrides automatic detection for CSV feeds. Leave as "Auto-detect" unless you know the exact delimiter used by your file.', 'content-egg'),
+                'callback'         => [$this, 'render_dropdown'],
+                'dropdown_options' => [
+                    'auto' => __('Auto-detect (recommended)', 'content-egg'),
+                    "\t"   => __('Tab (\\t)', 'content-egg'),
+                    ';'    => __('Semicolon (;)', 'content-egg'),
+                    ','    => __('Comma (,)', 'content-egg'),
+                    '|'    => __('Pipe (|)', 'content-egg'),
+                ],
+                'default'          => 'auto',
+            ],
+            'csv_enclosure' => [
+                'title'            => __('CSV Enclosure', 'content-egg'),
+                'description'      => __('Overrides automatic detection of the text qualifier. Choose this if your CSV uses a specific quote character around fields.', 'content-egg'),
+                'callback'         => [$this, 'render_dropdown'],
+                'dropdown_options' => [
+                    'auto' => __('Auto-detect (recommended)', 'content-egg'),
+                    '"'    => __('Double quote (")', 'content-egg'),
+                    "'"    => __("Single quote (')", 'content-egg'),
+                    'none' => __('None (unquoted fields)', 'content-egg'),
+                ],
+                'default'          => 'auto',
+            ],
+
+            'xml_processor' => array(
+                'title'       => __('XML Processor', 'content-egg'),
+                'description' => __(
+                    'Choose which XML parser to use. XmlStringStreamer is the default and works for most feeds. '
+                        . 'If you experience “Premature end of data” or similar XML errors, try switching to XmlReader.',
+                    'content-egg'
+                ),
+                'callback'    => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'XmlStringStreamer' => __('XmlStringStreamer (default, faster)', 'content-egg'),
+                    'XmlReader'         => __('XmlReader (safer for nested XML)', 'content-egg'),
+                ),
+                'default'     => 'XmlStringStreamer',
+            ),
 
         );
         $options = array_merge(parent::options(), $options);
@@ -379,15 +428,57 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
         return $value;
     }
 
+    /**
+     * Validate feed URL for http(s) and ftp(s).
+     */
     public function validateFeedUrl($value)
     {
+        if (!is_string($value) || $value === '')
+        {
+            return false;
+        }
+
+        // Basic URL validation (supports ftp, ftps too)
         if (filter_var($value, FILTER_VALIDATE_URL) === false)
         {
             return false;
         }
-        else
+
+        $parts = parse_url($value);
+        if ($parts === false)
         {
-            return true;
+            return false;
         }
+
+        $scheme  = isset($parts['scheme']) ? strtolower((string) $parts['scheme']) : '';
+        $host    = isset($parts['host']) ? (string) $parts['host'] : '';
+        $allowed = ['http', 'https', 'ftp', 'ftps'];
+
+        if ($scheme === '' || $host === '' || !in_array($scheme, $allowed, true))
+        {
+            return false;
+        }
+
+        // For FTP/FTPS require a file path (i.e., path exists and does not end with '/')
+        if ($scheme === 'ftp' || $scheme === 'ftps')
+        {
+            $path = isset($parts['path']) ? (string) $parts['path'] : '';
+            if ($path === '' || substr($path, -1) === '/')
+            {
+                // e.g., reject ftp://host/ (directory only)
+                return false;
+            }
+        }
+
+        if (isset($parts['port']))
+        {
+            $port = (int) $parts['port'];
+            if ($port < 1 || $port > 65535)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

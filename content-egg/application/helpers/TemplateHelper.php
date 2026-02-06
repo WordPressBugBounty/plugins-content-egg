@@ -12,10 +12,8 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\libs\amazon\AmazonLocales;
+use ContentEgg\application\models\LinkIndexModel;
 use ContentEgg\application\Translator;
-
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
 
 /**
  * TemplateHelper class file
@@ -46,6 +44,7 @@ class TemplateHelper
     static $price_history_highest_item = null;
     static $price_history_since = null;
     static $delivery_at_checkout = false;
+    private static $needsClicksJs = false;
 
     public static function formatPriceCurrency($price, $currencyCode, $before_symbol = '', $after_symbol = '')
     {
@@ -518,16 +517,10 @@ class TemplateHelper
 
     public static function viewMorrisChart($id, array $options, $htmlOptions = array('style' => 'height: 250px;'))
     {
-        // morris.js
         \wp_enqueue_style('morrisjs');
         \wp_enqueue_script('morrisjs');
 
-        if (!empty($options['chartType']) && in_array($options['chartType'], array(
-            'Line',
-            'Area',
-            'Donut',
-            'Bar'
-        )))
+        if (!empty($options['chartType']) && in_array($options['chartType'], array('Line', 'Area', 'Donut', 'Bar'), true))
         {
             $chartType = $options['chartType'];
             unset($options['chartType']);
@@ -538,17 +531,49 @@ class TemplateHelper
         }
         $options['element'] = $id;
 
+        // Pull out JS callbacks (unencoded functions)
+        $jsCallbacks = array();
+        if (isset($options['_js']) && is_array($options['_js']))
+        {
+            $jsCallbacks = $options['_js'];
+            unset($options['_js']);
+        }
+
+        // Build HTML attrs
         $html_attr = '';
+        // merge our left-to-right hint into style if style already provided
+        $dirStyle = 'direction: ltr;';
+        if (isset($htmlOptions['style']))
+        {
+            $htmlOptions['style'] = $dirStyle . ' ' . $htmlOptions['style'];
+        }
+        else
+        {
+            $htmlOptions['style'] = $dirStyle . ' height: 250px;';
+        }
         foreach ($htmlOptions as $name => $value)
         {
             $html_attr .= ' ' . esc_attr($name) . '="' . esc_attr($value) . '"';
         }
 
-        echo '<div style="direction: ltr;" id="' . esc_attr($id) . '"' . $html_attr . '></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        // Print container
+        echo '<div id="' . esc_attr($id) . '"' . $html_attr . '></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+        // Print script: JSON options + inject raw callbacks
+        $json = wp_json_encode($options, JSON_UNESCAPED_SLASHES);
         echo '<script>';
-        echo 'jQuery(document).ready(function($) {';
-        echo 'new Morris.' . esc_html($chartType) . '(' . json_encode($options) . ')';
-        echo '})';
+        echo 'jQuery(function($){';
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Safe JSON output from wp_json_encode().
+        echo 'var opts = ' . $json . ';';
+        // inject callbacks as real functions
+        foreach ($jsCallbacks as $key => $fn)
+        {
+            // $fn should be a raw JS function string like "function(y,data){ ... }"
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- intentionally outputting raw JS function strings
+            echo 'opts[' . wp_json_encode((string) $key) . '] = ' . $fn . ';';
+        }
+        echo 'new Morris.' . esc_html($chartType) . '(opts);';
+        echo '});';
         echo '</script>';
     }
 
@@ -977,7 +1002,14 @@ class TemplateHelper
 
     public static function buyNowBtnText($print = true, array $item = array(), $forced_text = '')
     {
-        return self::btnText('btn_text_buy_now', __('BUY NOW', 'content-egg-tpl'), $print, $item, $forced_text);
+        if (self::isLinkedToBridge($item))
+        {
+            return self::btnText('btn_text_bridge', __('See Details', 'content-egg-tpl'), $print, $item, $forced_text);
+        }
+        else
+        {
+            return self::btnText('btn_text_buy_now', __('BUY NOW', 'content-egg-tpl'), $print, $item, $forced_text);
+        }
     }
 
     public static function couponBtnText($print = true, array $item = array(), $forced_text = '')
@@ -1390,27 +1422,203 @@ class TemplateHelper
         return join(' ', $rel);
     }
 
-    public static function getGtagClickEvent(array $item)
+    /**
+     * GA4-safe helpers (length-limited, multibyte-aware).
+     */
+    private static function mb_len(string $s): int
     {
-        if (GeneralConfig::getInstance()->option('send_ga_click_event') != 'enabled')
+        return function_exists('mb_strlen') ? mb_strlen($s, 'UTF-8') : strlen($s);
+    }
+
+    private static function mb_sub(string $s, int $start, int $len): string
+    {
+        return function_exists('mb_substr') ? mb_substr($s, $start, $len, 'UTF-8') : substr($s, $start, $len);
+    }
+
+    /**
+     * Trim to max length, preserving UTF-8 where possible.
+     */
+    private static function clamp_len(string $s, int $max): string
+    {
+        if ($max <= 0)
+        {
             return '';
+        }
+        if (self::mb_len($s) <= $max)
+        {
+            return $s;
+        }
+        return self::mb_sub($s, 0, $max);
+    }
 
-        if (!empty($item['aff_url']))
-            $product_url = esc_url($item['aff_url']);
-        elseif (!empty($item['url']))
-            $product_url =  esc_url($item['url']);
+    /**
+     * GA4: sanitize + clamp event name to ≤ 40 chars.
+     * Uses WP's sanitize_key (lowercase a-z0-9_), then clamps.
+     * Falls back to 'event' if empty after sanitization.
+     */
+    private static function ga4_event_name(string $raw, string $fallback = 'event'): string
+    {
+        $name = sanitize_key($raw);
+        if ($name === '')
+        {
+            $name = sanitize_key($fallback);
+        }
+        // Clamp to GA4 max length
+        $name = self::clamp_len($name, 40);
+        // Final fallback if somehow empty
+        return $name !== '' ? $name : 'event';
+    }
+
+    /**
+     * GA4: sanitize + clamp parameter name to ≤ 40 chars.
+     */
+    private static function ga4_param_name(string $raw): string
+    {
+        $key = sanitize_key($raw);
+        return self::clamp_len($key, 40);
+    }
+
+    /**
+     * GA4: normalize any value to a JS-safe representation,
+     * clamping stringy values to ≤ 100 chars BEFORE escaping.
+     */
+    private static function ga4_normalize_value($val)
+    {
+        // Keep numeric/bool types as-is.
+        if (is_int($val) || is_float($val))
+        {
+            return $val;
+        }
+        if (is_bool($val))
+        {
+            return $val;
+        }
+
+        // For arrays/objects, stringify to JSON then clamp.
+        if (is_array($val) || is_object($val))
+        {
+            $val = wp_json_encode($val, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if (!is_string($val))
+            {
+                $val = '';
+            }
+        }
         else
-            $product_url =  '';
+        {
+            $val = (string) $val;
+        }
 
-        $product_title = isset($item['title']) ? esc_html($item['title']) : 'Product Name';
+        // Clamp to GA4 string limit BEFORE escaping for JS.
+        $val = self::clamp_len($val, 100);
+        return $val;
+    }
 
-        $onclick_event = sprintf(
-            "gtag('event', 'cegg_affiliate_click', {'cegg_link_url': '%s','cegg_product_title': '%s'});",
-            $product_url,
-            $product_title
+    /**
+     * Build GA4 onclick JS for affiliate clicks.
+     *
+     * @param array $item product item data.
+     * @return string JS snippet for onclick attribute, or empty string.
+     */
+    public static function getGtagClickEvent(array $item): string
+    {
+        if (GeneralConfig::getInstance()->option('send_ga_click_event') !== 'enabled')
+        {
+            return '';
+        }
+
+        $product_title = isset($item['title'])     ? (string) $item['title']     : 'Product Name';
+        $module_id     = isset($item['module_id']) ? (string) $item['module_id'] : '';
+        $merchant      = isset($item['merchant'])  ? (string) $item['merchant']  : '';
+        $unique_id     = isset($item['unique_id']) ? (string) $item['unique_id'] : '';
+        $post_id       = isset($item['post_id'])   ? (int) $item['post_id']      : 0;
+
+        // Base params
+        $params = array(
+            'cegg_product_title' => $product_title,
+            'cegg_module'        => $module_id,
+            'cegg_merchant'      => $merchant,
+            'cegg_unique_id'     => $unique_id,
+            'cegg_post_id'       => $post_id,
         );
 
-        return $onclick_event;
+        // Allow devs to add/modify parameters
+        $params = apply_filters('cegg_gtag_event_params', $params, $item);
+
+        // Drop only truly empty strings/nulls (keep 0/false)
+        $params = array_filter($params, static function ($v)
+        {
+            return $v !== '' && $v !== null;
+        });
+
+        // Event name (sanitize + clamp to GA4 limit)
+        $default_event_name = 'cegg_affiliate_click';
+        $event_name_raw     = apply_filters('cegg_gtag_event_name', $default_event_name, $item);
+        $event_name_raw     = (string) ($event_name_raw ?: $default_event_name);
+        $event_name         = self::ga4_event_name($event_name_raw, $default_event_name);
+
+        // Build JS object literal with QUOTED keys and properly typed values
+        $seenKeys = array(); // to avoid duplicate keys after clamping
+        $parts    = array();
+
+        foreach ($params as $key => $val)
+        {
+            $key = self::ga4_param_name((string) $key);
+            if ($key === '')
+            {
+                continue;
+            }
+
+            // Dedup if truncation caused a collision: append numeric suffix up to limit.
+            if (isset($seenKeys[$key]))
+            {
+                $suffix = 2;
+                $base   = $key;
+                // Try to append _2, _3 ... while keeping ≤ 40 chars.
+                while (isset($seenKeys[$key]))
+                {
+                    $try = $base . '_' . $suffix;
+                    if (self::mb_len($try) > 40)
+                    {
+                        // Trim base to make space for suffix, then retry
+                        $room = 40 - (self::mb_len('_' . (string)$suffix));
+                        $base = self::clamp_len($base, max(1, $room));
+                        $try  = $base . '_' . $suffix;
+                    }
+                    $key = $try;
+                    $suffix++;
+                    if ($suffix > 99)
+                    { // give up after reasonable attempts
+                        break;
+                    }
+                }
+            }
+            $seenKeys[$key] = true;
+
+            // Normalize/clamp value to GA4 rules
+            $norm = self::ga4_normalize_value($val);
+
+            // Always quote the key
+            $quotedKey = "'" . $key . "'";
+
+            if (is_int($norm) || is_float($norm))
+            {
+                $parts[] = $quotedKey . ':' . $norm; // numeric unquoted
+            }
+            elseif (is_bool($norm))
+            {
+                $parts[] = $quotedKey . ':' . ($norm ? 'true' : 'false');
+            }
+            else
+            {
+                // Escape for single-quoted JS string AFTER clamping
+                $parts[] = $quotedKey . ":'" . esc_js($norm) . "'";
+            }
+        }
+
+        $params_js = '{' . implode(',', $parts) . '}';
+
+        // Final JS call
+        return "gtag('event','{$event_name}',{$params_js});";
     }
 
     public static function printRating(array $item, $size = 'default')
@@ -2371,18 +2579,35 @@ class TemplateHelper
         $tag_params = array();
 
         if ($rel = TemplateHelper::getRelValue())
+        {
             $tag_params['rel'] = $rel;
+        }
 
         if ($onclick_event = TemplateHelper::getGtagClickEvent($item))
+        {
             $tag_params['onclick'] = $onclick_event;
+        }
 
-        $tag_params['target'] = '_blank';
+        if (!self::isLinkedToBridge($item))
+        {
+            $tag_params['target'] = '_blank';
+        }
+
         $tag_params['href'] = $item['url'];
 
-        $tag_params = array_merge($tag_params, $custom_tag_params);
+        // Inject beacon attributes for direct (non-redirect) links
+        $beacon_attrs = self::buildDirectClickBeaconAttrs($item);
+
+        // Merge order: base → beacon → custom (custom wins on conflicts)
+        $tag_params = array_merge($tag_params, $beacon_attrs, $custom_tag_params);
+
+        // Ensure 'cegg-click' class is present if beacon is active (even when custom class provided)
+        if (isset($beacon_attrs['data-cegg-click']))
+        {
+            $tag_params['class'] = trim(($tag_params['class'] ?? '') . ' cegg-click');
+        }
 
         echo self::arrayToTagParameters($tag_params); // phpcs:ignore
-
     }
 
     public static function openATag(array $item, array $params = array(), array $custom_tag_params = array())
@@ -2508,7 +2733,7 @@ class TemplateHelper
         if ($class_str)
             echo ' ' . esc_attr($class_str);
 
-        echo '" src="' . $logo_uri . '" alt="' . esc_attr(self::getMerchantName($item)) . '" />';
+        echo '" src="' . esc_url($logo_uri) . '" alt="' . esc_attr(self::getMerchantName($item)) . '" />';
     }
 
     public static function icon(array $item, array $params = array(), $class_str = '')
@@ -2520,7 +2745,7 @@ class TemplateHelper
         if ($class_str)
             echo ' ' . esc_attr($class_str);
 
-        echo '" src="' . $icon_uri . '" alt="' . esc_attr(self::getMerchantName($item)) . '" />';
+        echo '" src="' . esc_url($icon_uri) . '" alt="' . esc_attr(self::getMerchantName($item)) . '" />';
     }
 
     public static function cashback(array $item, $display_icon = true)
@@ -2660,7 +2885,7 @@ class TemplateHelper
         return false;
     }
 
-    public static function isVisibleDisclaimer(array $params)
+    public static function isVisibleDisclaimer(array $params, array $items = array())
     {
         $field = 'disclaimer';
 
@@ -2668,6 +2893,9 @@ class TemplateHelper
             return true;
 
         if (isset($params['hide']) && in_array($field, $params['hide']))
+            return false;
+
+        if ($items && self::isAllItemsBridged($items))
             return false;
 
         if (GeneralConfig::getInstance()->option('product_block_disclaimer') == 'enabled')
@@ -2703,7 +2931,7 @@ class TemplateHelper
 
     public static function isVisibleDisclaimerOrPriceUpdate(array $items, array $params)
     {
-        return self::isVisibleDisclaimer($params) || self::isVisiblePriceUpdate($params, $items);
+        return self::isVisibleDisclaimer($params, $items) || self::isVisiblePriceUpdate($params, $items);
     }
 
     public static function isVisible(array $item, $field, array $params, array $items = array(), $default = true)
@@ -2712,7 +2940,7 @@ class TemplateHelper
             return false;
 
         if ($field == 'disclaimer')
-            return self::isVisibleDisclaimer($params);
+            return self::isVisibleDisclaimer($params, $items);
 
         if ($field == 'price_update')
             return self::isVisiblePriceUpdate($params, $items);
@@ -2733,6 +2961,9 @@ class TemplateHelper
         if ($field == 'new_used_price')
         {
             if (empty($item['extra']['totalNew']) || (int)$item['extra']['totalNew'] <= 1)
+                return false;
+
+            if (!self::isVisible($item, 'price', $params, $items, $default))
                 return false;
 
             $new_price = !empty($item['extra']['lowestNewPrice']) ? $item['extra']['lowestNewPrice'] : 0;
@@ -3107,7 +3338,6 @@ class TemplateHelper
         $canvas_id = TemplateHelper::generateGlobalId('cegg-price-history-chart-');
 
         \wp_enqueue_script('cegg-chartjs');
-        // \wp_enqueue_script('cegg-chartjs-adapter-date-fns');
 
         $locale = get_locale();
         $locale = str_replace('_', '-', $locale);
@@ -3120,11 +3350,11 @@ class TemplateHelper
             'dateFormat' => get_option('date_format'),
             'locale' => $locale,
         ];
-        wp_localize_script('cegg-chartjs', 'priceHistoryData', $localized_data);
+        $data_json = wp_json_encode($localized_data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
 
         ob_start();
 ?>
-        <canvas id="<?php echo esc_attr($canvas_id); ?>" height="120" aria-label="price history chart" role="img"></canvas>
+        <canvas id="<?php echo esc_attr($canvas_id); ?>" height="100" aria-label="price history chart" role="img" data-price-history="<?php echo esc_attr($data_json); ?>"></canvas>
         <script>
             document.addEventListener("DOMContentLoaded", function() {
                 const ctx = document.getElementById('<?php echo esc_attr($canvas_id); ?>');
@@ -3134,7 +3364,8 @@ class TemplateHelper
                     merchants,
                     currency,
                     locale
-                } = priceHistoryData;
+                } = JSON.parse(ctx.dataset.priceHistory);
+
                 const rootStyles = getComputedStyle(document.documentElement);
                 const borderColor = rootStyles.getPropertyValue('--cegg-primary').trim();
                 const rgb = rootStyles.getPropertyValue('--cegg-primary-rgb').trim();
@@ -3270,21 +3501,23 @@ class TemplateHelper
 
     public static function ratingProgress(array $item)
     {
-        if (!$rating = self::getRatingValueScale10($item))
+        if (! $rating = self::getRatingValueScale10($item))
+        {
             return;
+        }
 
-        $rating = max(0, min(10, $rating));
-        $percentage = ($rating / 10) * 100;
-
+        $rating      = max(0, min(10, $rating));
+        $percentage  = ($rating / 10) * 100;
         $percentage_attr = esc_attr($percentage . '%');
-        $aria_now = esc_attr(round($percentage));
-        $aria_label = esc_attr('Product rating: ' . $rating . ' out of 10');
+        $aria_now    = esc_attr((string) round($percentage));
+        $aria_label  = esc_attr('Product rating: ' . $rating . ' out of 10');
 
-        $output = '<div class="progress" role="progressbar" aria-label="' . $aria_label . '"';
-        $output .= ' aria-valuenow="' . esc_attr($aria_now) . '" aria-valuemin="0" aria-valuemax="100" style="height: 7px">';
-        $output .= '<div class="progress-bar" style="width: ' . $percentage_attr . ';"></div>';
+        $output  = '<div class="progress" role="progressbar" aria-label="' . $aria_label . '"';
+        $output .= ' aria-valuenow="' . $aria_now . '" aria-valuemin="0" aria-valuemax="100" style="height:7px">';
+        $output .= '<div class="progress-bar" style="width:' . $percentage_attr . ';"></div>';
         $output .= '</div>';
 
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- safe, fully escaped HTML output
         echo $output;
     }
 
@@ -3304,5 +3537,182 @@ class TemplateHelper
             if (TemplateHelper::isVisible($item, 'coupons', $params, $items, $default))
                 TemplateHelper::shopInfoOffcanvas($item);
         }
+    }
+
+    /**
+     * Reduce items to N per group based on a selection mode.
+     */
+    public static function pickByGroups(array $data, $group_pick = 'cheapest', $group_limit = 1)
+    {
+        // 1) Collect all items across modules, grouped by 'group' (fallback to _no_group)
+        $grouped_items = [];
+        foreach ($data as $module_items)
+        {
+            foreach ($module_items as $item)
+            {
+                if (empty($item['unique_id']))
+                {
+                    continue;
+                }
+                $g = (!empty($item['group'])) ? $item['group'] : '_no_group';
+                $grouped_items[$g][] = $item;
+            }
+        }
+
+        // 2) For each group, pick up to $group_limit items according to $group_pick
+        $allowed_ids = [];
+        foreach ($grouped_items as $group => $items)
+        {
+            switch ($group_pick)
+            {
+                case 'cheapest':
+                    $sorted = TemplateHelper::sortByPrice($items, 'asc');
+                    break;
+                case 'priciest':
+                    $sorted = TemplateHelper::sortByPrice($items, 'desc');
+                    break;
+                default: // 'random'
+                    $sorted = $items;
+                    shuffle($sorted);
+                    break;
+            }
+
+            // Take first N after sorting/shuffling
+            $selected = array_slice(array_values($sorted), 0, $group_limit);
+            foreach ($selected as $sel)
+            {
+                if (!empty($sel['unique_id']))
+                {
+                    $allowed_ids[$sel['unique_id']] = true;
+                }
+            }
+        }
+
+        // 3) Rebuild $data keeping only allowed ids, preserving original module grouping and order
+        $filtered = [];
+        foreach ($data as $module_id => $items)
+        {
+            foreach ($items as $item)
+            {
+                if (!empty($item['unique_id']) && isset($allowed_ids[$item['unique_id']]))
+                {
+                    $filtered[$module_id][] = $item;
+                }
+            }
+
+            if (empty($filtered[$module_id]))
+            {
+                unset($filtered[$module_id]);
+            }
+        }
+
+        return $filtered;
+    }
+
+    public static function isLinkedToBridge(array $item)
+    {
+        if (!empty($item['bridge_url']))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    public static function isAllItemsBridged(array $items)
+    {
+        foreach ($items as $item)
+        {
+            if (!self::isLinkedToBridge($item))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Build data-attributes for the client-side click beacon (non-redirect tracking).
+     * Emits ONLY the link_id (no triplet fallback). Returns [] when unavailable/disabled.
+     */
+    private static function buildDirectClickBeaconAttrs(array $item): array
+    {
+        // Feature flags
+        if (
+            GeneralConfig::getInstance()->option('clicks_track_direct') !== 'enabled' ||
+            self::isLinkedToBridge($item)
+        )
+        {
+            return [];
+        }
+
+        // Redirect links
+        if (!empty($item['aff_url']) && $item['aff_url'] !== $item['url'])
+        {
+            return [];
+        }
+
+        // Resolve context to look up link_id from the index
+        global $post;
+        $post_id   = !empty($item['post_id'])   ? (int) $item['post_id']   : (($post && !empty($post->ID)) ? (int) $post->ID : 0);
+        $module_id = !empty($item['module_id']) ? (string) $item['module_id'] : '';
+        $unique_id = !empty($item['unique_id']) ? (string) $item['unique_id'] : '';
+
+        if ($post_id <= 0 || $module_id === '' || $unique_id === '')
+        {
+            return [];
+        }
+        // Per-request cache: post -> module -> unique_id -> link_id
+        static $linkIdCache = [];
+        if (!isset($linkIdCache[$post_id]))
+        {
+            $linkIdCache[$post_id] = [];
+            $rows = LinkIndexModel::model()->listByPost($post_id);
+            if (is_array($rows))
+            {
+                foreach ($rows as $r)
+                {
+                    $mid = (string) $r['module_id'];
+                    $uid = (string) $r['unique_id'];
+                    $linkIdCache[$post_id][$mid][$uid] = (int) $r['id'];
+                }
+            }
+        }
+
+        $link_id = (int) ($linkIdCache[$post_id][$module_id][$unique_id] ?? 0);
+        if ($link_id <= 0)
+        {
+            return [];
+        }
+
+        self::markClicksJsNeeded(); // ensure JS is printed in footer once
+
+        // Expose link_id + nonce to the frontend
+        return [
+            'data-cegg-click'   => '1',
+            'data-cegg-link-id' => (string) $link_id,
+        ];
+    }
+
+    /** Mark that the clicks beacon JS is needed on this page. */
+    private static function markClicksJsNeeded(): void
+    {
+        if (self::$needsClicksJs) return;
+        self::$needsClicksJs = true;
+        add_action('wp_footer', [__CLASS__, 'printClicksInlineScript'], 99);
+    }
+
+    public static function printClicksInlineScript(): void
+    {
+        if (!self::$needsClicksJs || is_admin())
+        {
+            return;
+        }
+
+        $endpoint = esc_url_raw(rest_url('cegg/v1/click'));
+
+        // js minifyed
+        echo '<script>' . '"use strict";!function(){var e="' . esc_js($endpoint) . '",t=new WeakMap;function n(n){var a=function(e){for(;e&&e!==document;){if("A"===e.tagName&&e.dataset&&"1"===e.dataset.ceggClick&&e.dataset.ceggLinkId)return e;e=e.parentNode}return null}(n.target);if(a){var c=Date.now();c-(t.get(a)||0)<800||(t.set(a,c),function(t){var n=parseInt(t.dataset.ceggLinkId,10);if(n){var a=JSON.stringify({link_id:n});try{if(navigator.sendBeacon){var c=new Blob([a],{type:"application/json"});navigator.sendBeacon(e,c)}else fetch(e,{method:"POST",headers:{"Content-Type":"application/json"},body:a,keepalive:!0,credentials:"omit",cache:"no-store"}).catch((function(){}))}catch(e){}}}(a))}}document.addEventListener("click",n,{capture:!0,passive:!0}),document.addEventListener("auxclick",(function(e){1!==e.button&&2!==e.button||n(e)}),{capture:!0,passive:!0})}();' . '</script>';
     }
 }

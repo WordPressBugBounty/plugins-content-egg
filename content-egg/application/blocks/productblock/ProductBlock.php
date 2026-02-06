@@ -3,9 +3,7 @@
 namespace ContentEgg\application\blocks\productblock;
 
 use ContentEgg\application\components\BlockTemplateManager;
-use ContentEgg\application\components\ModuleManager;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\components\ModuleManager;;
 
 defined('\ABSPATH') || exit;
 
@@ -121,6 +119,15 @@ class ProductBlock
             ),
             'start_number' => array(
                 'type' => 'integer'
+            ),
+            'link_target' => [
+                'type'    => 'string',
+                'default' => 'auto',
+                'enum'    => ['auto', 'affiliate', 'bridge'],
+            ],
+            'post_id' => array(
+                'type' => 'integer',
+                'default' => 0,
             ),
         );
     }

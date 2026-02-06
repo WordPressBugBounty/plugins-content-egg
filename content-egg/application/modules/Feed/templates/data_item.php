@@ -1,10 +1,10 @@
 <?php
 
-defined( '\ABSPATH' ) || exit;
+defined('\ABSPATH') || exit;
 /*
   Name: Product card
  */
 
-__( 'Product card', 'content-egg-tpl' );
 
-$this->renderPartial( 'item' );
+
+$this->renderPartial('item');

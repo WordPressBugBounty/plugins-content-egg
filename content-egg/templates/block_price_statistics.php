@@ -5,8 +5,6 @@
  * Shortcoded: FALSE
  */
 
-__('Price statistics', 'content-egg-tpl');
-
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\components\ContentProduct;
 

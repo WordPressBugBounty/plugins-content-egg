@@ -5,8 +5,6 @@
  * Module Types: PRODUCT
  */
 
-__('Customizable (use with "show" parameter)', 'content-egg-tpl');
-
 use ContentEgg\application\helpers\TemplateHelper;
 
 defined('\ABSPATH') || exit;

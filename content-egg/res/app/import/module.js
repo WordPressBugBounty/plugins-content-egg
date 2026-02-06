@@ -2,7 +2,7 @@
     'use strict';
 
   angular
-    .module('contentEggApp', ['ngSanitize'])
+    .module('contentEgg', ['ngSanitize'])
     .constant('ajaxurl', window.ajaxurl)
     .constant('contentEggNonce', window.contentegg_params.nonce)
     .constant('importNonce', window.contentegg_params.importNonce)
@@ -14,7 +14,7 @@
 })();
 
 angular
-  .module('contentEggApp')
+  .module('contentEgg')
   .directive('selectOnClick', function () {
     return {
       restrict: 'A',

@@ -2,9 +2,6 @@
 
 namespace ContentEgg\application\components\ai;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 defined('\ABSPATH') || exit;
 
 /**
@@ -52,7 +49,7 @@ class SystemPrompt
         catch (\Exception $e)
         {
             $error = sprintf('AI Error: %s', $e->getMessage());
-            throw new \Exception($error);
+            throw new \Exception(esc_html($error));
         }
 
         return $content;

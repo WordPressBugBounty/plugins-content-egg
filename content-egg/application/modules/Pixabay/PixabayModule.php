@@ -8,9 +8,7 @@ use ContentEgg\application\components\ParserModule;
 use ContentEgg\application\libs\pixabay\PixabaySearch;
 use ContentEgg\application\components\Content;
 use ContentEgg\application\admin\PluginAdmin;
-use ContentEgg\application\admin\GeneralConfig;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\admin\GeneralConfig;;
 
 /**
  * PixabayModule class file
@@ -118,7 +116,7 @@ class PixabayModule extends ParserModule
 		}
 		catch (Exception $e)
 		{
-			throw new \Exception(strip_tags($e->getMessage()));
+			throw new \Exception(esc_html(wp_strip_all_tags($e->getMessage())));
 		}
 
 		if (!isset($results['hits']))

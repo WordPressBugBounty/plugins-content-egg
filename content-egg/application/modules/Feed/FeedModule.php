@@ -12,7 +12,6 @@ use ContentEgg\application\components\ModuleName;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\components\LinkHandler;
-use ContentEgg\application\Plugin;
 
 use function ContentEgg\prn;
 use function ContentEgg\prnx;
@@ -85,16 +84,29 @@ class FeedModule extends AffiliateFeedParserModule
         return $classname::model();
     }
 
-    public function isZippedFeed()
+    public function isCompressedFeed(): bool
     {
-        if ($this->config('archive_format') == 'zip')
+        if ($this->isZippedFeed() || $this->isGzipFeed())
         {
             return true;
         }
-        else
-        {
-            return false;
-        }
+
+        return false;
+    }
+
+    public function getArchiveFormat(): string
+    {
+        return strtolower((string) $this->config('archive_format'));
+    }
+
+    public function isGzipFeed(): bool
+    {
+        return $this->getArchiveFormat() === 'gz';
+    }
+
+    public function isZippedFeed(): bool
+    {
+        return $this->getArchiveFormat() === 'zip';
     }
 
     public function getFeedUrl()
@@ -150,10 +162,15 @@ class FeedModule extends AffiliateFeedParserModule
 
         if ($missed)
         {
-            throw new \Exception(sprintf(
-                'The following required mapping fields are missing from the feed: %s.',
-                implode(', ', $missed)
-            ));
+            throw new \Exception(
+                sprintf(
+                    esc_html__(
+                        'The following required mapping fields are missing from the feed: %s.',
+                        'content-egg'
+                    ),
+                    esc_html(implode(', ', $missed))
+                )
+            );
         }
 
         $product = array();
@@ -179,7 +196,9 @@ class FeedModule extends AffiliateFeedParserModule
         if (!empty($mapped_data['availability']))
         {
             $availability = strtolower($mapped_data['availability']);
-            if (strstr($availability, 'out of stock') || strstr($availability, 'outofstock'))
+            $normalized = strtolower(preg_replace('/[\s_-]+/', '', $availability));
+            // Matches: "out of stock", "out-of-stock", "out_of_stock", "outofstock"
+            if (strpos($normalized, 'outofstock') !== false)
             {
                 $product['stock_status'] = ContentProduct::STOCK_STATUS_OUT_OF_STOCK;
             }
@@ -243,9 +262,13 @@ class FeedModule extends AffiliateFeedParserModule
             $options['price_max'] = (float) $query_params['price_max'];
 
         if (TextHelper::isEan($keyword))
+        {
             $results = $this->product_model->searchByEan($keyword, $limit, $options);
+        }
         elseif (filter_var($keyword, FILTER_VALIDATE_URL))
+        {
             $results = $this->product_model->searchByUrl($keyword, $this->config('partial_url_match'), $limit);
+        }
         else
         {
             $options['search_type'] = $this->config('search_type');
@@ -422,11 +445,27 @@ class FeedModule extends AffiliateFeedParserModule
             {
                 $content->category = $r['category'];
 
-                if (strstr($r['category'], '>'))
+                $separators = apply_filters('cegg_feed_category_separators', array('>', '|'), $r);
+
+                if (! empty($separators) && is_array($separators))
                 {
-                    $content->categoryPath = explode('>', $content->category);
-                    $content->categoryPath = array_map('trim', $content->categoryPath);
-                    $content->category = end($content->categoryPath);
+                    $escaped = array_map(function ($sep)
+                    {
+                        return preg_quote($sep, '#');
+                    }, $separators);
+
+                    $pattern = '#\s*(?:' . implode('|', $escaped) . ')\s*#';
+
+                    if (preg_match($pattern, $content->category))
+                    {
+                        $content->categoryPath = preg_split($pattern, $content->category);
+                        $content->categoryPath = array_map('trim', $content->categoryPath);
+                        $content->categoryPath = array_filter($content->categoryPath, 'strlen');
+                        if (! empty($content->categoryPath))
+                        {
+                            $content->category = end($content->categoryPath);
+                        }
+                    }
                 }
             }
 
@@ -490,14 +529,76 @@ class FeedModule extends AffiliateFeedParserModule
 
     public function viewDataPrepare($data)
     {
-        if (!$deeplink = $this->config('deeplink'))
-        {
-            return parent::viewDataPrepare($data);
-        }
+        $deeplink        = (string) $this->config('deeplink');
+        $rawParamsString = (string) $this->config('tracking_params');
+        $rawParamsString = trim(sanitize_text_field($rawParamsString));
 
-        foreach ($data as $key => $d)
+        foreach ($data as $key => $item)
         {
-            $data[$key]['url'] = LinkHandler::createAffUrl($d['orig_url'], $deeplink, $d);
+            $baseUrl = '';
+            if (!empty($deeplink) && !empty($item['orig_url']))
+            {
+                $baseUrl = LinkHandler::createAffUrl($item['orig_url'], $deeplink, $item);
+            }
+            else
+            {
+                $baseUrl = !empty($item['url']) ? $item['url'] : (!empty($item['orig_url']) ? $item['orig_url'] : '');
+            }
+
+            if ($rawParamsString === '')
+            {
+                $data[$key]['url'] = $baseUrl;
+                continue;
+            }
+
+            // Parse tracking params: accept "name=value&name2=value2" (also tolerates commas/newlines)
+            // Example: clickref={{post_id}}  OR  subId1=mysite1&subId2={{post_id}}
+            $pairs = preg_split('/[&\n,]+/', $rawParamsString);
+            $resolvedParams = array();
+            $paramNames     = array();
+
+            foreach ($pairs as $pair)
+            {
+                $pair = trim($pair);
+                if ($pair === '')
+                {
+                    continue;
+                }
+
+                // Split into name and value at the first "="
+                $eqPos = strpos($pair, '=');
+                $name  = $eqPos === false ? $pair : substr($pair, 0, $eqPos);
+                $valueTemplate = $eqPos === false ? '' : substr($pair, $eqPos + 1);
+
+                // Sanitize name
+                $name = trim($name);
+                $name = preg_replace('/[^a-zA-Z0-9_.\-]/', '', $name);
+
+                if ($name === '')
+                {
+                    continue;
+                }
+
+                $valueTemplate = trim($valueTemplate);
+
+                // Resolve dynamic placeholders
+                $value = (string) LinkHandler::getUrlTemplate($baseUrl, $valueTemplate, $item);
+
+                $resolvedParams[$name] = $value;
+                $paramNames[] = $name;
+            }
+
+            if (!empty($resolvedParams))
+            {
+                $url = remove_query_arg($paramNames, $baseUrl);
+                $url = add_query_arg($resolvedParams, $url);
+
+                $data[$key]['url'] = esc_url_raw($url);
+            }
+            else
+            {
+                $data[$key]['url'] = $baseUrl;
+            }
         }
 
         return parent::viewDataPrepare($data);
@@ -654,10 +755,15 @@ class FeedModule extends AffiliateFeedParserModule
         }
         catch (\Throwable $e)
         {
+            $message = sprintf(
+                /* translators: %s: exception message */
+                esc_html__('AI mapping failed: %s', 'content-egg'),
+                esc_html($e->getMessage())
+            );
+
             throw new \RuntimeException(
-                __('AI mapping failed: ', 'content-egg') . $e->getMessage(),
-                0,
-                $e
+                esc_html($message),
+                0
             );
         }
 
@@ -671,8 +777,11 @@ class FeedModule extends AffiliateFeedParserModule
             $missing = implode(', ', $this->getConfigInstance()->missingRequired($mapping));
             throw new \RuntimeException(
                 sprintf(
-                    __('AI mapping did not cover required fields: %s. Please map them manually.', 'content-egg'),
-                    $missing
+                    esc_html__(
+                        'AI mapping did not cover required fields: %s. Please map them manually.',
+                        'content-egg'
+                    ),
+                    esc_html($missing)
                 )
             );
         }
@@ -689,7 +798,10 @@ class FeedModule extends AffiliateFeedParserModule
         if (!$apiKey)
         {
             throw new \RuntimeException(
-                __('OpenAI API key is not configured. Please add it under Content Egg → Settings → AI → OpenAI API Key.', 'content-egg')
+                esc_html__(
+                    'OpenAI API key is not configured. Please add it under Content Egg → Settings → AI → OpenAI API Key.',
+                    'content-egg'
+                )
             );
         }
 
@@ -781,7 +893,12 @@ class FeedModule extends AffiliateFeedParserModule
             case 'json':
                 return $prompt->suggestFieldsMappingJson($data, $fieldNames);
             default:
-                throw new \InvalidArgumentException("Unsupported format: $format");
+                throw new \InvalidArgumentException(
+                    sprintf(
+                        esc_html__('Unsupported format: %s', 'content-egg'),
+                        esc_html($format)
+                    )
+                );
         }
     }
 

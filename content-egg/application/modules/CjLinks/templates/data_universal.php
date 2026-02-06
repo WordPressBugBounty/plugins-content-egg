@@ -4,8 +4,6 @@ defined('\ABSPATH') || exit;
   Name: Universal
  */
 
-__('Universal', 'content-egg-tpl');
-
 use ContentEgg\application\helpers\TemplateHelper;
 
 ?>

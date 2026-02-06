@@ -7,7 +7,6 @@ use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 
 use function ContentEgg\prn;
-use function ContentEgg\prnx;
 
 defined('\ABSPATH') || exit;
 
@@ -64,6 +63,8 @@ class ShortcodeAtts
             'border_color' => '',
             'tabs_type' => '',
             'cols_order' => '',
+            'group_pick' => '',
+            'link_target' => '',
         );
 
         $allowed_atts = \apply_filters('cegg_block_shortcode_atts', $allowed_atts);
@@ -105,6 +106,8 @@ class ShortcodeAtts
         $a['border_color'] = strtolower(\sanitize_text_field($a['border_color']));
         $a['tabs_type'] = strtolower(\sanitize_text_field($a['tabs_type']));
         $a['cols_order'] = \sanitize_text_field($a['cols_order']);
+        $a['group_pick'] = strtolower(\sanitize_text_field($a['group_pick']));
+        $a['link_target'] = strtolower(\sanitize_text_field($a['link_target']));
 
         if (is_numeric($a['border']))
             $a['border'] = abs($a['border']);
@@ -120,11 +123,15 @@ class ShortcodeAtts
         if ($a['products'])
             $a['products'] = TextHelper::getArrayFromCommaList($a['products']);
         if ($a['add_query_arg'])
+        {
             parse_str($a['add_query_arg'], $a['add_query_arg']);
+        }
 
         if ($a['cols'] && !$a['cols_md'])
             $a['cols_md'] = $a['cols'];
 
+        $allowed_link_target = array('affiliate', 'bridge', 'auto');
+        $allowed_group_pick = array('cheapest', 'priciest', 'random');
         $allowed_sort = array('price', 'discount', 'reverse', 'total_price');
         $allowed_order = array('asc', 'desc');
         $allowed_img_ratio = array('1x1', '4x3', '16x9', '21x9');
@@ -138,6 +145,12 @@ class ShortcodeAtts
         $a['order'] = strtolower($a['order']);
         if (!in_array($a['sort'], $allowed_sort))
             $a['sort'] = '';
+        if (!in_array($a['group_pick'], $allowed_group_pick))
+            $a['group_pick'] = '';
+        if (!in_array($a['link_target'], $allowed_link_target))
+            $a['link_target'] = '';
+        if ($a['link_target'] == 'auto')
+            $a['link_target'] = '';
         if (!in_array($a['order'], $allowed_order))
             $a['order'] = '';
         if ($a['sort'] == 'discount' && !$a['order'])

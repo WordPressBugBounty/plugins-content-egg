@@ -10,9 +10,7 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\AdminHelper;
-use ContentEgg\application\helpers\LogoHelper;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\helpers\LogoHelper;;
 
 /**
  * ToolsController class file
@@ -265,6 +263,7 @@ class ToolsController
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . strlen($json));
 
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         echo $json;
         exit;
     }
@@ -335,6 +334,7 @@ class ToolsController
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . strlen($json));
 
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         echo $json;
         exit;
     }

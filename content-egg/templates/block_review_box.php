@@ -8,8 +8,6 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-use function ContentEgg\prn;
-
 $item = TemplateHelper::selectItemByBadge($items);
 if ($title)
   $item['title'] = $title;
@@ -18,6 +16,11 @@ if (!empty($params['btn_text']))
   $btn_text = $params['btn_text'];
 else
   $btn_text = '';
+
+if (TemplateHelper::isAllItemsBridged($items))
+{
+  $this->params['hide'][] = 'price_update';
+}
 
 if (!empty($item['group']) && strpos($item['group'], 'RoundupProduct') !== false)
   $items = TemplateHelper::sortByPrice($items);
@@ -106,7 +109,11 @@ if (!empty($item['group']) && strpos($item['group'], 'RoundupProduct') !== false
             <?php
             if (empty($btn_text))
             {
-              if ($btn_item['price'])
+              if (TemplateHelper::isLinkedToBridge($btn_item))
+              {
+                $btn_text = TemplateHelper::buyNowBtnText(false, $item);
+              }
+              elseif ($btn_item['price'])
                 $params['btn_text'] = sprintf(TemplateHelper::__('%s at %s'), '%PRICE%', '%MERCHANT%');
               elseif ($item['module_id'] == 'Udemy')
                 $params['btn_text'] = sprintf(TemplateHelper::__('View on %s'), '%MERCHANT%');

@@ -2,9 +2,7 @@
 
 namespace ContentEgg\application\components;
 
-use ContentEgg\application\admin\GeneralConfig;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\admin\GeneralConfig;;
 
 defined('\ABSPATH') || exit;
 

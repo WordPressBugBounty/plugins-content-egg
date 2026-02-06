@@ -9,9 +9,6 @@ use ContentEgg\application\Plugin;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TextHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * ModuleSettingsContoller class file
  *
@@ -38,6 +35,7 @@ class ModuleSettingsContoller
     public function actionIndex()
     {
         \wp_enqueue_style('cegg-bootstrap5-full', '', Plugin::version());
+        \wp_enqueue_style('cegg-bootstrap-icons', PluginAdmin::res('/admin/bootstrap/css/bootstrap-icons.min.css'), [], Plugin::version());
         PluginAdmin::getInstance()->render('module_index', array('modules' => ModuleManager::getInstance()->getConfigurableModules()));
     }
 

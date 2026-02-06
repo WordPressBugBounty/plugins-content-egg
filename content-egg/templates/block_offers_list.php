@@ -8,8 +8,6 @@ use ContentEgg\application\helpers\TemplateHelper;
 
 defined('\ABSPATH') || exit;
 
-__('Sorted offers list with product images', 'content-egg-tpl');
-
 TemplateHelper::addShopInfoOffcanvases($items, $params);
 TemplateHelper::addCouponOffcanvases($items, $params);
 

@@ -4,9 +4,7 @@ namespace ContentEgg\application\modules\Viglink;
 
 defined('\ABSPATH') || exit;
 
-use ContentEgg\application\components\AffiliateParserModuleConfig;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\components\AffiliateParserModuleConfig;;
 
 /**
  * AffiliatewindowConfig class file

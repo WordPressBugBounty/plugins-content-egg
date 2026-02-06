@@ -4,9 +4,7 @@ namespace ContentEgg\application\admin\import;
 
 use ContentEgg\application\components\ai\ContentHelper;
 use ContentEgg\application\components\ai\SystemPrompt;
-use ContentEgg\application\helpers\TextHelper;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\helpers\TextHelper;;
 
 defined('\ABSPATH') || exit;
 

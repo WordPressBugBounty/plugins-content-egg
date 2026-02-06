@@ -14,9 +14,6 @@ use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\Translator;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * WooIntegrator class file
  *
@@ -227,7 +224,9 @@ class WooIntegrator
         GalleryScheduler::maybeSchedulePendingImages($post_id, $item);
 
         if ($product->get_type() == 'external' && \apply_filters('cegg_sync_woo_url_allowed', true))
+        {
             $product->set_product_url($item['url']);
+        }
 
         // brand taxonomy (Rehub feature)
         if (self::isRehubTheme())
@@ -274,7 +273,36 @@ class WooIntegrator
 
         $res = $product->save();
 
-        if (GeneralConfig::getInstance()->option('sync_ean') == 'enabled' && self::isEanForWoocommerceActive())
+        // Sync native WooCommerce GTIN/EAN -> _global_unique_id
+        if (GeneralConfig::getInstance()->option('sync_gtin') === 'enabled')
+        {
+            $gtin_raw = '';
+
+            if (! empty($item['gtin']))
+            {
+                $gtin_raw = (string) $item['gtin'];
+            }
+            elseif (! empty($item['ean']))
+            {
+                $gtin_raw = (string) $item['ean'];
+            }
+
+            $gtin_sanitized  = sanitize_text_field($gtin_raw);
+            $gtin_normalized = apply_filters('cegg_wc_normalize_gtin', $gtin_sanitized);
+
+            $meta_key = '_global_unique_id';
+
+            if ($gtin_normalized !== '')
+            {
+                \update_post_meta($post_id, $meta_key, $gtin_normalized);
+            }
+            else
+            {
+                \delete_post_meta($post_id, $meta_key);
+            }
+        }
+
+        if (GeneralConfig::getInstance()->option('sync_ean') === 'enabled' && self::isEanForWoocommerceActive())
         {
             $field = \apply_filters('cegg_alg_ean_field', '_alg_ean');
             if (!empty($item['ean']))

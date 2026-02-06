@@ -6,9 +6,7 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ModuleManager;
-use ContentEgg\application\Plugin;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\Plugin;;
 
 /**
  * AdminHelper class file
@@ -307,24 +305,18 @@ class AdminHelper
 			return '';
 		}
 
-		$url = Plugin::pluginPricingUrl('ce_pro_badge', 'badge_click');
-		return sprintf(
-			'<a href="%s" target="_blank" class="cegg-pro-link">
-            <span class="cegg-badge cegg-badge-pro">PRO Feature</span>
-        </a>',
-			esc_url($url)
-		);
+		$url = Plugin::pluginPricingUrl('ce_pro_badge', 'pro_badge_click');
+		return sprintf('<a href="%s" target="_blank" class="cegg-pro-link"><span class="cegg-badge cegg-badge-pro">PRO Feature</span></a>', esc_url($url));
 	}
 
 	public static function redirect($url, $status = 302, $fallback = '')
 	{
-		$default = $fallback ?: home_url('/');
-
-		$location = wp_validate_redirect($url, $default);
+		$default   = $fallback ?: home_url('/');
+		$location  = wp_validate_redirect($url, $default);
 
 		if (! $location)
 		{
-			wp_die('Invalid redirect URL.');
+			wp_die(esc_html__('Invalid redirect URL.', 'text-domain'));
 		}
 
 		if (! headers_sent())
@@ -333,7 +325,7 @@ class AdminHelper
 			exit;
 		}
 
-		// Fallback: headers already sent
+		// Fallback: headers already sent.
 		nocache_headers();
 
 		$js_url = wp_json_encode($location);
@@ -344,10 +336,8 @@ class AdminHelper
 			esc_attr('0;url=' . $location)
 		);
 		echo '</head><body>';
-		printf(
-			'<script>window.location.href=%s;</script>',
-			$js_url
-		);
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Safe JSON-encoded redirect URL.
+		printf('<script>window.location.href=%s;</script>', $js_url);
 		echo '</body></html>';
 		exit;
 	}

@@ -7,9 +7,7 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\admin\GeneralConfig;
-use ContentEgg\application\vendor\CrawlerDetect;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\vendor\CrawlerDetect\CrawlerDetect;
 
 /**
  * ModuleUpdateVisit class file

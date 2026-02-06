@@ -3,8 +3,6 @@
 use ContentEgg\application\admin\ProductPrefillController;
 use ContentEgg\application\helpers\AdminHelper;
 
-use function ContentEgg\prn;
-
 defined('ABSPATH') || exit;
 
 $settings = is_array($settings ?? null) ? $settings : [];
@@ -49,8 +47,17 @@ $ai_warning = AdminHelper::getSysAiWarning();
 ?>
 
 <div class="wrap cegg5-container">
-    <h1 class="h3"><?php echo esc_html__('Product Prefill Tool', 'content-egg'); ?></h1>
-
+    <h1 class="h3">
+        <?php echo esc_html__('Product Prefill Tool', 'content-egg'); ?>
+        <a href="<?php echo esc_url('https://ce-docs.keywordrush.com/set-up-products/fill-tool'); ?>"
+            target="_blank" rel="noopener noreferrer"
+            class="link-secondary text-decoration-none small ms-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94" />
+            </svg>
+        </a>
+    </h1>
     <?php if (! empty($selected_posts)) : ?>
         <div class="alert alert-warning mt-4" role="alert">
             <strong><?php esc_html_e('Important:', 'content-egg'); ?></strong>
@@ -81,6 +88,7 @@ $ai_warning = AdminHelper::getSysAiWarning();
         </div>
 
         <script>
+            "use strict";
             document.addEventListener('DOMContentLoaded', () => {
                 const btn = document.getElementById('togglePosts');
                 const list = document.getElementById('selectedPosts');
@@ -160,8 +168,8 @@ $ai_warning = AdminHelper::getSysAiWarning();
                                 $id = 'radio_' . esc_attr($value);
                             ?>
                                 <div class="form-check mb-2">
-                                    <input class="" type="radio" name="keyword_source" id="<?php echo $id; ?>" value="<?php echo esc_attr($value); ?>" <?php checked($keyword_source, $value); ?> <?php echo $extra; ?>>
-                                    <label class="form-check-label" for="<?php echo $id; ?>">
+                                    <input class="" type="radio" name="keyword_source" id="<?php echo esc_attr($id); ?>" value="<?php echo esc_attr($value); ?>" <?php checked($keyword_source, $value); ?> <?php echo esc_attr($extra); ?>>
+                                    <label class="form-check-label" for="<?php echo esc_attr($id); ?>">
                                         <?php echo esc_html($label); ?>
                                         <?php if ($pro_feature) : ?>
                                             <?php echo wp_kses_post(AdminHelper::getProFeatureWarning()); ?>
@@ -187,12 +195,18 @@ $ai_warning = AdminHelper::getSysAiWarning();
                             } ?>
 
                             <!-- Extra selects / inputs for certain keyword sources -->
-                            <div class="mt-2 ms-4" id="title_module_select" style="display:none;">
+                            <div class="mt-2 ms-4" id="title_module_select" style="display: none;">
                                 <select name="source_module_title" class="form-select">
-                                    <option value="">"><?php esc_html_e('Select a module', 'content-egg'); ?></option>
-                                    <?php foreach ($modules_full as $id => $name) : ?>
-                                        <option value="<?php echo esc_attr($id); ?>" <?php selected($source_module_title, $id); ?>><?php echo esc_html($name); ?></option>
-                                    <?php endforeach; ?>
+                                    <option value="">
+                                        <?php esc_html_e('Select a module', 'content-egg'); ?>
+                                    </option>
+                                    <?php if (!empty($modules_full)) : ?>
+                                        <?php foreach ($modules_full as $id => $name) : ?>
+                                            <option value="<?php echo esc_attr($id); ?>" <?php selected($source_module_title, $id); ?>>
+                                                <?php echo esc_html($name); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </select>
                             </div>
 
@@ -202,7 +216,7 @@ $ai_warning = AdminHelper::getSysAiWarning();
 
                             <div class="mt-2 ms-4" id="gtin_module_select" style="display:none;">
                                 <select name="source_module_gtin" class="form-select">
-                                    <option value="">"><?php esc_html_e('Select a module', 'content-egg'); ?></option>
+                                    <option value=""><?php esc_html_e('Select a module', 'content-egg'); ?></option>
                                     <?php foreach ($modules_full as $id => $name) : ?>
                                         <option value="<?php echo esc_attr($id); ?>" <?php selected($source_module_gtin, $id); ?>><?php echo esc_html($name); ?></option>
                                     <?php endforeach; ?>
@@ -262,7 +276,7 @@ $ai_warning = AdminHelper::getSysAiWarning();
                     <select name="max_products_per_module" id="max_products_per_module" class="form-select w-auto">
                         <option value="0" <?php selected($max_products_per_module, 0); ?>><?php esc_html_e('Default Module Settings', 'content-egg'); ?></option>
                         <?php for ($i = 1; $i <= 10; $i++) : ?>
-                            <option value="<?php echo $i; ?>" <?php selected($max_products_per_module, $i); ?>><?php echo $i; ?></option>
+                            <option value="<?php echo esc_attr($i); ?>" <?php selected($max_products_per_module, $i); ?>><?php echo esc_html($i); ?></option>
                         <?php endfor; ?>
                     </select>
                     <div class="small text-muted mt-1"><?php esc_html_e('Maximum number of products each selected module can add to a post.', 'content-egg'); ?></div>
@@ -276,7 +290,7 @@ $ai_warning = AdminHelper::getSysAiWarning();
                     <select name="max_products_total" id="max_products_total" class="form-select w-auto">
                         <option value="0" <?php selected($max_products_total, 0); ?>><?php esc_html_e('Unlimited', 'content-egg'); ?></option>
                         <?php for ($i = 1; $i <= 30; $i++) : ?>
-                            <option value="<?php echo $i; ?>" <?php selected($max_products_total, $i); ?>><?php echo $i; ?></option>
+                            <option value="<?php echo esc_attr((string)$i); ?>" <?php selected($max_products_total, $i); ?>><?php echo esc_html((string)$i); ?></option>
                         <?php endfor; ?>
                     </select>
                     <div class="small text-muted mt-1"><?php esc_html_e('Total number of products to insert into each post from all modules combined.', 'content-egg'); ?></div>
@@ -315,14 +329,17 @@ $ai_warning = AdminHelper::getSysAiWarning();
                         ?>
                             <div class="row align-items-center mb-2">
                                 <div class="col-md-4">
-                                    <select name="shortcode_blocks[<?php echo $i; ?>][position]" class="form-select">
+                                    <select name="shortcode_blocks[<?php echo esc_attr($i); ?>][position]" class="form-select">
                                         <?php foreach ($positions as $value => $label) : ?>
-                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($pos_val, $value); ?>><?php echo esc_html($label); ?></option>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($pos_val, $value); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </option>
                                         <?php endforeach; ?>
                                     </select>
+
                                 </div>
                                 <div class="col-md-8">
-                                    <input maxlength="300" type="text" name="shortcode_blocks[<?php echo $i; ?>][code]" class="form-control" value="<?php echo esc_attr($code_val); ?>" placeholder="<?php esc_attr_e('Shortcode or block markup', 'content-egg'); ?>">
+                                    <input maxlength="300" type="text" name="shortcode_blocks[<?php echo esc_attr($i); ?>][code]" class="form-control" value="<?php echo esc_attr($code_val); ?>" placeholder="<?php echo esc_attr__('Shortcode or block markup', 'content-egg'); ?>">
                                 </div>
                             </div>
                         <?php endfor; ?>
@@ -343,9 +360,24 @@ $ai_warning = AdminHelper::getSysAiWarning();
                             $value_val = $custom_fields[$i]['value'] ?? '';
                         ?>
                             <div class="row mb-2">
-                                <div class="col-md-4"><input type="text" name="custom_fields[<?php echo $i; ?>][key]" class="form-control" value="<?php echo esc_attr($key_val); ?>" placeholder="<?php esc_attr_e('Field Name', 'content-egg'); ?>"></div>
-                                <div class="col-md-8"><input type="text" name="custom_fields[<?php echo $i; ?>][value]" class="form-control" value="<?php echo esc_attr($value_val); ?>" placeholder="<?php esc_attr_e('Field Value (e.g. %PRODUCT.title%)', 'content-egg'); ?>"></div>
+                                <div class="col-md-4">
+                                    <input
+                                        type="text"
+                                        name="custom_fields[<?php echo esc_attr($i); ?>][key]"
+                                        class="form-control"
+                                        value="<?php echo esc_attr($key_val); ?>"
+                                        placeholder="<?php esc_attr_e('Field Name', 'content-egg'); ?>">
+                                </div>
+                                <div class="col-md-8">
+                                    <input
+                                        type="text"
+                                        name="custom_fields[<?php echo esc_attr($i); ?>][value]"
+                                        class="form-control"
+                                        value="<?php echo esc_attr($value_val); ?>"
+                                        placeholder="<?php esc_attr_e('Field Value (e.g. %PRODUCT.title%)', 'content-egg'); ?>">
+                                </div>
                             </div>
+
                         <?php endfor; ?>
                         <div class="text-muted mt-2"><?php esc_html_e('Available placeholders:', 'content-egg'); ?> <i>%KEYWORD%</i>, <i>%RANDOM(10,50)%</i>, <i>%PRODUCT.title%</i>, <i>%PRODUCT.price%</i>, <i>%PRODUCT.domain%</i>, <i>%PRODUCT.url%</i>, <i>%PRODUCT.ATTRIBUTE.attribute-name%</i></div>
                     </div>
@@ -361,29 +393,38 @@ $ai_warning = AdminHelper::getSysAiWarning();
 </div>
 
 <script>
-    // Toggle keyword-source dependant fields & hide rest of form on fully-AI
+    "use strict";
+    // Toggle keyword-source-dependent fields & hide rest of form on fully-AI
     (function() {
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener("DOMContentLoaded", () => {
             const keywordRadios = document.querySelectorAll('input[name="keyword_source"]');
-            const keywordRow = document.getElementById('keyword_source_row');
-            const metaInput = document.getElementById('meta_field_input');
-            const gtinSelect = document.getElementById('gtin_module_select');
-            const titleSelect = document.getElementById('title_module_select');
+            const keywordRow = document.getElementById("keyword_source_row");
+            const metaInput = document.getElementById("meta_field_input");
+            const gtinSelect = document.getElementById("gtin_module_select");
+            const titleSelect = document.getElementById("title_module_select");
+
+            if (!keywordRadios.length || !keywordRow || !metaInput || !gtinSelect || !titleSelect) {
+                return; // stop safely if elements are missing
+            }
 
             const toggle = () => {
-                const selected = document.querySelector('input[name="keyword_source"]:checked').value;
-                metaInput.style.display = selected === 'meta_field' ? 'block' : 'none';
-                gtinSelect.style.display = selected === 'gtin_module' ? 'block' : 'none';
-                titleSelect.style.display = selected === 'product_title_module' ? 'block' : 'none';
+                const checked = document.querySelector('input[name="keyword_source"]:checked');
+                if (!checked) return;
+
+                const selected = checked.value;
+                metaInput.style.display = selected === "meta_field" ? "block" : "none";
+                gtinSelect.style.display = selected === "gtin_module" ? "block" : "none";
+                titleSelect.style.display = selected === "product_title_module" ? "block" : "none";
 
                 let row = keywordRow.nextElementSibling;
                 while (row) {
-                    row.style.display = selected === 'fully_automatic_ai' ? 'none' : '';
+                    row.style.display = selected === "fully_automatic_ai" ? "none" : "";
                     row = row.nextElementSibling;
                 }
             };
-            keywordRadios.forEach(el => el.addEventListener('change', toggle));
-            toggle();
+
+            keywordRadios.forEach(el => el.addEventListener("change", toggle));
+            toggle(); // initialize on load
         });
     })();
 </script>

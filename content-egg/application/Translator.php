@@ -16,8 +16,6 @@ use ContentEgg\application\admin\GeneralConfig;
 class Translator
 {
 
-    private static $pairs = array();
-
     public static function __($str)
     {
         return self::translate($str);

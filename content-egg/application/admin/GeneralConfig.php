@@ -13,8 +13,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\TemplateManager;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\LocalRedirector;
 
 /**
  * GeneralSettings class file
@@ -193,6 +192,37 @@ class GeneralConfig extends Config
         );
 
         return array(
+            'lang' => array(
+                'title' => __('Website Language', 'content-egg'),
+                'description' => __('Set the language for the frontend display.', 'content-egg'),
+                'dropdown_options' => self::langs(),
+                'callback' => array($this, 'render_dropdown'),
+                'default' => self::getDefaultLang(),
+                'section' => __('General settings', 'content-egg'),
+            ),
+            'external_featured_images' => array(
+                'title' => __('External Featured Images', 'content-egg'),
+                'description' => __('Enable or disable the use of featured images sourced from external URLs.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'disabled' => __('Disabled - Use internal image', 'content-egg'),
+                    'enabled_internal_priority' => __('Enabled - Internal image takes priority', 'content-egg'),
+                    'enabled_external_priority' => __('Enabled - External image takes priority', 'content-egg'),
+                ),
+                'default' => 'disabled',
+                'section' => __('General settings', 'content-egg'),
+            ),
+            'image_proxy' => array(
+                'title' => __('Image Proxy', 'content-egg'),
+                'description' => sprintf(__('Enable a local proxy for external Amazon images. This may increase server load, so enable only if <a target="_blank" href="%s">necessary</a>.', 'content-egg'), 'https://ce-docs.keywordrush.com/faq/is-content-egg-gdpr-compliant#product-images-and-embedded-content'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'disabled' => __('Disabled', 'content-egg'),
+                    'enabled' => __('Enabled', 'content-egg'),
+                ),
+                'default' => 'disabled',
+                'section' => __('General settings', 'content-egg'),
+            ),
             'post_types' => array(
                 'title' => 'Post Types',
                 'description' => __('Select the post types that you want to integrate with the Content Egg plugin.', 'content-egg'),
@@ -225,44 +255,67 @@ class GeneralConfig extends Config
                 'default' => '',
                 'section' => __('General settings', 'content-egg'),
             ),
-            'redirect_prefix' => array(
-                'title' => __('Redirect Prefix', 'content-egg'),
-                'description' => __('Set a custom prefix for local redirect URLs.', 'content-egg'),
-                'callback' => array($this, 'render_input'),
-                'default' => '',
-                'validator' => array(
-                    'trim',
-                    'allow_empty',
-                    array(
-                        'call' => array('\ContentEgg\application\helpers\FormValidator', 'alpha_numeric'),
-                        'message' => sprintf(__('The field "%s" can contain only Latin letters and digits.', 'content-egg'), __('Redirect prefix', 'content-egg')),
-                    ),
+
+            'clicks_track_redirect' => array(
+                'title'       => __('Track Clicks With Redirect', 'content-egg'),
+                'description' => __('Counts clicks that go through local redirect links (“link cloaking”). You can enable local redirects per module in its settings.', 'content-egg'),
+                'callback'    => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'enabled'  => __('Enabled', 'content-egg'),
+                    'disabled' => __('Disabled', 'content-egg'),
                 ),
-                'section' => __('General settings', 'content-egg'),
+                'default' => 'enabled',
+                'section'     => __('General settings', 'content-egg'),
+            ),
+
+            'clicks_track_direct' => array(
+                'title'       => __('Track Clicks Without Redirect', 'content-egg'),
+                'description' => __('Count clicks on direct affiliate links (no local redirect). Recommended for programs that prohibit cloaking (e.g., Amazon). Uses a lightweight client-side beacon; no personal data is stored.', 'content-egg')
+                    . '<p class="description">' . esc_html__('Note:', 'content-egg') . ' '
+                    . esc_html__('After enabling, the plugin will index existing product links in the background. On larger sites this can take several minutes.', 'content-egg')
+                    . '</p>',
+                'callback'    => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'enabled'  => __('Enabled', 'content-egg'),
+                    'disabled' => __('Disabled', 'content-egg'),
+                ),
+                'default' => 'disabled',
+                'validator'   => [
+                    ['call' => [$this, 'processClicksTrackDirect'], 'type' => 'filter'],
+                ],
+                'section'     => __('General settings', 'content-egg'),
+            ),
+            'clicks_retention_days' => array(
+                'title'       => __('Click Stats Retention (days)', 'content-egg'),
+                'description' => __('Keep daily click aggregates for this many days. Set 0 to keep forever (no automatic cleanup).', 'content-egg'),
+                'callback'    => array($this, 'render_input'),
+                'default'     => 180,
+                'validator'   => array(
+                    'trim',
+                ),
+                'section'     => __('General settings', 'content-egg'),
             ),
             'send_ga_click_event' => array(
-                'title' => __('Affiliate Link Tracking', 'content-egg'),
-                'description' => __('Automatically track affiliate link clicks in Google Analytics 4 as custom events for better performance monitoring.', 'content-egg')
-                    . '<br>' . __('Note: GA4 must be installed on your site for tracking to function.', 'content-egg'),
-                'callback' => array($this, 'render_dropdown'),
-                'dropdown_options' => array(
-                    'enabled' => __('Enabled', 'content-egg'),
+                'title'       => __('GA4 Link Tracking', 'content-egg'),
+                'description' =>
+                __('Automatically track affiliate link clicks in Google Analytics 4 as custom events for better performance monitoring.', 'content-egg')
+                    . '<br>' .
+                    __('Note: GA4 must be installed on your site for tracking to function.', 'content-egg')
+                    . '<br>' .
+                    sprintf(
+                        '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+                        esc_url('https://ce-docs.keywordrush.com/features/clicks-statistics#id-4.-tracking-clicks-in-google-analytics-ga4'),
+                        esc_html__('Learn how to track clicks in GA4', 'content-egg')
+                    ),
+                'callback'          => array($this, 'render_dropdown'),
+                'dropdown_options'  => array(
+                    'enabled'  => __('Enabled', 'content-egg'),
                     'disabled' => __('Disabled', 'content-egg'),
                 ),
                 'default' => 'disabled',
                 'section' => __('General settings', 'content-egg'),
             ),
-            'redirect_pass_parameters' => array(
-                'title' => __('Pass-through Query Parameters', 'content-egg'),
-                'description' => __('Enable or disable the forwarding of query parameters to redirect links.', 'content-egg'),
-                'callback' => array($this, 'render_dropdown'),
-                'dropdown_options' => array(
-                    'enabled' => __('Enabled', 'content-egg'),
-                    'disabled' => __('Disabled', 'content-egg'),
-                ),
-                'default' => 'disabled',
-                'section' => __('General settings', 'content-egg'),
-            ),
+
             'filter_bots' => array(
                 'title' => __('Bot Filtering', 'content-egg'),
                 'description' => __('Prevent bots from triggering parsers.', 'content-egg') .
@@ -271,6 +324,7 @@ class GeneralConfig extends Config
                 'default' => true,
                 'section' => __('General settings', 'content-egg'),
             ),
+
             'logo_source' => [
                 'title'       => esc_html__('Logo Source', 'content-egg'),
                 'description' => sprintf(
@@ -473,37 +527,7 @@ class GeneralConfig extends Config
         }
 
         $options = array(
-            'lang' => array(
-                'title' => __('Website Language', 'content-egg'),
-                'description' => __('Set the language for the frontend display.', 'content-egg'),
-                'dropdown_options' => self::langs(),
-                'callback' => array($this, 'render_dropdown'),
-                'default' => self::getDefaultLang(),
-                'section' => __('Frontend', 'content-egg'),
-            ),
-            'external_featured_images' => array(
-                'title' => __('External Featured Images', 'content-egg'),
-                'description' => __('Enable or disable the use of featured images sourced from external URLs.', 'content-egg'),
-                'callback' => array($this, 'render_dropdown'),
-                'dropdown_options' => array(
-                    'disabled' => __('Disabled - Use internal image', 'content-egg'),
-                    'enabled_internal_priority' => __('Enabled - Internal image takes priority', 'content-egg'),
-                    'enabled_external_priority' => __('Enabled - External image takes priority', 'content-egg'),
-                ),
-                'default' => 'disabled',
-                'section' => __('Frontend', 'content-egg'),
-            ),
-            'image_proxy' => array(
-                'title' => __('Image Proxy', 'content-egg'),
-                'description' => sprintf(__('Enable a local proxy for external Amazon images. This may increase server load, so enable only if <a target="_blank" href="%s">necessary</a>.', 'content-egg'), 'https://ce-docs.keywordrush.com/faq/is-content-egg-gdpr-compliant#product-images-and-embedded-content'),
-                'callback' => array($this, 'render_dropdown'),
-                'dropdown_options' => array(
-                    'disabled' => __('Disabled', 'content-egg'),
-                    'enabled' => __('Enabled', 'content-egg'),
-                ),
-                'default' => 'disabled',
-                'section' => __('Frontend', 'content-egg'),
-            ),
+
             'color_mode' => array(
                 'title' => __('Color Mode', 'content-egg'),
                 'description' => __('Choose between Light or Dark theme settings.', 'content-egg'),
@@ -523,16 +547,34 @@ class GeneralConfig extends Config
                 'default' => 'outline-primary',
                 'section' => __('Frontend', 'content-egg'),
             ),
+
             'btn_text_buy_now' => array(
-                'title' => __('Product Button Text', 'content-egg'),
-                'description' => __('Customize the "Buy Now" button text.', 'content-egg') . ' ' .  __('You can use tags like %MERCHANT%, %DOMAIN%, %PRICE%, and %STOCK_STATUS% for dynamic content.', 'content-egg'),
-                'callback' => array($this, 'render_input'),
-                'default' => '',
-                'validator' => array(
-                    'strip_tags',
+                'title'       => __('Product Button Text (Affiliate)', 'content-egg'),
+                'description' => sprintf(
+                    __('Text for the external “Buy Now” button. Leave empty to use the default: %1$s. Supports tokens: %2$s', 'content-egg'),
+                    '<code>Buy Now</code>',
+                    '<code>%MERCHANT%</code>, <code>%DOMAIN%</code>, <code>%PRICE%</code>, <code>%STOCK_STATUS%</code>'
                 ),
-                'section' => __('Frontend', 'content-egg'),
+                'callback'    => array($this, 'render_input'),
+                'default'     => '', // empty = use built-in default “Buy Now”
+                'validator'   => array('strip_tags'),
+                'section'     => __('Frontend', 'content-egg'),
             ),
+
+            'btn_text_bridge' => array(
+                'title'       => __('Bridge Button Text (On-Site)', 'content-egg'),
+                'description' => sprintf(
+                    __('Text for the on-site Bridge button. Leave empty to use the default: %1$s. Supports tokens: %2$s', 'content-egg'),
+                    '<code>See Details</code>',
+                    '<code>%MERCHANT%</code>, <code>%DOMAIN%</code>, <code>%PRICE%</code>, <code>%STOCK_STATUS%</code>, <code>%SITE_NAME%</code>'
+                ),
+                'callback'    => array($this, 'render_input'),
+                'default'     => '', // empty = use built-in default “See Details”
+                'validator'   => array('strip_tags'),
+                'section'     => __('Frontend', 'content-egg'),
+
+            ),
+
             'btn_text_coupon' => array(
                 'title' => __('Coupon Button Text', 'content-egg'),
                 'description' => sprintf(__('Customize the text for the coupon button, replacing "%s" with your preferred wording.', 'content-egg'), __('Shop Sale', 'content-egg-tpl')),
@@ -622,7 +664,60 @@ class GeneralConfig extends Config
                     'ugc' => 'ugc',
                 ),
                 'callback' => array($this, 'render_checkbox_list'),
-                'default' => array('nofollow'),
+                'default' => array('nofollow', 'noopener'),
+                'section' => __('Frontend', 'content-egg'),
+            ),
+            'redirect_prefix' => array(
+                'title' => __('Redirect Prefix', 'content-egg'),
+                'description' => __('Set the path segment used for local redirect URLs. Leave empty to use the default "go".', 'content-egg'),
+                'callback' => array($this, 'render_input'),
+                'default' => '',
+                'validator' => array(
+                    array(
+                        'call' => array($this, 'processRedirectPrefix'),
+                        'type' => 'filter',
+                    ),
+                    'trim',
+                    'allow_empty',
+                    array(
+                        'call' => array('\ContentEgg\application\helpers\FormValidator', 'alpha_numeric'),
+                        'message' => sprintf(__('The field "%s" can contain only Latin letters and digits.', 'content-egg'), __('Redirect prefix', 'content-egg')),
+                    ),
+                ),
+                'section' => __('Frontend', 'content-egg'),
+            ),
+            'redirect_pass_parameters' => array(
+                'title' => __('Pass-through Query Parameters', 'content-egg'),
+                'description' => __('Enable or disable the forwarding of query parameters to redirect links.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'enabled' => __('Enabled', 'content-egg'),
+                    'disabled' => __('Disabled', 'content-egg'),
+                ),
+                'default' => 'disabled',
+                'section' => __('Frontend', 'content-egg'),
+            ),
+            'redirect_status_code' => array(
+                'title'       => __('Redirect Status Code', 'content-egg'),
+                'description' => __('Choose the HTTP status code for local redirects.', 'content-egg'),
+                'callback'    => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    '301' => __('301 — Moved Permanently', 'content-egg'),
+                    '302' => __('302 — Found (Temporary)', 'content-egg'),
+                    '307' => __('307 — Temporary Redirect', 'content-egg'),
+                ),
+                'default' => '301',
+                'section' => __('Frontend', 'content-egg'),
+            ),
+            'link_destination' => array(
+                'title' => __('Link destination preference', 'content-egg'),
+                'description' => __('Choose where product links should send visitors when a Bridge Page exists. You can override this behavior using the link_target shortcode parameter.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'affiliate' => __('Prefer Merchant (affiliate)', 'content-egg'),
+                    'bridge' => __('Prefer Bridge Page (on your site)', 'content-egg'),
+                ),
+                'default' => 'bridge',
                 'section' => __('Frontend', 'content-egg'),
             ),
             'logos' => array(
@@ -820,28 +915,42 @@ class GeneralConfig extends Config
                 'default' => '',
                 'section' => __('WooCommerce', 'content-egg'),
             ),
+            'sync_gtin' => array(
+                'title'            => __('Sync GTIN (WooCommerce native)', 'content-egg'),
+                'description'      => __('Synchronize the Content Egg GTIN/EAN to WooCommerce’s native product identifier field.', 'content-egg'),
+                'callback'         => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'enabled'  => __('Enabled', 'content-egg'),
+                    'disabled' => __('Disabled', 'content-egg'),
+                ),
+                'default' => 'disabled',
+                'section' => __('WooCommerce', 'content-egg'),
+            ),
+
             'sync_ean' => array(
-                'title' => __('Sync EAN', 'content-egg'),
-                'description' => __('Requires the EAN for WooCommerce plugin for synchronization.', 'content-egg'),
-                'callback' => array($this, 'render_dropdown'),
+                'title'            => __('Sync EAN (EAN for WooCommerce plugin)', 'content-egg'),
+                'description'      => __('Copy the EAN from Content Egg to the EAN for WooCommerce field (meta: _alg_ean). Requires the EAN for WooCommerce plugin to be active.', 'content-egg'),
+                'callback'         => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
-                    'enabled' => __('Enabled', 'content-egg'),
+                    'enabled'  => __('Enabled', 'content-egg'),
                     'disabled' => __('Disabled', 'content-egg'),
                 ),
                 'default' => 'disabled',
                 'section' => __('WooCommerce', 'content-egg'),
             ),
+
             'sync_isbn' => array(
-                'title' => __('Sync ISBN', 'content-egg'),
-                'description' => __('Requires the EAN for WooCommerce plugin for synchronization.', 'content-egg'),
-                'callback' => array($this, 'render_dropdown'),
+                'title'            => __('Sync ISBN (EAN for WooCommerce plugin)', 'content-egg'),
+                'description'      => __('Copy the ISBN from Content Egg to the EAN for WooCommerce field (meta: _alg_isbn). Requires the EAN for WooCommerce plugin to be active.', 'content-egg'),
+                'callback'         => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
-                    'enabled' => __('Enabled', 'content-egg'),
+                    'enabled'  => __('Enabled', 'content-egg'),
                     'disabled' => __('Disabled', 'content-egg'),
                 ),
                 'default' => 'disabled',
                 'section' => __('WooCommerce', 'content-egg'),
             ),
+
             'woocommerce_shortcode_single' => array(
                 'title' => __('Add Shortcode to Single Product Pages', 'content-egg'),
                 'description' => __(
@@ -1494,5 +1603,53 @@ class GeneralConfig extends Config
         }
 
         return [];
+    }
+
+    public function processRedirectPrefix($value): string
+    {
+        $old = (string) $this->option('redirect_prefix');
+        $new = TextHelper::clear((string) $value);
+
+        if ($new === $old)
+        {
+            return $new;
+        }
+
+        $prefix = ($new !== '') ? $new : LocalRedirector::DEFAULT_PREFIX;
+
+        // Flush once to apply the new /{prefix}/{slug} rule
+        LocalRedirector::flushRules($prefix);
+
+        return $new;
+    }
+
+    public function processClicksTrackDirect($value)
+    {
+        $old = (string) $this->option('clicks_track_direct');
+        $new = (string) $value;
+
+        if ($new === $old)
+        {
+            return $new;
+        }
+
+        if ($new === 'enabled')
+        {
+            // Backfill all posts for modules with local redirect OFF (direct mode)
+            if (!wp_next_scheduled('cegg_link_index_backfill_once', ['direct', null]))
+            {
+                wp_schedule_single_event(time() + 5, 'cegg_link_index_backfill_once', ['direct', null]);
+            }
+        }
+        else
+        {
+            // Disabled: cancel any pending direct-mode backfills
+            while ($ts = wp_next_scheduled('cegg_link_index_backfill_once', ['direct', null]))
+            {
+                wp_unschedule_event($ts, 'cegg_link_index_backfill_once', ['direct', null]);
+            }
+        }
+
+        return $new;
     }
 }

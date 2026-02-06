@@ -291,14 +291,15 @@ use ContentEgg\application\models\AutoblogModel;
         foreach ($options as $value => $label)
         {
             printf(
-                '<option value="%d" %s>%s</option>',
-                $value,
+                '<option value="%s" %s>%s</option>',
+                esc_attr($value),
                 selected($current, $value, false),
                 esc_html($label)
             );
         }
 
         echo '</select>';
+
         echo '</td>';
         echo '</tr>';
         ?>

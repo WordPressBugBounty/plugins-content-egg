@@ -15,9 +15,6 @@ use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\components\ShortcodeAtts;
 use ContentEgg\application\helpers\TemplateHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * ModuleViewer class file
  *
@@ -31,8 +28,6 @@ class ModuleViewer
     private $module_data_pointer = array();
     private $block_data_pointer = array();
     private $data = array();
-
-    private static $total_items = 0;
 
     public static function getInstance()
     {
@@ -309,6 +304,12 @@ class ModuleViewer
                 Shortcoded::getInstance($post_id)->setShortcodedModule($module_id);
         }
 
+        // group pick
+        if (!empty($params['group_pick']))
+        {
+            $data = TemplateHelper::pickByGroups($data, $params['group_pick']);
+        }
+
         // remove duplicates
         if (!empty($params['remove_duplicates_by']))
         {
@@ -340,7 +341,7 @@ class ModuleViewer
         }
         $template = $params['template'];
 
-        $sorted_templates = array('block_offers_logo', 'block_offers_list', 'block_price_comparison', 'block_offers_logo_shipping', 'block_price_alert', 'block_popup_button', 'block_popup_compare', 'block_price_comparison_card', 'block_price_statistics', 'block_offers_logo_groups', 'block_offers_logo_shipping_groups', 'block_offers_logo_btn', 'block_review_box');
+        $sorted_templates = array('block_offers_logo', 'block_offers_list', 'block_price_comparison', 'block_offers_logo_shipping', 'block_price_alert', 'block_popup_button', 'block_popup_compare', 'block_price_comparison_card', 'block_price_statistics', 'block_offers_logo_groups', 'block_offers_logo_shipping_groups', 'block_offers_logo_btn', 'block_review_box', 'block_text_links');
         if (in_array($params['template'], $sorted_templates))
         {
             if (empty($params['order']))

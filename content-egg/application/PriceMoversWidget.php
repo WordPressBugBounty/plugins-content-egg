@@ -12,9 +12,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ContentProduct;
-use ContentEgg\application\components\ShortcodeAtts;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\components\ShortcodeAtts;;
 
 /**
  * PriceMoversWidget class file

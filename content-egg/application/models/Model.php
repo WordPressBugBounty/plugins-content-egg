@@ -4,8 +4,7 @@ namespace ContentEgg\application\models;
 
 use ContentEgg\application\Plugin;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 defined('\ABSPATH') || exit;
 

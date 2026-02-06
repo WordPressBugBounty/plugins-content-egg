@@ -5,8 +5,7 @@ namespace ContentEgg\application\components;
 use ContentEgg\application\admin\GeneralConfig;
 use Generator;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 defined('\ABSPATH') || exit;
 

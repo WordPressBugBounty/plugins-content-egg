@@ -3,8 +3,6 @@
  * Name: Grid
  */
 
-__('Grid', 'content-egg-tpl');
-
 use ContentEgg\application\helpers\TemplateHelper;
 
 defined('\ABSPATH') || exit;

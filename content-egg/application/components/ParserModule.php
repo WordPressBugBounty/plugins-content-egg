@@ -10,9 +10,6 @@ use ContentEgg\application\LocalRedirect;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\Plugin;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * ParserModule abstract class file
  *
@@ -142,27 +139,9 @@ abstract class ParserModule extends Module
 
     public function viewDataPrepare($data)
     {
-        // cashback integration
-        if (GeneralConfig::getInstance()->option('cashback_integration') == 'enabled' && class_exists('\CashbackTracker\application\Plugin'))
+        if (!is_array($data) || empty($data))
         {
-            foreach ($data as $key => $d)
-            {
-                $data[$key]['url'] = \CashbackTracker\application\components\DeeplinkGenerator::maybeAddTracking($d['url']);
-            }
-        }
-
-        // local redirect
-        if ($this->config('set_local_redirect'))
-        {
-            foreach ($data as $key => $d)
-            {
-                if (isset($d['url']))
-                {
-                    $data[$key]['aff_url'] = $d['url'];
-                } // url without redirect
-
-                $data[$key]['url'] = LocalRedirect::createRedirectUrl($d);
-            }
+            return $data;
         }
 
         return $data;
@@ -211,10 +190,21 @@ abstract class ParserModule extends Module
             }
             catch (\Exception $e)
             {
-                if (count($keywords) == 1)
-                    throw new \Exception($e->getMessage(), $e->getCode());
-                else
+                $kcount     = count($keywords);
+                $code       = (int) $e->getCode();
+                $retryable  = [408, 425, 429, 500, 502, 503, 504]; // timeouts, rate limit, transient 5xx
+
+                // If multiple keywords AND error is retryable → skip to next keyword
+                if ($kcount > 1 && in_array($code, $retryable, true))
+                {
                     continue;
+                }
+
+                // Otherwise, rethrow (single keyword, or non-retryable error)
+                throw new \RuntimeException(
+                    esc_html(wp_strip_all_tags($e->getMessage())),
+                    (int) ($code ?: 0)
+                );
             }
 
             if (!empty($groups[$i]))

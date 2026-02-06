@@ -3,7 +3,7 @@ defined('\ABSPATH') || exit;
 /*
   Name: Image
  */
-__('Image', 'content-egg-tpl');
+
 ?>
 
 <div class="container px-0 mb-5 mt-1" <?php $this->colorMode(); ?>>

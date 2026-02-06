@@ -4,9 +4,6 @@ namespace ContentEgg\application;
 
 use ContentEgg\application\admin\GeneralConfig;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 defined('\ABSPATH') || exit;
 
 /**
@@ -94,7 +91,7 @@ class ImageProxy
 
         if ($http_code !== 200)
         {
-            wp_die('Failed to fetch image (HTTP ' . $http_code . ').', 'Error', ['response' => 500]);
+            wp_die(sprintf('Failed to fetch image (HTTP %d).', esc_html($http_code)), esc_html__('Error', 'content-egg'), ['response' => 500]);
         }
 
         $allowed_mime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];

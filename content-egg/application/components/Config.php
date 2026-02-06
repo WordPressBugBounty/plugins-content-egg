@@ -5,7 +5,6 @@ namespace ContentEgg\application\components;
 use ContentEgg\application\helpers\AdminHelper;
 use ContentEgg\application\Plugin;
 
-use function ContentEgg\prn;
 use function ContentEgg\prnx;
 
 defined('\ABSPATH') || exit;
@@ -19,7 +18,6 @@ defined('\ABSPATH') || exit;
  */
 abstract class Config
 {
-
     protected $page_slug;
     protected $option_name;
     protected $option_values = array();
@@ -170,7 +168,6 @@ abstract class Config
         $this->options = $this->options();
 
         $sections = array();
-
         foreach ($this->options as $id => $field)
         {
             if (empty($field['title']))
@@ -213,7 +210,6 @@ abstract class Config
             {
                 $params['help_url'] = $field['help_url'];
             }
-
             if (!empty($field['is_pro']))
             {
                 $params['is_pro'] = true;
@@ -245,11 +241,19 @@ abstract class Config
                 $title .= AdminHelper::getProFeatureWarning();
             }
 
-            \add_settings_field(
+            add_settings_field(
                 $id,
-                $title,
+                wp_kses(
+                    $title,
+                    array(
+                        'span' => array(
+                            'style' => true,
+                            'class' => true,
+                        ),
+                    )
+                ),
                 $field['callback'],
-                $this->page_slug, // menu slug
+                $this->page_slug,
                 $field['section'],
                 $params
             );
@@ -313,11 +317,15 @@ abstract class Config
             . esc_attr($args['name']) . ']" id="'
             . esc_attr($args['label_for']) . '" value="'
             . esc_attr($args['value']) . '" class="regular-text" />';
-        if (!empty($args['render_after']))
-            echo $args['render_after'];
-        if ($args['description'])
+
+        if (! empty($args['render_after']))
         {
-            echo '<p class="description">' . $args['description'] . '</p>';
+            echo wp_kses_post($args['render_after']);
+        }
+
+        if (! empty($args['description']))
+        {
+            echo '<p class="description">' . wp_kses_post($args['description']) . '</p>';
         }
     }
 
@@ -347,19 +355,14 @@ abstract class Config
 
     public function render_dropdown(array $args): void
     {
-        $name  = esc_attr("{$args['option_name']}[{$args['name']}]");
-        $id    = esc_attr($args['label_for']);
-        $value = $args['value'];
+        $name       = "{$args['option_name']}[{$args['name']}]";
+        $id         = (string) $args['label_for'];
+        $value      = $args['value'];
+        $fieldIsPro = ! empty($args['is_pro']);
 
-        $fieldIsPro     = ! empty($args['is_pro']);
-        $disableAll     = $fieldIsPro && ! Plugin::isPro() ? ' disabled' : '';
-
-        printf(
-            '<select name="%s" id="%s"%s>',
-            $name,
-            $id,
-            $disableAll
-        );
+        echo '<select name="' . esc_attr($name) . '" id="' . esc_attr($id) . '"'
+            . disabled($fieldIsPro && ! Plugin::isPro(), true, false)
+            . '>';
 
         foreach ($args['dropdown_options'] as $optValue => $optData)
         {
@@ -374,19 +377,15 @@ abstract class Config
                 $optPro   = false;
             }
 
-            $disableOpt = ($optPro && ! Plugin::isPro()) ? ' disabled' : '';
-
-            $suffix = ($optPro && ! Plugin::isPro())
-                ? ' <small>(Pro)</small>'
-                : '';
+            $suffix = ($optPro && ! Plugin::isPro()) ? '<small>(Pro)</small>' : '';
 
             printf(
                 '<option value="%s"%s%s>%s%s</option>',
-                esc_attr($optValue),
+                esc_attr((string) $optValue),
                 selected($value, $optValue, false),
-                $disableOpt,
+                disabled($optPro && ! Plugin::isPro(), true, false),
                 esc_html($optLabel),
-                $suffix
+                $suffix ? wp_kses($suffix, array('small' => array())) : ''
             );
         }
 
@@ -399,13 +398,9 @@ abstract class Config
 
         if (! empty($args['description']))
         {
-            printf(
-                '<p class="description">%s</p>',
-                wp_kses_post($args['description'])
-            );
+            echo '<p class="description">' . wp_kses_post($args['description']) . '</p>';
         }
     }
-
     public function render_checkbox_list($args)
     {
         if (empty($args['checkbox_options']))
@@ -568,7 +563,7 @@ abstract class Config
                             }
                             if (!$res)
                             {
-                                \add_settings_error($option, $option, $v['message']);
+                                \add_settings_error($option, $option, wp_kses_post($v['message']));
                                 $value = $this->get_current($option);
                                 if (!empty($v['when']))
                                 {
@@ -612,9 +607,14 @@ abstract class Config
             $out = $this->out;
         }
 
-        if (!$this->option_exists($option))
+        if (! $this->option_exists($option))
         {
-            throw new \Exception('Options "' . $option . '" does not exists.');
+            throw new \Exception(
+                sprintf(
+                    'Options "%s" does not exist.',
+                    esc_html($option)
+                )
+            );
         }
 
         if (!isset($input[$option]) && $this->is_checkbox($option))
@@ -624,7 +624,12 @@ abstract class Config
 
         if (!isset($input[$option]))
         {
-            throw new \Exception('Options "' . $option . '" does not exists.');
+            throw new \Exception(
+                sprintf(
+                    'Options "%s" does not exist.',
+                    esc_html($option)
+                )
+            );
         }
 
         if (isset($out[$option]))

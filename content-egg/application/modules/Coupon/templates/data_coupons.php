@@ -1,11 +1,11 @@
 <?php
 
-defined( '\ABSPATH' ) || exit;
+defined('\ABSPATH') || exit;
 
 /*
   Name: Coupons
  */
-__( 'Coupons', 'content-egg-tpl' );
 
 
-$this->renderPartial( 'coupon' );
+
+$this->renderPartial('coupon');

@@ -7,9 +7,6 @@
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\ArrayHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 defined('\ABSPATH') || exit;
 
 TemplateHelper::addShopInfoOffcanvases($items, $params);
@@ -18,6 +15,9 @@ $ratings = TemplateHelper::generateStaticRatings(count($items));
 
 foreach ($items as $i => $item)
 {
+    if (!isset($item['group']))
+        $item['group'] = '';
+
     if (empty($item['ratingDecimal']) && isset($item['extra']['data']['ratingDecimal']))
         $items[$i]['ratingDecimal'] = $item['ratingDecimal'] = TemplateHelper::convertRatingScale10($item['extra']['data']['ratingDecimal']);
 

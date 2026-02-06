@@ -10,8 +10,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * ModuleApi class file
@@ -45,7 +44,9 @@ class ModuleApi
         \check_ajax_referer('contentegg-metabox', '_contentegg_nonce');
 
         if (empty($_POST['module']))
+        {
             die("Module is undefined.");
+        }
 
         @set_time_limit(240);
 

@@ -9,8 +9,7 @@ use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
+
 
 /**
  * StructuredData class file

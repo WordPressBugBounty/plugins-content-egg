@@ -16,8 +16,8 @@ use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\admin\import\AutoImportScheduler;
 use ContentEgg\application\blocks\productblock\ProductBlock;
 use ContentEgg\application\admin\import\ProductImportScheduler;
-
-use function ContentEgg\prnx;
+use ContentEgg\application\admin\ProductMapMaintenance;
+use ContentEgg\application\components\LinkIndexIndexer;;
 
 /**
  * Plugin class file
@@ -28,8 +28,8 @@ use function ContentEgg\prnx;
  */
 class Plugin
 {
-    const version = '9.0.2';
-    const db_version = 80;
+    const version = '10.1.0';
+    const db_version = 88;
     const wp_requires = '5.9';
     const slug = 'content-egg';
     const short_slug = 'cegg';
@@ -53,6 +53,8 @@ class Plugin
 
     public static function registerComponents()
     {
+        LocalRedirector::initAction();
+
         // Register widgets early
         \add_action('widgets_init', function ()
         {
@@ -73,6 +75,8 @@ class Plugin
             Pattern::initAction();
             ProductBlock::initAction();
             GalleryScheduler::initAction();
+            ProductMapMaintenance::initAction();
+            LinkIndexIndexer::initAction();
             \add_action('wp_loaded', array($this, 'registerScripts'));
 
             if (!\is_admin())
@@ -80,22 +84,24 @@ class Plugin
                 \add_action('amp_post_template_css', array($this, 'registerAmpStyles'));
                 ModuleViewer::getInstance()->init();
                 ModuleUpdateVisit::getInstance()->init();
-                LocalRedirect::initAction();
                 CurrencyHelper::getInstance(GeneralConfig::getInstance()->option('lang'));
                 ProductSearch::initAction();
                 StructuredData::initAction();
             }
             ImageProxy::getInstance()->init();
             PriceAlert::getInstance()->init();
+            MaintenanceScheduler::initAction();
             AutoblogScheduler::initAction();
             ModuleUpdateScheduler::initAction();
             ProductPrefillScheduler::initAction();
             ProductImportScheduler::initAction();
             AutoImportScheduler::initAction();
+            LinkIndexScheduler::initAction();
             WooIntegrator::initAction();
             ExternalFeaturedImage::initAction();
             AggregateOffer::initAction();
             AffiliateDisclaimer::initAction();
+            ClicksRestController::getInstance()->init();
             if (!self::isFree())
             {
                 DataRestController::getInstance()->init();
