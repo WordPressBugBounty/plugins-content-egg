@@ -1,0 +1,86 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/comparison-table",
+    "version": "1.0.0",
+    "title": "Comparison Table",
+    "category": "cegg-blocks",
+    "icon": "table-col-after",
+    "description": "CE-first multi-product comparison block with table variants.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+  "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "versus", "product-list"]
+        },
+        "heading_label": {
+            "type": "string",
+            "default": "Side-by-side comparison"
+        },
+        "heading_title": {
+            "type": "string",
+            "default": ""
+        },
+        "heading_tag": {
+            "type": "string",
+            "default": "div",
+            "enum": ["h1", "h2", "h3", "h4", "div"]
+        },
+        "cta_label": {
+            "type": "string",
+            "default": ""
+        },
+        "footer_note": {
+            "type": "string",
+            "default": ""
+        },
+        "items": {
+            "type": "array",
+            "default": []
+        },
+        "criteria": {
+            "type": "array",
+            "default": []
+        },
+        "anchor": {
+            "type": "string",
+            "default": ""
+        },
+        "toc_label": {
+            "type": "string",
+            "default": ""
+        },
+        "include_in_toc": {
+            "type": "boolean",
+            "default": false
+        },
+        "level": {
+            "type": "number",
+            "default": 2
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

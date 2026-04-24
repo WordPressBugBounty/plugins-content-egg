@@ -14,7 +14,7 @@ defined('ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link   https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class PresetForm
 {
@@ -49,13 +49,18 @@ class PresetForm
             'woo_short_desc_tpl'  => '',
 
             // AI settings
+            'ai_model'            => '',
             'ai_product_content'  => [],
             'ai_title'            => '',
             'ai_content'          => '',
             'ai_short_desc'       => '',
+            'ai_extra_section1'   => '',
+            'ai_extra_section2'   => '',
             'prompt1'             => '',
             'prompt2'             => '',
             'prompt3'             => '',
+            'prompt4'             => '',
+            'prompt5'             => '',
 
             // Custom fields – provide three empty slots by default
             'custom_fields'       => array_fill(0, 3, [
@@ -102,6 +107,7 @@ class PresetForm
             'title_tpl'          => sanitize_text_field($data['title_tpl']),
             'body_tpl'           => wp_kses_post($data['body_tpl']),
             'woo_short_desc_tpl' => wp_kses_post($data['woo_short_desc_tpl']),
+            'ai_model'           => sanitize_text_field($data['ai_model']),
             'ai_product_content' => array_intersect(
                 (array) $data['ai_product_content'],
                 [
@@ -118,9 +124,13 @@ class PresetForm
             'ai_title'           => sanitize_key($data['ai_title']),
             'ai_content'         => sanitize_key($data['ai_content']),
             'ai_short_desc'      => sanitize_key($data['ai_short_desc']),
+            'ai_extra_section1'  => sanitize_key($data['ai_extra_section1']),
+            'ai_extra_section2'  => sanitize_key($data['ai_extra_section2']),
             'prompt1'            => sanitize_textarea_field($data['prompt1']),
             'prompt2'            => sanitize_textarea_field($data['prompt2']),
             'prompt3'            => sanitize_textarea_field($data['prompt3']),
+            'prompt4'            => sanitize_textarea_field($data['prompt4']),
+            'prompt5'            => sanitize_textarea_field($data['prompt5']),
             'custom_fields'      => array_map(static function ($field)
             {
                 return [

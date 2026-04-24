@@ -1,0 +1,104 @@
+/*
+ * Specifications block — visual CSS only.
+ * Layout uses Bootstrap flex/grid utilities.
+ * All colors, borders, radii come from eggb tokens.
+ */
+
+.eggb-specs--default {
+  padding: var(--eggb-block-pad);
+}
+
+.eggb-ks-label {
+  display: block;
+  font-size: var(--eggb-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--eggb-text-muted);
+}
+
+.eggb-ks-value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.eggb-ks-icon {
+  color: var(--eggb-accent);
+  display: inline-flex;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  margin-top: 0.15em;
+}
+
+.eggb-ks-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.eggb-specs--compact {
+  font-size: var(--eggb-text-sm);
+}
+
+.eggb-specs--compact table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 0;
+}
+
+.eggb-specs--compact tr {
+  border-top: 1px solid var(--eggb-border);
+}
+
+.eggb-specs--compact tr:first-child {
+  border-top: none;
+}
+
+.eggb-specs--compact td {
+  padding: 0.2rem 0;
+  vertical-align: top;
+  line-height: 1.4;
+}
+
+.eggb-specs--compact .eggb-ks-label {
+  display: table-cell;
+  width: 28%;
+  padding-right: 1rem;
+  white-space: normal;
+}
+
+.eggb-specs-hl-stack {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.eggb-specs--highlight .eggb-specs-hl-band {
+  display: flex;
+  border: var(--eggb-border-w) solid var(--eggb-border);
+  border-radius: var(--eggb-radius);
+  overflow: hidden;
+}
+
+.eggb-specs-hl-item {
+  flex: 1 1 20%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.875rem 0.5rem;
+  border-right: var(--eggb-border-w) solid var(--eggb-border);
+}
+
+.eggb-specs-hl-item:last-child {
+  border-right: none;
+}
+
+.eggb-specs-hl-value {
+  font-size: var(--eggb-text-lg);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--eggb-accent);
+}

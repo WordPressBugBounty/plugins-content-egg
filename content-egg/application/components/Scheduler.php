@@ -9,7 +9,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 abstract class Scheduler implements iScheduler
 {
@@ -25,12 +25,16 @@ abstract class Scheduler implements iScheduler
             $timestamp = time();
 
         if (!\wp_next_scheduled(static::getCronTag()))
+        {
             \wp_schedule_event($timestamp, $recurrence, static::getCronTag());
+        }
     }
 
     public static function clearScheduleEvent()
     {
         if (\wp_next_scheduled(static::getCronTag()))
+        {
             \wp_clear_scheduled_hook(static::getCronTag());
+        }
     }
 }

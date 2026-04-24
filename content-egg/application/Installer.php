@@ -10,6 +10,7 @@ use ContentEgg\application\admin\import\PresetRepository;
 use ContentEgg\application\admin\import\ProductImportScheduler;
 use ContentEgg\application\admin\LicConfig;
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\components\OfferCountService;
 use ContentEgg\application\models\LinkIndexModel;
 
 /**
@@ -17,7 +18,7 @@ use ContentEgg\application\models\LinkIndexModel;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class Installer
 {
@@ -70,17 +71,15 @@ class Installer
         \add_option(Plugin::slug . '_first_activation_date', time());
         self::upgradeTables();
 
-        if (!Plugin::isFree())
-        {
-            SystemScheduler::addScheduleEvent('weekly', time() + rand(259200, 604800));
-        }
-
         MaintenanceScheduler::activate();
         AutoblogScheduler::maybeAddScheduleEvent();
         ProductPrefillScheduler::maybeAddScheduleEvent();
         ProductImportScheduler::maybeAddScheduleEvent();
         AutoImportScheduler::maybeAddScheduleEvent();
-
+        if (!Plugin::isFree())
+        {
+            SystemScheduler::addScheduleEvent('daily');
+        }
         PresetRepository::maybeInstallBuiltInPresets();
     }
 
@@ -93,7 +92,9 @@ class Installer
         ProductImportScheduler::clearScheduleEvent();
         AutoImportScheduler::clearScheduleEvent();
         if (!Plugin::isFree())
+        {
             SystemScheduler::clearScheduleEvent();
+        }
     }
 
     public static function requirements()
@@ -162,9 +163,6 @@ class Installer
         if ($db_version < 56)
             self::upgrade_v56();
 
-        if ($db_version < 57)
-            self::upgrade_v57();
-
         if ($db_version < 80)
             self::upgrade_v80();
 
@@ -174,8 +172,13 @@ class Installer
         if ($db_version < 86)
             self::upgrade_v86();
 
-        if ($db_version < 88)
-            self::upgrade_v88();
+        if ($db_version < 90)
+            self::upgrade_v90();
+
+        if (!Plugin::isFree())
+        {
+            SystemScheduler::addScheduleEvent('daily');
+        }
 
         \update_option(Plugin::slug . '_db_version', self::dbVesrion());
     }
@@ -213,12 +216,6 @@ class Installer
         ModuleUpdateScheduler::addScheduleEvent('ten_min');
     }
 
-    private static function upgrade_v57()
-    {
-        if (!Plugin::isFree())
-            SystemScheduler::addScheduleEvent('weekly', time() + rand(259200, 604800));
-    }
-
     private static function upgrade_v80()
     {
         PresetRepository::maybeInstallBuiltInPresets();
@@ -246,6 +243,11 @@ class Installer
         {
             LinkIndexModel::model()->deleteByModule($module_id);
         }
+    }
+
+    private static function upgrade_v90()
+    {
+        OfferCountService::maybeRebuildOnUpgrade();
     }
 
     public function redirect_after_activation()

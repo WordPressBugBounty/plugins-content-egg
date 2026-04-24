@@ -2,7 +2,7 @@
   class="cegg5-container"
   ng-app="contentEgg"
   ng-controller="SearchController as vm"
-  <?php if (\ContentEgg\application\Plugin::isDevEnvironment()): ?>
+  <?php if (false && \ContentEgg\application\Plugin::isDevEnvironment()): ?>
   ng-init="vm.results = [
     {
       unique_id: 'prod-001',
@@ -295,8 +295,8 @@
                   </span>
 
                   <del ng-show="item._priceOldFormatted"
-                    class="cegg-old-price fs-6 _priceOldFormatted-body-tertiary fw-normal me-1"
-                    ng-bind-html="item._priceFormatted">
+                    class="cegg-old-price fs-6 body-tertiary fw-normal me-1"
+                    ng-bind-html="item._priceOldFormatted">
                   </del>
                 </div>
 

@@ -8,18 +8,18 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\BlockTemplateManager;
 use ContentEgg\application\components\ShortcodeAtts;
 
-use function ContentEgg\prn;;
+use function ContentEgg\prn;
+use function ContentEgg\prnx;;
 
 /**
  * BlockShortcode class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class BlockShortcode extends EggShortcode
 {
-
     const shortcode = 'content-egg-block';
 
     private static $instance = null;
@@ -41,6 +41,20 @@ class BlockShortcode extends EggShortcode
         return $this->viewData($atts, $content);
     }
 
+    protected function renderAsyncPlaceholder($post_id, array $a, $content = '')
+    {
+        $html = $this->buildAsyncPlaceholderHtml(
+            'cegg-block-',
+            'cegg-block',
+            'block',
+            $post_id,
+            $a,
+            $content
+        );
+
+        return $this->getAsyncInlineCssOnce() . $html;
+    }
+
     public function viewData($atts, $content = '', $only_return_data = false)
     {
         $a = ShortcodeAtts::prepare($atts);
@@ -57,22 +71,28 @@ class BlockShortcode extends EggShortcode
             $post_id = $a['post_id'];
 
         if (empty($a['template']))
-            return;
+            return '';
 
         if ($a['template'] != 'block_greenshift')
         {
             $tpl_manager = BlockTemplateManager::getInstance();
 
             if (!$tpl_manager->isTemplateExists($a['template']))
-                return;
+                return '';
 
             $template_file = $tpl_manager->getViewPath($a['template']);
             if (!$template_file)
                 return '';
 
             // Get supported modules for this tpl
-            $headers = \get_file_data($template_file, array('module_ids' => 'Modules', 'module_types' => 'Module Types', 'shortcoded' => 'Shortcoded'));
+            $headers = \get_file_data($template_file, array(
+                'module_ids'   => 'Modules',
+                'module_types' => 'Module Types',
+                'shortcoded'   => 'Shortcoded'
+            ));
+
             $supported_module_ids = array();
+
             if ($headers && !empty($headers['module_ids']))
             {
                 $supported_module_ids = explode(',', $headers['module_ids']);
@@ -98,6 +118,15 @@ class BlockShortcode extends EggShortcode
 
         if (!$supported_module_ids)
             return '';
+
+        /**
+         * Async mode (frontend only)
+         * - Do NOT use for editor preview or internal data-only calls.
+         */
+        if (!$this->isEditorRenderRequest() && !$only_return_data && !empty($a['async']))
+        {
+            return $this->renderAsyncPlaceholder($post_id, $a, $content);
+        }
 
         if ($a['modules'])
             $module_ids = $a['modules'];

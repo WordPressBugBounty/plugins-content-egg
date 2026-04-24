@@ -9,18 +9,24 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 
 class OpenAiClient extends AiClient
 {
-	//@link: https://openai.com/api/pricing/
-	const PRICE_INPUT_5_nano = 0.05;
-	const PRICE_OUTPUT_5_nano = 0.40;
-	const PRICE_INPUT_4o_mini = 0.150;
-	const PRICE_OUTPUT_4o_mini = 0.600;
-	const PRICE_INPUT_4o = 2.50;
-	const PRICE_OUTPUT_4o = 10.00;
+	//@link: https://platform.openai.com/docs/pricing
+	const PRICE_INPUT_5_NANO = 0.05;
+	const PRICE_OUTPUT_5_NANO = 0.40;
+	const PRICE_INPUT_4O_MINI = 0.150;
+	const PRICE_OUTPUT_4O_MINI = 0.600;
+	const PRICE_INPUT_4O = 2.50;
+	const PRICE_OUTPUT_4O = 10.00;
+	const PRICE_INPUT_5_1 = 1.25;
+	const PRICE_OUTPUT_5_1 = 10.00;
+	const PRICE_INPUT_5_2 = 1.75;
+	const PRICE_OUTPUT_5_2 = 14.00;
+	const PRICE_INPUT_5_2_PRO = 21.00;
+	const PRICE_OUTPUT_5_2_PRO = 84.00;
 
 	public function getChatUrl()
 	{
@@ -39,16 +45,28 @@ class OpenAiClient extends AiClient
 	{
 		return [
 			'gpt-5-nano' => [
-				'input'  => apply_filters('cegg_price_input_4o_nano', self::PRICE_INPUT_5_nano),
-				'output' => apply_filters('cegg_price_output_4o_nano', self::PRICE_OUTPUT_5_nano),
+				'input'  => apply_filters('cegg_price_input_5_nano', self::PRICE_INPUT_5_NANO),
+				'output' => apply_filters('cegg_price_output_5_nano', self::PRICE_OUTPUT_5_NANO),
 			],
 			'gpt-4o-mini' => [
-				'input'  => apply_filters('cegg_price_input_4o_mini', self::PRICE_INPUT_4o_mini),
-				'output' => apply_filters('cegg_price_output_4o_mini', self::PRICE_OUTPUT_4o_mini),
+				'input'  => apply_filters('cegg_price_input_4o_mini', self::PRICE_INPUT_4O_MINI),
+				'output' => apply_filters('cegg_price_output_4o_mini', self::PRICE_OUTPUT_4O_MINI),
 			],
 			'gpt-4o' => [
-				'input'  => apply_filters('cegg_price_input_4o', self::PRICE_INPUT_4o),
-				'output' => apply_filters('cegg_price_output_4o', self::PRICE_OUTPUT_4o),
+				'input'  => apply_filters('cegg_price_input_4o', self::PRICE_INPUT_4O),
+				'output' => apply_filters('cegg_price_output_4o', self::PRICE_OUTPUT_4O),
+			],
+			'gpt-5.1' => [
+				'input'  => apply_filters('cegg_price_input_5_1', self::PRICE_INPUT_5_1),
+				'output' => apply_filters('cegg_price_output_5_1', self::PRICE_OUTPUT_5_1),
+			],
+			'gpt-5.2' => [
+				'input'  => apply_filters('cegg_price_input_5_2', self::PRICE_INPUT_5_2),
+				'output' => apply_filters('cegg_price_output_5_2', self::PRICE_OUTPUT_5_2),
+			],
+			'gpt-5.2-pro' => [
+				'input'  => apply_filters('cegg_price_input_5_2_pro', self::PRICE_INPUT_5_2_PRO),
+				'output' => apply_filters('cegg_price_output_5_2_pro', self::PRICE_OUTPUT_5_2_PRO),
 			],
 		];
 	}

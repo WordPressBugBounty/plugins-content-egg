@@ -1,0 +1,58 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/rating-breakdown",
+    "version": "1.0.0",
+    "title": "Rating Breakdown",
+    "category": "cegg-blocks",
+    "icon": "star-filled",
+    "description": "Overall review score with category-level rating bars.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+  "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "compact", "grid", "category-grid"]
+        },
+        "overall_score": {
+            "type": "string",
+            "default": ""
+        },
+        "overall_denom": {
+            "type": "string",
+            "default": "out of 10"
+        },
+        "stars": {
+            "type": "number",
+            "default": 0
+        },
+        "categories": {
+            "type": "array",
+            "default": []
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

@@ -11,7 +11,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 
 class ImportPostPromptFree extends Prompt
@@ -69,6 +69,16 @@ class ImportPostPromptFree extends Prompt
                 'key'    => 'prompt3',
                 'label'  => __('Custom Prompt #3', 'content-egg'),
                 'method' => 'customPrompt3Title',
+            ],
+            [
+                'key'    => 'prompt4',
+                'label'  => __('Custom Prompt #4', 'content-egg'),
+                'method' => 'customPrompt4Title',
+            ],
+            [
+                'key'    => 'prompt5',
+                'label'  => __('Custom Prompt #5', 'content-egg'),
+                'method' => 'customPrompt5Title',
             ],
         ];
     }
@@ -161,6 +171,16 @@ class ImportPostPromptFree extends Prompt
                 'label'  => __('Custom Prompt #3', 'content-egg'),
                 'method' => 'customPrompt3Description',
             ],
+            [
+                'key'    => 'prompt4',
+                'label'  => __('Custom Prompt #4', 'content-egg'),
+                'method' => 'customPrompt4Description',
+            ],
+            [
+                'key'    => 'prompt5',
+                'label'  => __('Custom Prompt #5', 'content-egg'),
+                'method' => 'customPrompt5Description',
+            ],
         ];
     }
 
@@ -216,6 +236,16 @@ class ImportPostPromptFree extends Prompt
                 'key'    => 'prompt3',
                 'label'  => __('Custom Prompt #3', 'content-egg'),
                 'method' => 'customPrompt3Description',
+            ],
+            [
+                'key'    => 'prompt4',
+                'label'  => __('Custom Prompt #4', 'content-egg'),
+                'method' => 'customPrompt4Description',
+            ],
+            [
+                'key'    => 'prompt5',
+                'label'  => __('Custom Prompt #5', 'content-egg'),
+                'method' => 'customPrompt5Description',
             ],
         ];
     }

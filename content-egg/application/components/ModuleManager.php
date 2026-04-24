@@ -10,12 +10,14 @@ use \ContentEgg\application\admin\AeIntegrationConfig;
 use \ContentEgg\application\components\LManager;
 use \ContentEgg\application\helpers\ArrayHelper;
 
+use function ContentEgg\prnx;
+
 /**
  * ModuleManager class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class ModuleManager
 {

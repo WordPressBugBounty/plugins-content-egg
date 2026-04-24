@@ -15,12 +15,15 @@ use ContentEgg\application\libs\amazon\AmazonLocales;
 use ContentEgg\application\models\LinkIndexModel;
 use ContentEgg\application\Translator;
 
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
+
 /**
  * TemplateHelper class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  *
  */
 class TemplateHelper
@@ -627,13 +630,17 @@ class TemplateHelper
         $name = '';
 
         if (!empty($item['merchant']) && (empty($item['domain']) || \apply_filters('cegg_merchant_name_priority', false)))
+        {
             $name = $item['merchant'];
+        }
         else
         {
             $name = ucfirst($item['domain']);
 
             if ($name == 'Aliexpress.com')
                 $name = 'Aliexpress';
+            elseif ($name == 'Bol.com')
+                $name = 'Bol';
             elseif ($name == 'Flipkart.com')
                 $name = 'Flipkart';
             elseif ($name == 'Ebay.com')
@@ -2846,9 +2853,37 @@ class TemplateHelper
     public static function priceUpdateAmazon(array $items, $price_disclaimer = true)
     {
         if (!$date = TemplateHelper::getLastUpdateFormattedAmazon($items))
+        {
             return;
+        }
 
-        echo wp_kses_post(sprintf(Translator::translate('Amazon price updated:') . ' <span class="text-nowrap">' . $date));
+        $total_modules = count($items);
+        if ($total_modules == 1)
+        {
+            $price_label = Translator::translate('Updated:');
+
+            $timestamp = strtotime($date);
+
+            if ($timestamp)
+            {
+                $now = current_time('timestamp');
+
+                // Less than 24 hours ago -> "3 hours ago"
+                if (($now - $timestamp) < DAY_IN_SECONDS)
+                {
+                    $date = sprintf(
+                        Translator::translate('%s ago'),
+                        human_time_diff($timestamp, $now)
+                    );
+                }
+            }   
+        }
+        else
+        {
+            $price_label = Translator::translate('Amazon price updated:');
+        }
+
+        echo wp_kses_post(sprintf($price_label . ' <span class="text-nowrap">' . $date));
 
         if ($price_disclaimer)
         {
@@ -3714,5 +3749,75 @@ class TemplateHelper
 
         // js minifyed
         echo '<script>' . '"use strict";!function(){var e="' . esc_js($endpoint) . '",t=new WeakMap;function n(n){var a=function(e){for(;e&&e!==document;){if("A"===e.tagName&&e.dataset&&"1"===e.dataset.ceggClick&&e.dataset.ceggLinkId)return e;e=e.parentNode}return null}(n.target);if(a){var c=Date.now();c-(t.get(a)||0)<800||(t.set(a,c),function(t){var n=parseInt(t.dataset.ceggLinkId,10);if(n){var a=JSON.stringify({link_id:n});try{if(navigator.sendBeacon){var c=new Blob([a],{type:"application/json"});navigator.sendBeacon(e,c)}else fetch(e,{method:"POST",headers:{"Content-Type":"application/json"},body:a,keepalive:!0,credentials:"omit",cache:"no-store"}).catch((function(){}))}catch(e){}}}(a))}}document.addEventListener("click",n,{capture:!0,passive:!0}),document.addEventListener("auxclick",(function(e){1!==e.button&&2!==e.button||n(e)}),{capture:!0,passive:!0})}();' . '</script>';
+    }
+
+    public static function getButtonVariants(array $item, array $params): array
+    {
+        $target = isset($params['link_target']) ? $params['link_target'] : 'bridge';
+
+        // Normal single button
+        if ($target !== 'both' || empty($item['bridge_url']))
+        {
+            return array(array($item, $params));
+        }
+
+        // 1) Affiliate button (uses original variant)
+        $affiliateItem = self::withAffiliateUrl($item);
+        $affiliateParams = $params;
+        $affiliateParams['link_target'] = 'affiliate';
+
+        // 2) Bridge button (reverse variant if set)
+        $bridgeParams = $params;
+        $bridgeParams['link_target'] = 'bridge';
+
+        if (!empty($bridgeParams['btn_variant']))
+        {
+            $bridgeParams['btn_variant'] = self::reverseBtnVariant($bridgeParams['btn_variant']);
+        }
+
+        return array(
+            array($affiliateItem, $affiliateParams),
+            array($item, $bridgeParams),
+        );
+    }
+
+    public static function withAffiliateUrl(array $item): array
+    {
+        $new = $item;
+
+        if (!empty($item['aff_url']))
+        {
+            $new['url'] = $item['aff_url'];
+        }
+
+        // Prevent bridge-selection logic for affiliate variant
+        $new['bridge_url'] = '';
+
+        return $new;
+    }
+
+    /**
+     * Reverse a Bootstrap-style variant by toggling the "outline-" prefix:
+     *   dark -> outline-dark
+     *   outline-primary -> primary
+     */
+    public static function reverseBtnVariant(string $variant): string
+    {
+        $variant = trim($variant);
+        if ($variant === '')
+        {
+            return $variant;
+        }
+
+        $prefix = 'outline-';
+        $plen   = strlen($prefix);
+
+        if (substr($variant, 0, $plen) === $prefix)
+        {
+            $base = substr($variant, $plen);
+            return $base !== '' ? $base : $variant;
+        }
+
+        return $prefix . $variant;
     }
 }

@@ -1,0 +1,41 @@
+/*
+ * Conclusion block — structural closing block.
+ * Visual tokens come from the active EggBlocks theme.
+ */
+
+.eggb-cn-title {
+  /* Uses shared defaults: 1.25rem / 700 from .eggb-block-title */
+}
+
+.eggb-cn-point-icon {
+  color: var(--eggb-accent);
+}
+
+.eggb-cn-arrow {
+  color: var(--eggb-text-muted);
+}
+
+.eggb-cn-link {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.eggb-cn-link:hover {
+  color: var(--eggb-accent);
+}
+
+.eggb-cn-summary {
+  margin: 0;
+}
+
+.eggb-block .eggb-cn-summary p {
+  margin: 0 0 0.75rem;
+}
+
+.eggb-block .eggb-cn-summary p:last-child {
+  margin-bottom: 0;
+}
+
+.eggb-conclusion--compact {
+  font-size: var(--eggb-text-sm);
+}

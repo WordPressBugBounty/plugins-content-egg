@@ -52,6 +52,8 @@ contentEgg.controller(
       next: "",
     };
 
+    var editorProductsSyncPromise = null;
+
     $timeout(function () {
       $rootScope.$broadcast("$tinymce:refresh");
     }, 1000);
@@ -84,8 +86,72 @@ contentEgg.controller(
         $timeout(function () {
           $rootScope.$broadcast("$tinymce:refresh");
         }, 0);
+        scheduleEditorProductsSync();
       },
     };
+
+    function buildEditorProductsSnapshot() {
+      var byModule = {};
+      var all = [];
+
+      angular.forEach($scope.active_modules, function (module_id) {
+        var added =
+          $scope.models[module_id] && Array.isArray($scope.models[module_id].added)
+            ? $scope.models[module_id].added
+            : [];
+
+        byModule[module_id] = added.map(function (item) {
+          return {
+            unique_id: item && item.unique_id ? item.unique_id : "",
+            module_id: item && item.module_id ? item.module_id : module_id,
+            title: item && item.title ? item.title : "",
+            subtitle: item && item.subtitle ? item.subtitle : "",
+            merchant: item && item.merchant ? item.merchant : "",
+            badge: item && item.badge ? item.badge : "",
+            domain: item && item.domain ? item.domain : "",
+            group: item && item.group ? item.group : "",
+            img: item && item.img ? item.img : "",
+            url: item && item.url ? item.url : "",
+            price: item && item.price ? item.price : "",
+            priceOld: item && item.priceOld ? item.priceOld : "",
+            currencyCode: item && item.currencyCode ? item.currencyCode : "",
+            ratingDecimal:
+              item && item.ratingDecimal ? item.ratingDecimal : "",
+            order_num: item && item.order_num ? item.order_num : "",
+          };
+        });
+
+        all = all.concat(byModule[module_id]);
+      });
+
+      return {
+        postId: getCurrentPostId(),
+        byModule: byModule,
+        all: all,
+        updatedAt: Date.now(),
+      };
+    }
+
+    function syncEditorProducts() {
+      var snapshot = buildEditorProductsSnapshot();
+      window.ceggEditorProducts = snapshot;
+      window.dispatchEvent(
+        new CustomEvent("ceggEditorProductsUpdated", {
+          detail: snapshot,
+        })
+      );
+    }
+
+    function scheduleEditorProductsSync() {
+      if (editorProductsSyncPromise) {
+        $timeout.cancel(editorProductsSyncPromise);
+      }
+
+      editorProductsSyncPromise = $timeout(function () {
+        editorProductsSyncPromise = null;
+        syncEditorProducts();
+      }, 0);
+    }
 
     angular.forEach($scope.active_modules, function (module_id, key) {
       $scope.models[module_id] = new ModuleService(module_id);
@@ -126,6 +192,8 @@ contentEgg.controller(
           contentegg_params.initUpdateParams[module_id];
       }
     });
+
+    syncEditorProducts();
 
     $scope.ai = function (module_id, title_method, description_method) {
       if (!$scope.models[module_id].added) return;
@@ -362,6 +430,7 @@ contentEgg.controller(
                 $scope.models[module_id].added = data.results[module_id];
               }
             });
+            scheduleEditorProductsSync();
           } else {
             $scope.smartGroupsError = data.error;
           }
@@ -419,6 +488,7 @@ contentEgg.controller(
         $scope.models[module_id].results[index]
       );
       $scope.models[module_id].added_changed = true;
+      scheduleEditorProductsSync();
     };
 
     $scope.addBlank = function (module_id, type = "contentProduct") {
@@ -427,6 +497,7 @@ contentEgg.controller(
       contentProduct.unique_id = Math.random().toString(36).slice(2);
       $scope.models[module_id].added.push(contentProduct);
       $scope.models[module_id].added_changed = true;
+      scheduleEditorProductsSync();
     };
 
     $scope.addAll = function (module_id) {
@@ -441,6 +512,7 @@ contentEgg.controller(
       var index = $scope.models[module_id].added.indexOf(data);
       $scope.models[module_id].added.splice(index, 1);
       $scope.models[module_id].added_changed = true;
+      scheduleEditorProductsSync();
     };
 
     $scope.deleteAll = function (module_id) {
@@ -448,6 +520,37 @@ contentEgg.controller(
       $scope.models[module_id].added_changed = true;
       $scope.activeSearchTabs[module_id] = true;
       $scope.activeResultTabs[module_id] = false;
+      scheduleEditorProductsSync();
+    };
+
+    $scope.copyAllProductsToClipboard = function (event) {
+      var icon = angular.element(event.currentTarget).find("i");
+      icon.removeClass("bi-clipboard").addClass("bi-check");
+
+      setTimeout(function () {
+        icon.removeClass("bi-check").addClass("bi-clipboard");
+      }, 1000);
+
+      var items = [];
+      angular.forEach($scope.active_modules, function (module_id) {
+        var added =
+          $scope.models[module_id] && Array.isArray($scope.models[module_id].added)
+            ? $scope.models[module_id].added
+            : [];
+        angular.forEach(added, function (product) {
+          items.push({
+            title: product && product.title ? product.title : "",
+            orig_url: product && product.orig_url ? product.orig_url : "",
+            product_ref: {
+              module_id:
+                product && product.module_id ? product.module_id : module_id,
+              unique_id: product && product.unique_id ? product.unique_id : "",
+            },
+          });
+        });
+      });
+
+      navigator.clipboard.writeText(JSON.stringify(items, null, 2));
     };
 
     $scope.copyKeywordProductIdsToClipboard = function (module_id, event) {
@@ -575,8 +678,10 @@ contentEgg.controller(
     };
 
     $scope.aiUndo = function (module_id) {
-      if ($scope.models[module_id].undo.length)
+      if ($scope.models[module_id].undo.length) {
         $scope.models[module_id].added = $scope.models[module_id].undo;
+        scheduleEditorProductsSync();
+      }
       $scope.models[module_id].undo = [];
     };
 

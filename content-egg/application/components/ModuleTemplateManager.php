@@ -7,14 +7,12 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ModuleManager;
 
-
-
 /**
  * ModuleTemplateManager class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class ModuleTemplateManager extends TemplateManager
 {

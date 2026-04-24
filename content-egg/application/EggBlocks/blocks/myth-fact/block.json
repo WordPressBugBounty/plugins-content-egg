@@ -1,0 +1,87 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/myth-fact",
+    "version": "1.0.0",
+    "title": "Myth vs Fact",
+    "category": "cegg-blocks",
+    "icon": "warning",
+    "description": "Debunk common myths with side-by-side fact panels or inline verdicts.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+  "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "inline"]
+        },
+        "section_label": {
+            "type": "string",
+            "default": "Myth vs Fact"
+        },
+        "title": {
+            "type": "string",
+            "default": ""
+        },
+        "heading_tag": {
+            "type": "string",
+            "default": "h2",
+            "enum": ["h1", "h2", "h3", "h4", "div"]
+        },
+        "label_myth": {
+            "type": "string",
+            "default": "Myth"
+        },
+        "label_fact": {
+            "type": "string",
+            "default": "Fact"
+        },
+        "label_why": {
+            "type": "string",
+            "default": "Why it matters"
+        },
+        "items": {
+            "type": "array",
+            "default": []
+        },
+        "anchor": {
+            "type": "string",
+            "default": ""
+        },
+        "toc_label": {
+            "type": "string",
+            "default": ""
+        },
+        "include_in_toc": {
+            "type": "boolean",
+            "default": false
+        },
+        "level": {
+            "type": "number",
+            "default": 2
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

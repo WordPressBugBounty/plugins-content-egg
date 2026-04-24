@@ -1,5 +1,6 @@
 <?php
 
+use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\admin\import\ImportPostPromptPro;
 use ContentEgg\application\admin\import\ImportPostPromptFree;
 use ContentEgg\application\helpers\AdminHelper;
@@ -266,6 +267,35 @@ $provider = ($is_pro) ? ImportPostPromptPro::class : ImportPostPromptFree::class
                 </td>
             </tr>
 
+            <!-- AI Model -->
+            <tr>
+                <th>
+                    <label for="cegg_preset_ai_model"><?php esc_html_e('AI Model', 'content-egg'); ?></label>
+                </th>
+                <td>
+                    <select id="cegg_preset_ai_model" name="cegg_preset[ai_model]">
+                        <option value="" <?php selected($data['ai_model'] ?? '', ''); ?>>
+                            <?php esc_html_e('— Use global default —', 'content-egg'); ?>
+                        </option>
+                        <?php foreach (GeneralConfig::getAiModelList(true) as $value => $label) : ?>
+                            <option value="<?php echo esc_attr($value); ?>" <?php selected($data['ai_model'] ?? '', (string) $value); ?>>
+                                <?php echo esc_html($label); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <p class="description">
+                        <?php
+                        esc_html_e(
+                            'Leave this blank to use the global default from Content Egg → Settings → AI → AI Model. Choose a model here only if you want this preset to override the global setting.',
+                            'content-egg'
+                        );
+                        ?>
+                    </p>
+
+                </td>
+            </tr>
+
             <!-- AI-Powered Product Fields -->
             <tr>
                 <th scope="row">
@@ -335,10 +365,14 @@ $provider = ($is_pro) ? ImportPostPromptPro::class : ImportPostPromptFree::class
                         <?php endforeach; ?>
                     </select>
                     <p class="description">
-                        <?php esc_html_e(
-                            'Use the %AI.title% placeholder in the Post Title Template to apply the AI-generated title.',
-                            'content-egg'
-                        ); ?>
+                        <?php
+                        printf(
+                            wp_kses_post(
+                                __('Use the %1$s placeholder in the Post Title Template to apply the AI-generated title.', 'content-egg')
+                            ),
+                            '<code>%AI.title%</code>'
+                        );
+                        ?>
                     </p>
 
                     <?php if ($is_pro) : ?>
@@ -375,10 +409,14 @@ $provider = ($is_pro) ? ImportPostPromptPro::class : ImportPostPromptFree::class
                         <?php endforeach; ?>
                     </select>
                     <p class="description">
-                        <?php esc_html_e(
-                            'Use the %AI.content% placeholder in the Post Body Template to insert AI-generated content.',
-                            'content-egg'
-                        ); ?>
+                        <?php
+                        printf(
+                            wp_kses_post(
+                                __('Use the %1$s placeholder in the Post Body Template to insert AI-generated content.', 'content-egg')
+                            ),
+                            '<code>%AI.content%</code>'
+                        );
+                        ?>
                     </p>
 
                     <?php if ($is_pro) : ?>
@@ -415,10 +453,104 @@ $provider = ($is_pro) ? ImportPostPromptPro::class : ImportPostPromptFree::class
                         <?php endforeach; ?>
                     </select>
                     <p class="description">
-                        <?php esc_html_e(
-                            'Use the %AI.short_desc% placeholder in the Woo Short Description Template to insert AI-generated text.',
-                            'content-egg'
-                        ); ?>
+                        <?php
+                        printf(
+                            wp_kses_post(
+                                __('Use the %1$s placeholder in the Woo Short Description Template to insert AI-generated text.', 'content-egg')
+                            ),
+                            '<code>%AI.short_desc%</code>'
+                        );
+                        ?>
+                    </p>
+
+                    <?php if ($is_pro) : ?>
+                        <p class="cegg-pro-warning"><?php echo wp_kses_post($ai_warning); ?></p>
+                    <?php endif; ?>
+                </td>
+            </tr>
+
+            <!-- AI Generator: Extra Section 1 -->
+            <tr>
+                <th scope="row">
+                    <label for="cegg_preset_ai_extra_section1">
+                        <?php esc_html_e('AI-Powered Extra Section 1', 'content-egg'); ?>
+                        <?php if (!$is_pro) : ?>
+                            <br><?php echo wp_kses_post(AdminHelper::getProFeatureWarning()); ?>
+                        <?php endif; ?>
+                    </label>
+                </th>
+                <td>
+                    <select
+                        id="cegg_preset_ai_extra_section1"
+                        name="cegg_preset[ai_extra_section1]"
+                        <?php disabled(! $is_pro); ?>>
+                        <?php
+                        $options = array_merge(
+                            ['' => __('Disabled', 'content-egg')],
+                            $provider::getExtraSectionMethodOptions()
+                        );
+                        $sel = $data['ai_extra_section1'] ?? '';
+                        foreach ($options as $value => $label) : ?>
+                            <option value="<?php echo esc_attr($value); ?>" <?php selected($sel, $value); ?>>
+                                <?php echo esc_html($label); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="description">
+                        <?php
+                        printf(
+                            wp_kses_post(
+                                __('Use the %1$s placeholder in the Post Body Template to insert AI-generated text. <a href="%2$s" target="_blank" rel="noopener noreferrer">Learn more</a>', 'content-egg')
+                            ),
+                            '<code>%AI.extra_section1%</code>',
+                            'https://ce-docs.keywordrush.com/set-up-products/import-tools/import-presets#add-extra-ai-generated-content-sections'
+                        );
+                        ?>
+                    </p>
+
+                    <?php if ($is_pro) : ?>
+                        <p class="cegg-pro-warning"><?php echo wp_kses_post($ai_warning); ?></p>
+                    <?php endif; ?>
+                </td>
+            </tr>
+
+            <!-- AI Generator: Extra Section 2 -->
+            <tr>
+                <th scope="row">
+                    <label for="cegg_preset_ai_extra_section2">
+                        <?php esc_html_e('AI-Powered Extra Section 2', 'content-egg'); ?>
+                        <?php if (!$is_pro) : ?>
+                            <br><?php echo wp_kses_post(AdminHelper::getProFeatureWarning()); ?>
+                        <?php endif; ?>
+                    </label>
+                </th>
+                <td>
+                    <select
+                        id="cegg_preset_ai_extra_section2"
+                        name="cegg_preset[ai_extra_section2]"
+                        <?php disabled(! $is_pro); ?>>
+                        <?php
+                        $options = array_merge(
+                            ['' => __('Disabled', 'content-egg')],
+                            $provider::getExtraSectionMethodOptions()
+                        );
+                        $sel = $data['ai_extra_section2'] ?? '';
+                        foreach ($options as $value => $label) : ?>
+                            <option value="<?php echo esc_attr($value); ?>" <?php selected($sel, $value); ?>>
+                                <?php echo esc_html($label); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="description">
+                        <?php
+                        printf(
+                            wp_kses_post(
+                                __('Use the %1$s placeholder in the Post Body Template to insert AI-generated text. <a href="%2$s" target="_blank" rel="noopener noreferrer">Learn more</a>', 'content-egg')
+                            ),
+                            '<code>%AI.extra_section2%</code>',
+                            'https://ce-docs.keywordrush.com/set-up-products/import-tools/import-presets#add-extra-ai-generated-content-sections'
+                        );
+                        ?>
                     </p>
 
                     <?php if ($is_pro) : ?>
@@ -438,7 +570,17 @@ $provider = ($is_pro) ? ImportPostPromptPro::class : ImportPostPromptFree::class
                         <?php disabled(! $is_pro); ?>
                         rows="3"><?php echo esc_textarea($data['prompt1'] ?? ''); ?></textarea>
 
-                    <?php \ContentEgg\application\helpers\AdminHelper::echoPlaceholderDescription(); ?>
+                    <p class="description" style="margin-top: 0.8em;">
+                        <?php echo esc_html__('Recommended placeholders:', 'content-egg') ?>
+                        <code>%SOURCE%</code>, <code>%PRODUCT%</code>, <code>%PRODUCT.title%</code>,
+                        <code>%PRODUCT.description%</code>, <code>%PRODUCT.price%</code>
+                        <a href="https://ce-docs.keywordrush.com/faq/placeholders-reference"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style="margin-left: 6px;">
+                            <?php echo esc_html__('Full reference', 'content-egg'); ?>
+                        </a>
+                    </p>
 
                 </td>
             </tr>
@@ -466,6 +608,32 @@ $provider = ($is_pro) ? ImportPostPromptPro::class : ImportPostPromptFree::class
                         class="widefat"
                         <?php disabled(! $is_pro); ?>
                         rows="3"><?php echo esc_textarea($data['prompt3'] ?? ''); ?></textarea>
+                </td>
+            </tr>
+
+            <!-- Custom Prompt #4 -->
+            <tr>
+                <th scope="row"><label for="cegg_preset_prompt4"><?php esc_html_e('Custom Prompt #4', 'content-egg'); ?></label></th>
+                <td>
+                    <textarea
+                        id="cegg_preset_prompt4"
+                        name="cegg_preset[prompt4]"
+                        class="widefat"
+                        <?php disabled(! $is_pro); ?>
+                        rows="3"><?php echo esc_textarea($data['prompt4'] ?? ''); ?></textarea>
+                </td>
+            </tr>
+
+            <!-- Custom Prompt #5 -->
+            <tr>
+                <th scope="row"><label for="cegg_preset_prompt5"><?php esc_html_e('Custom Prompt #5', 'content-egg'); ?></label></th>
+                <td>
+                    <textarea
+                        id="cegg_preset_prompt5"
+                        name="cegg_preset[prompt5]"
+                        class="widefat"
+                        <?php disabled(! $is_pro); ?>
+                        rows="3"><?php echo esc_textarea($data['prompt5'] ?? ''); ?></textarea>
                 </td>
             </tr>
 

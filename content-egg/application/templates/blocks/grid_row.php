@@ -3,10 +3,13 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TemplateHelper;
 
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
+
 ?>
 
 <div class="col">
-    <div class="cegg-grid-card cegg-card h-100 p-3<?php TemplateHelper::border($params); ?>">
+    <div class="cegg-grid-card cegg-card h-100 p-3 position-relative<?php TemplateHelper::border($params); ?>">
 
         <?php if ($this->isVisible('number', false)): ?>
             <div class="position-absolute z-3 top-0 start-50 translate-middle translate-middle">
@@ -105,14 +108,32 @@ use ContentEgg\application\helpers\TemplateHelper;
 
         </div>
         <?php if ($this->isVisible('button')): ?>
-            <div class="cegg-card-button pt-3">
-                <div class="d-grid">
-                    <?php TemplateHelper::button($item, $params, array('class' => 'stretched-link')); ?>
+            <?php $variants = TemplateHelper::getButtonVariants($item, $params); ?>
+
+            <div class="cegg-card-button pt-3 position-static">
+                <div class="d-grid<?php echo count($variants) > 1 ? ' gap-2' : ''; ?>">
+                    <?php foreach ($variants as $idx => $pair): ?>
+                        <?php list($btnItem, $btnParams) = $pair; ?>
+
+                        <?php
+                        if ($idx === 0)
+                        {
+                            // primary action: make the whole card clickable
+                            $attrs = array('class' => 'stretched-link');
+                        }
+                        else
+                        {
+                            // keep secondary action clickable above the stretched overlay
+                            $attrs = array('class' => 'position-relative z-3 pe-auto');
+                        }
+
+                        TemplateHelper::button($btnItem, $btnParams, $attrs);
+                        ?>
+                    <?php endforeach; ?>
                 </div>
             </div>
         <?php else: ?>
             <?php TemplateHelper::link(' ', $item, $params, array('class' => 'stretched-link')); ?>
         <?php endif; ?>
-
     </div>
 </div>

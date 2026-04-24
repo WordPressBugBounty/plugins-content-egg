@@ -12,7 +12,7 @@ use ContentEgg\application\libs\RestClient;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  *
  * @link http://docs.amazonwebservices.com/AWSECommerceService/latest/DG/ Amazon Product Advertising API
  */

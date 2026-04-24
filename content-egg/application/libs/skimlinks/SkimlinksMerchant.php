@@ -11,7 +11,7 @@ use ContentEgg\application\libs\RestClient;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  * Skimlinks Merchant API
  * @link: http://developers.skimlinks.com/merchant.html
  *
@@ -47,7 +47,7 @@ class SkimlinksMerchant extends RestClient
 		return $this->_decodeResponse($response);
 	}
 
-	public function restGet($path, array $query = null)
+	public function restGet($path, ?array $query = null)
 	{
 		$query['apikey']       = $this->apikey;
 		$query['account_id']   = $this->account_id;

@@ -19,7 +19,7 @@ use ContentEgg\application\Translator;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class WooIntegrator
 {
@@ -270,6 +270,8 @@ class WooIntegrator
 
         // update meta
         self::setMetaSyncUniqueId($post_id, $module_id, $item['unique_id']);
+
+        $product = \apply_filters('cegg_before_woo_product_save', $product, $item, $module_id, $post_id);
 
         $res = $product->save();
 
@@ -748,6 +750,7 @@ class WooIntegrator
 
         echo \do_shortcode($shortcode);
     }
+
     public static function addShortcodeArchive()
     {
         if (!$shortcode = GeneralConfig::getInstance()->option('woocommerce_shortcode_archive'))

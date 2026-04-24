@@ -5,7 +5,7 @@ use ContentEgg\application\helpers\TemplateHelper;
 
 ?>
 
-<div class="cegg-list-card cegg-card <?php echo $i < count($items) - 1 ? ' mb-3' : ''; ?><?php TemplateHelper::border($params); ?>">
+<div class="cegg-list-card cegg-card position-relative <?php echo $i < count($items) - 1 ? ' mb-3' : ''; ?><?php TemplateHelper::border($params); ?>">
 
     <?php if ($this->isVisible('number', false)): ?>
         <div class="position-absolute top-50 z-3 start-0 translate-middle">
@@ -98,15 +98,37 @@ use ContentEgg\application\helpers\TemplateHelper;
             <?php endif; ?>
 
             <?php if ($this->isVisible('button')): ?>
-                <div class="cegg-card-button pt-3">
-                    <div class="d-grid"><?php TemplateHelper::button($item, $params, array('class' => 'stretched-link')); ?></div>
+                <?php $variants = TemplateHelper::getButtonVariants($item, $params); ?>
+
+                <div class="cegg-card-button pt-3 position-static">
+                    <div class="d-grid<?php echo count($variants) > 1 ? ' gap-2' : ''; ?> position-static">
+                        <?php foreach ($variants as $idx => $pair): ?>
+                            <?php list($btnItem, $btnParams) = $pair; ?>
+
+                            <?php
+                            if ($idx === 0)
+                            {
+                                // primary action stretches over the whole card
+                                $attrs = array('class' => 'stretched-link');
+                            }
+                            else
+                            {
+                                // keep secondary action clickable above stretched overlay
+                                $attrs = array('class' => 'position-relative z-3 pe-auto');
+                            }
+
+                            TemplateHelper::button($btnItem, $btnParams, $attrs);
+                            ?>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
+
             <?php else: ?>
                 <?php TemplateHelper::link(' ', $item, $params, array('class' => 'stretched-link')); ?>
             <?php endif; ?>
 
             <?php if ($this->isVisible('shop_info')) : ?>
-                <div class="position-relative fs-6 z-3 small text-truncate">
+                <div class="position-relative mt-1 fs-6 z-3 small text-truncate">
                     <small><?php TemplateHelper::shopInfo($item); ?></small>
                 </div>
             <?php elseif ($this->isVisible('merchant')): ?>

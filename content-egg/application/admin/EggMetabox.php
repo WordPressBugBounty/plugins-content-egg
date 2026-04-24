@@ -4,6 +4,7 @@ namespace ContentEgg\application\admin;
 
 defined('\ABSPATH') || exit;
 
+use ContentEgg\application\admin\import\PresetRepository;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ContentManager;
@@ -19,7 +20,7 @@ use ContentEgg\application\Plugin;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class EggMetabox
 {
@@ -269,8 +270,11 @@ document.addEventListener("DOMContentLoaded", function() {
         \wp_enqueue_script('tinymce-code', \ContentEgg\PLUGIN_RES . '/app/vendor/tinymce-code/plugin.min.js', array('wp-tinymce'), Plugin::version);
         \wp_register_script('contentegg-metabox-app', \ContentEgg\PLUGIN_RES . '/app/app.js', array('angularjs'), Plugin::version());
         \wp_enqueue_script('contentegg-metabox-service', \ContentEgg\PLUGIN_RES . '/app/ModuleService.js', array('contentegg-metabox-app'), Plugin::version());
-        \wp_enqueue_script('cegg-import-service', PluginAdmin::res('app/import/service.js'), ['contentegg-metabox-app'], Plugin::version(), true);
-        \wp_enqueue_script('cegg-toast-service', PluginAdmin::res('app/bs-toast.service.js'), ['contentegg-metabox-app'], Plugin::version(), true);
+        if (!PresetRepository::jsEnqueued())
+        {
+            \wp_enqueue_script('cegg-import-service', PluginAdmin::res('app/import/service.js'), ['contentegg-metabox-app'], Plugin::version(), true);
+            \wp_enqueue_script('cegg-toast-service', PluginAdmin::res('app/bs-toast.service.js'), ['contentegg-metabox-app'], Plugin::version(), true);
+        }
 
         // Bootstrap
         \wp_enqueue_style('cegg-bootstrap-admin', \ContentEgg\PLUGIN_RES . '/admin/bootstrap/css/bootstrap.css', array(), Plugin::version());

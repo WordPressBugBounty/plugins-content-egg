@@ -2,8 +2,6 @@
 
 namespace ContentEgg\application\helpers;
 
-
-
 defined('\ABSPATH') || exit;
 
 /**
@@ -11,7 +9,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  *
  */
 class CurrencyHelper
@@ -91,7 +89,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'United States dollar',
+                'name' => __('United States dollar', 'content-egg-tpl'),
             ),
             'EUR' => array(
                 'currency_symbol' => '&euro;',
@@ -108,7 +106,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Euro',
+                'name' => __('Euro', 'content-egg-tpl'),
             ),
             'CAD' => array(
                 'currency_symbol' => 'C $',
@@ -116,7 +114,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Canadian dollar',
+                'name' => __('Canadian dollar', 'content-egg-tpl'),
             ),
             'GBP' => array(
                 'currency_symbol' => '&pound;',
@@ -124,7 +122,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'British pound',
+                'name' => __('British pound', 'content-egg-tpl'),
             ),
             'JPY' => array(
                 'currency_symbol' => '&yen;',
@@ -132,7 +130,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 0,
-                'name' => 'Japanese yen',
+                'name' => __('Japanese yen', 'content-egg-tpl'),
             ),
             'CNY' => array(
                 'currency_symbol' => '&yen;',
@@ -140,23 +138,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Chinese yuan',
-            ),
-            'RUB' => array(
-                'currency_symbol' => 'руб.',
-                'currency_pos' => 'right_space',
-                'thousand_sep' => ' ',
-                'decimal_sep' => ',',
-                'num_decimals' => 0,
-                'name' => 'Russian ruble',
-            ),
-            'RUR' => array(
-                'currency_symbol' => 'руб.',
-                'currency_pos' => 'right_space',
-                'thousand_sep' => ' ',
-                'decimal_sep' => ',',
-                'num_decimals' => 0,
-                'name' => 'Russian ruble',
+                'name' => __('Chinese yuan', 'content-egg-tpl'),
             ),
             'UAH' => array(
                 'currency_symbol' => 'грн.',
@@ -164,7 +146,7 @@ class CurrencyHelper
                 'thousand_sep' => ' ',
                 'decimal_sep' => ',',
                 'num_decimals' => 0,
-                'name' => 'Ukrainian hryvnia',
+                'name' => __('Ukrainian hryvnia', 'content-egg-tpl'),
             ),
             'INR' => array(
                 'currency_symbol' => '₹',
@@ -172,7 +154,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 0,
-                'name' => 'Indian Rupee',
+                'name' => __('Indian Rupee', 'content-egg-tpl'),
             ),
             'AUD' => array(
                 'currency_symbol' => 'AU $',
@@ -180,7 +162,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Australian dollar',
+                'name' => __('Australian dollar', 'content-egg-tpl'),
             ),
             'VND' => array(
                 'currency_symbol' => '&#8363;',
@@ -188,7 +170,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 0,
-                'name' => 'Vietnamese dong',
+                'name' => __('Vietnamese dong', 'content-egg-tpl'),
             ),
             'BRL' => array(
                 'currency_symbol' => 'R$',
@@ -196,7 +178,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Brazilian real',
+                'name' => __('Brazilian real', 'content-egg-tpl'),
             ),
             'TND' => array(
                 'currency_symbol' => 'DT',
@@ -205,7 +187,7 @@ class CurrencyHelper
                 'thousand_sep'    => '',
                 'decimal_sep'     => ',',
                 'num_decimals'    => 3,
-                'name'            => 'Tunisian dinar',
+                'name'            => __('Tunisian dinar', 'content-egg-tpl'),
             ),
             'NGN' => array(
                 'currency_symbol' => '₦',
@@ -213,7 +195,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Nigerian naira',
+                'name' => __('Nigerian naira', 'content-egg-tpl'),
             ),
             'MXN' => array(
                 'currency_symbol' => '$',
@@ -221,7 +203,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Mexican peso',
+                'name' => __('Mexican peso', 'content-egg-tpl'),
             ),
             'MDL' => array(
                 'currency_symbol' => 'lei',
@@ -229,7 +211,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Moldovan leu',
+                'name' => __('Moldovan leu', 'content-egg-tpl'),
             ),
             'KRW' => array(
                 'currency_symbol' => '₩',
@@ -237,7 +219,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 0,
-                'name' => 'South Korean won',
+                'name' => __('South Korean won', 'content-egg-tpl'),
             ),
             'THB' => array(
                 'currency_symbol' => '฿',
@@ -245,7 +227,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 0,
-                'name' => 'Thai baht',
+                'name' => __('Thai baht', 'content-egg-tpl'),
             ),
             'RON' => array(
                 'currency_symbol' => 'Lei',
@@ -253,7 +235,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Romanian Leu',
+                'name' => __('Romanian Leu', 'content-egg-tpl'),
             ),
             'EGP' => array(
                 'currency_symbol' => 'EGP',
@@ -261,7 +243,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 0,
-                'name' => 'Egypt Pound',
+                'name' => __('Egypt Pound', 'content-egg-tpl'),
             ),
             'KWD' => array(
                 'currency_symbol' => 'KD',
@@ -269,7 +251,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 3,
-                'name' => 'Kuwaiti dinar',
+                'name' => __('Kuwaiti dinar', 'content-egg-tpl'),
             ),
             'TRY' => array(
                 'currency_symbol' => 'TL',
@@ -277,7 +259,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Turkish Lira',
+                'name' => __('Turkish Lira', 'content-egg-tpl'),
             ),
             'IDR' => array(
                 'currency_symbol' => 'Rp',
@@ -285,7 +267,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 0,
-                'name' => 'Indonesian Rupiah',
+                'name' => __('Indonesian Rupiah', 'content-egg-tpl'),
             ),
             'PKR' => array(
                 'currency_symbol' => 'PKR.',
@@ -293,7 +275,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 0,
-                'name' => 'Pakistani Rupee',
+                'name' => __('Pakistani Rupee', 'content-egg-tpl'),
             ),
             'HKD' => array(
                 'currency_symbol' => 'HKD$',
@@ -301,7 +283,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Hong Kong dollar',
+                'name' => __('Hong Kong dollar', 'content-egg-tpl'),
             ),
             'ILS' => array(
                 'currency_symbol' => '&#8362;',
@@ -309,7 +291,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Israeli Shekel',
+                'name' => __('Israeli Shekel', 'content-egg-tpl'),
             ),
             'AED' => array(
                 'currency_symbol' => 'AED',
@@ -317,7 +299,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'UAE Dirham',
+                'name' => __('UAE Dirham', 'content-egg-tpl'),
             ),
             'SAR' => array(
                 'currency_symbol' => 'SAR',
@@ -325,7 +307,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Saudi Riyal',
+                'name' => __('Saudi Riyal', 'content-egg-tpl'),
             ),
             'SGD' => array(
                 'currency_symbol' => 'S$',
@@ -333,7 +315,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Singapore dollar',
+                'name' => __('Singapore dollar', 'content-egg-tpl'),
             ),
             'HUF' => array(
                 'currency_symbol' => 'Ft',
@@ -341,7 +323,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 0,
-                'name' => 'Hungarian forint',
+                'name' => __('Hungarian forint', 'content-egg-tpl'),
             ),
             'PLN' => array(
                 'currency_symbol' => 'zł',
@@ -349,7 +331,7 @@ class CurrencyHelper
                 'thousand_sep' => '',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Polish Zloty',
+                'name' => __('Polish Zloty', 'content-egg-tpl'),
             ),
             'CZK' => array(
                 'currency_symbol' => 'Kč',
@@ -357,7 +339,7 @@ class CurrencyHelper
                 'thousand_sep' => ' ',
                 'decimal_sep' => ',',
                 'num_decimals' => 0,
-                'name' => 'Czech koruna',
+                'name' => __('Czech koruna', 'content-egg-tpl'),
             ),
             'MYR' => array(
                 'currency_symbol' => 'RM',
@@ -365,7 +347,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Malaysia Ringgit',
+                'name' => __('Malaysia Ringgit', 'content-egg-tpl'),
             ),
             'PCT' => array(
                 'currency_symbol' => '%',
@@ -373,7 +355,7 @@ class CurrencyHelper
                 'thousand_sep' => '',
                 'decimal_sep' => '.',
                 'num_decimals' => 1,
-                'name' => 'Percentage',
+                'name' => __('Percentage', 'content-egg-tpl'),
             ),
             'CLP' => array(
                 'currency_symbol' => '$',
@@ -381,7 +363,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 0,
-                'name' => 'Peso Chileno',
+                'name' => __('Peso Chileno', 'content-egg-tpl'),
             ),
             'DKK' => array(
                 'currency_symbol' => 'DKK',
@@ -389,7 +371,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Danske Kroner',
+                'name' => __('Danske Kroner', 'content-egg-tpl'),
             ),
             'KES' => array(
                 'currency_symbol' => 'KSh',
@@ -397,7 +379,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Kenyan Shilling',
+                'name' => __('Kenyan Shilling', 'content-egg-tpl'),
             ),
             'HRK' => array(
                 'currency_symbol' => 'kn',
@@ -405,7 +387,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Croatian Kuna',
+                'name' => __('Croatian Kuna', 'content-egg-tpl'),
             ),
             'PEN' => array(
                 'currency_symbol' => 'S/',
@@ -413,7 +395,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Peruvian sol',
+                'name' => __('Peruvian sol', 'content-egg-tpl'),
             ),
             'DOP' => array(
                 'currency_symbol' => 'RD$',
@@ -421,7 +403,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Dominican Peso',
+                'name' => __('Dominican Peso', 'content-egg-tpl'),
             ),
             'UYU' => array(
                 'currency_symbol' => 'U$S',
@@ -429,7 +411,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Uruguayan Peso',
+                'name' => __('Uruguayan Peso', 'content-egg-tpl'),
             ),
             'NIO' => array(
                 'currency_symbol' => 'C$',
@@ -437,7 +419,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Nicaraguan Córdoba',
+                'name' => __('Nicaraguan Córdoba', 'content-egg-tpl'),
             ),
             'PAB' => array(
                 'currency_symbol' => 'B/.',
@@ -445,7 +427,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Panamanian Balboa',
+                'name' => __('Panamanian Balboa', 'content-egg-tpl'),
             ),
             'SVC' => array(
                 'currency_symbol' => '$',
@@ -453,7 +435,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Salvadoran Colón',
+                'name' => __('Salvadoran Colón', 'content-egg-tpl'),
             ),
             'GTQ' => array(
                 'currency_symbol' => 'Q',
@@ -461,7 +443,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Guatemalan Quetzal',
+                'name' => __('Guatemalan Quetzal', 'content-egg-tpl'),
             ),
             'HNL' => array(
                 'currency_symbol' => 'L',
@@ -469,7 +451,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Honduran Lempira',
+                'name' => __('Honduran Lempira', 'content-egg-tpl'),
             ),
             'JMD' => array(
                 'currency_symbol' => 'JM$',
@@ -477,7 +459,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Jamaican Dollar',
+                'name' => __('Jamaican Dollar', 'content-egg-tpl'),
             ),
             'CRC' => array(
                 'currency_symbol' => '₡',
@@ -485,7 +467,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Costa Rican Colón',
+                'name' => __('Costa Rican Colón', 'content-egg-tpl'),
             ),
             'ARS' => array(
                 'currency_symbol' => '$',
@@ -493,7 +475,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Argentine Peso',
+                'name' => __('Argentine Peso', 'content-egg-tpl'),
             ),
             'BOB' => array(
                 'currency_symbol' => 'Bs',
@@ -501,7 +483,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Bolivian Boliviano',
+                'name' => __('Bolivian Boliviano', 'content-egg-tpl'),
             ),
             'COP' => array(
                 'currency_symbol' => '$',
@@ -509,7 +491,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Colombian Peso',
+                'name' => __('Colombian Peso', 'content-egg-tpl'),
             ),
             'XOF' => array(
                 'currency_symbol' => 'FCFA',
@@ -517,7 +499,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 0,
-                'name' => 'CFA Franc',
+                'name' => __('CFA Franc', 'content-egg-tpl'),
             ),
             'SEK' => array(
                 'currency_symbol' => 'kr',
@@ -525,7 +507,7 @@ class CurrencyHelper
                 'thousand_sep' => ' ',
                 'decimal_sep' => '.',
                 'num_decimals' => 0,
-                'name' => 'Swedish Krona',
+                'name' => __('Swedish Krona', 'content-egg-tpl'),
             ),
             'PHP' => array(
                 'currency_symbol' => '₱',
@@ -533,7 +515,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 0,
-                'name' => 'Philippine Peso',
+                'name' => __('Philippine Peso', 'content-egg-tpl'),
             ),
             'JOD' => array(
                 'currency_symbol' => 'JOD',
@@ -541,7 +523,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Jordanian Dinar',
+                'name' => __('Jordanian Dinar', 'content-egg-tpl'),
             ),
             'NOK' => array(
                 'currency_symbol' => 'NOK',
@@ -549,7 +531,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Norske kroner',
+                'name' => __('Norske kroner', 'content-egg-tpl'),
             ),
             'NZD' => array(
                 'currency_symbol' => 'NZ $',
@@ -557,7 +539,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'New Zealand dollar',
+                'name' => __('New Zealand dollar', 'content-egg-tpl'),
             ),
             'LKR' => array(
                 'currency_symbol' => 'Rs',
@@ -565,7 +547,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Sri Lankan Rupee',
+                'name' => __('Sri Lankan Rupee', 'content-egg-tpl'),
             ),
             'ZAR' => array(
                 'currency_symbol' => 'R',
@@ -573,7 +555,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'South African Rand',
+                'name' => __('South African Rand', 'content-egg-tpl'),
             ),
             'UMO' => array(
                 'currency_symbol' => '$%PRICE% / ' . __('mo', 'content-egg-tpl'),
@@ -581,7 +563,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'USD/month',
+                'name' => __('USD/month', 'content-egg-tpl'),
             ),
             'BGN' => array(
                 'currency_symbol' => 'лв.',
@@ -589,7 +571,7 @@ class CurrencyHelper
                 'thousand_sep' => '.',
                 'decimal_sep' => ',',
                 'num_decimals' => 2,
-                'name' => 'Bulgarian Lev',
+                'name' => __('Bulgarian Lev', 'content-egg-tpl'),
             ),
             'BDT' => array(
                 'currency_symbol' => '৳',
@@ -597,7 +579,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Bangladeshi Taka',
+                'name' => __('Bangladeshi Taka', 'content-egg-tpl'),
             ),
             'NPR' => array(
                 'currency_symbol' => '₨',
@@ -605,7 +587,7 @@ class CurrencyHelper
                 'thousand_sep' => ',',
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Nepalese Rupee',
+                'name' => __('Nepalese Rupee', 'content-egg-tpl'),
             ),
             'CHF' => array(
                 'currency_symbol' => 'CHF',
@@ -613,9 +595,8 @@ class CurrencyHelper
                 'thousand_sep' => "'",
                 'decimal_sep' => '.',
                 'num_decimals' => 2,
-                'name' => 'Swiss Franc',
+                'name' => __('Swiss Franc', 'content-egg-tpl'),
             ),
-
         );
     }
 

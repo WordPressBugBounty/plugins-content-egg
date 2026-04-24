@@ -1,0 +1,62 @@
+/*
+ * Definitions block — structural terminology block.
+ * Visual tokens come from the active EggBlocks theme.
+ */
+
+.eggb-df-term {
+  min-width: 10rem;
+  font-weight: 600;
+}
+
+.eggb-definitions--compact {
+  font-size: var(--eggb-text-sm);
+}
+
+.eggb-df-compact-term {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--eggb-text-muted);
+}
+
+.eggb-df-compact-item + .eggb-df-compact-item {
+  border-top: var(--eggb-border-w) dashed var(--eggb-border);
+  padding-top: 0.5rem;
+}
+
+.eggb-definitions--inline {
+  font-size: var(--eggb-text-sm);
+}
+
+.eggb-df-inline-term {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--eggb-text-muted);
+}
+
+.eggb-df-inline-item {
+  border-left: 2px solid color-mix(in srgb, var(--eggb-accent) 35%, transparent);
+  padding-left: 0.75rem;
+}
+
+.eggb-df-card-term {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.eggb-df-card-def {
+  color: var(--eggb-text-muted);
+}
+
+.eggb-block .eggb-df-card-def p,
+.eggb-block dd p {
+  margin: 0 0 0.5rem;
+}
+
+.eggb-block .eggb-df-card-def p:last-child,
+.eggb-block dd p:last-child {
+  margin-bottom: 0;
+}

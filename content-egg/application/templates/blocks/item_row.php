@@ -3,6 +3,8 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TemplateHelper;
 
+use function ContentEgg\prnx;
+
 ?>
 
 <div class="cegg-item-card cegg-card <?php TemplateHelper::border($params, 'border'); ?>">
@@ -94,10 +96,13 @@ use ContentEgg\application\helpers\TemplateHelper;
             <?php endif; ?>
 
             <?php if ($this->isVisible('button')): ?>
-                <div class="cegg-card-button p-0 pt-3 d-grid col-sm-12 col-md-8">
 
-                    <?php TemplateHelper::button($item, $params); ?>
-                </div>
+                <?php foreach (TemplateHelper::getButtonVariants($item, $params) as [$btnItem, $btnParams]): ?>
+                    <div class="cegg-card-button p-0 pt-2 d-grid col-sm-12 col-md-8">
+                        <?php TemplateHelper::button($btnItem, $btnParams); ?>
+                    </div>
+                <?php endforeach; ?>
+
                 <div class="clearfix"></div>
 
             <?php endif; ?>

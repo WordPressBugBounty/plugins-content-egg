@@ -2,7 +2,9 @@
 
 namespace ContentEgg\application\admin\import;
 
-use ContentEgg\application\helpers\TextHelper;;
+use ContentEgg\application\helpers\TextHelper;
+
+use function ContentEgg\prnx;;
 
 defined('\ABSPATH') || exit;
 
@@ -11,7 +13,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 
 class ImportProductPrompt extends ImportPrompt
@@ -167,8 +169,8 @@ EOD;
         );
 
         /* -----------------------------------------------------------------
- * 4. Decode & validate JSON
- * ----------------------------------------------------------------- */
+        * 4. Decode & validate JSON
+        * ----------------------------------------------------------------- */
         $item = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($item))
         {
@@ -202,7 +204,7 @@ EOD;
                     break;
 
                 case 'rating':
-                    $product['ratingDecimal'] = max(1.0, min(10.0, (float) $item['rating']));
+                    $product['ratingDecimal'] = round(max(1.0, min(10.0, (float) $item['rating'])), 1);
                     $product['rating']        = '';
                     break;
 

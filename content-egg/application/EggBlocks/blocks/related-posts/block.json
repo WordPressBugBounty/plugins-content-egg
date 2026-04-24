@@ -1,0 +1,49 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/related-posts",
+    "version": "1.0.0",
+    "title": "Related Posts",
+    "category": "cegg-blocks",
+    "icon": "admin-links",
+    "description": "Links to related articles with multiple layout options.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+    "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "compact",
+            "enum": ["compact", "media-list", "cards", "featured"]
+        },
+        "section_label": {
+            "type": "string",
+            "default": "Related Articles"
+        },
+        "items": {
+            "type": "array",
+            "default": []
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

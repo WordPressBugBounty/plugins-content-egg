@@ -15,7 +15,7 @@ defined('ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 
 class SearchTab extends AbstractTab
@@ -33,9 +33,12 @@ class SearchTab extends AbstractTab
         wp_enqueue_script('cegg-sanitize',  PluginAdmin::res('app/vendor/angular-sanitize.js'), ['cegg-angular'], null, true);
 
         // 2) Our Angular pieces
-        wp_enqueue_script('cegg-import-module',      PluginAdmin::res('app/import/module.js'),      ['cegg-sanitize'],   Plugin::version(), true);
-        wp_enqueue_script('cegg-import-service',     PluginAdmin::res('app/import/service.js'),     ['cegg-import-module'], Plugin::version(), true);
-        wp_enqueue_script('cegg-import-controllers', PluginAdmin::res('app/import/controllers.js'), ['cegg-import-service'], Plugin::version(), true);
+        if (!PresetRepository::jsEnqueued())
+        {
+            wp_enqueue_script('cegg-import-module',      PluginAdmin::res('app/import/module.js'),      ['cegg-sanitize'],   Plugin::version(), true);
+            wp_enqueue_script('cegg-import-service',     PluginAdmin::res('app/import/service.js'),     ['cegg-import-module'], Plugin::version(), true);
+            wp_enqueue_script('cegg-import-controllers', PluginAdmin::res('app/import/controllers.js'), ['cegg-import-service'], Plugin::version(), true);
+        }
 
         // 3) Bootstrap
         wp_enqueue_style('cegg-bootstrap5-full');

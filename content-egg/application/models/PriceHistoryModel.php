@@ -6,15 +6,14 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ContentProduct;
-
-
+use ContentEgg\application\helpers\TextHelper;
 
 /**
  * PriceHistoryModel class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class PriceHistoryModel extends Model
 {
@@ -283,7 +282,8 @@ class PriceHistoryModel extends Model
 		// INCLUDED module IDs
 		if (!empty($params['include_module_ids']))
 		{
-			$include_ids  = array_map('strval', (array) $params['include_module_ids']);
+			$include_ids = TextHelper::getArrayFromCommaList($params['include_module_ids']);
+			$include_ids  = array_map('strval', (array) $include_ids);
 			$placeholders = implode(', ', array_fill(0, count($include_ids), '%s'));
 			$where_extra[] = "price_history.module_id IN ($placeholders)";
 			$query_params  = array_merge($query_params, $include_ids);
@@ -292,7 +292,8 @@ class PriceHistoryModel extends Model
 		// EXCLUDED module IDs
 		if (!empty($params['exclude_module_ids']))
 		{
-			$exclude_ids  = array_map('strval', (array) $params['exclude_module_ids']);
+			$exclude_ids = TextHelper::getArrayFromCommaList($params['exclude_module_ids']);
+			$exclude_ids  = array_map('strval', (array) $exclude_ids);
 			$placeholders = implode(', ', array_fill(0, count($exclude_ids), '%s'));
 			$where_extra[] = "price_history.module_id NOT IN ($placeholders)";
 			$query_params  = array_merge($query_params, $exclude_ids);

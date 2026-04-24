@@ -8,14 +8,18 @@ use ContentEgg\application\components\ParserModule;
 use ContentEgg\application\libs\pixabay\PixabaySearch;
 use ContentEgg\application\components\Content;
 use ContentEgg\application\admin\PluginAdmin;
-use ContentEgg\application\admin\GeneralConfig;;
+use ContentEgg\application\admin\GeneralConfig;
+
+use function ContentEgg\prnx;
+
+;
 
 /**
  * PixabayModule class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class PixabayModule extends ParserModule
 {

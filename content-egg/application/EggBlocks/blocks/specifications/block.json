@@ -1,0 +1,74 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/specifications",
+    "version": "1.0.0",
+    "title": "Specifications",
+    "category": "cegg-blocks",
+    "icon": "excerpt-view",
+    "description": "Structured technical specifications for product reviews.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+  "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "compact", "highlight"]
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "section_label": {
+            "type": "string",
+            "default": ""
+        },
+        "title": {
+            "type": "string",
+            "default": ""
+        },
+        "heading_tag": {
+            "type": "string",
+            "default": "h2",
+            "enum": ["h1", "h2", "h3", "h4", "div"]
+        },
+        "specs": {
+            "type": "array",
+            "default": []
+        },
+        "anchor": {
+            "type": "string",
+            "default": ""
+        },
+        "toc_label": {
+            "type": "string",
+            "default": ""
+        },
+        "include_in_toc": {
+            "type": "boolean",
+            "default": false
+        },
+        "level": {
+            "type": "number",
+            "default": 2
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

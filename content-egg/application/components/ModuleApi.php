@@ -10,14 +10,14 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 
-
+use function ContentEgg\prnx;
 
 /**
  * ModuleApi class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class ModuleApi
 {
@@ -238,6 +238,7 @@ class ModuleApi
                         $item->_descriptionText = \wp_strip_all_tags($item->description);
                 }
             }
+
             $this->formatJson(array('results' => $data, 'error' => ''));
         }
         catch (\Exception $e)

@@ -12,7 +12,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 
 class ProductBlock
@@ -20,7 +20,6 @@ class ProductBlock
     public static function initAction()
     {
         self::registerBlock();
-        //add_action('init', array(__CLASS__, 'registerBlock'));
         add_action('enqueue_block_editor_assets', array(__CLASS__, 'enqueueBlockAssets'));
     }
 
@@ -123,11 +122,19 @@ class ProductBlock
             'link_target' => [
                 'type'    => 'string',
                 'default' => 'auto',
-                'enum'    => ['auto', 'affiliate', 'bridge'],
+                'enum'    => ['auto', 'affiliate', 'bridge', 'both'],
             ],
             'post_id' => array(
                 'type' => 'integer',
                 'default' => 0,
+            ),
+            'async' => array(
+                'type' => 'boolean',
+                'default' => false,
+            ),
+            'lazy' => array(
+                'type' => 'boolean',
+                'default' => false,
             ),
         );
     }
@@ -193,7 +200,9 @@ class ProductBlock
         $template = isset($attributes['template']) ? $attributes['template'] : '';
 
         if ($is_editor && BlockTemplateManager::isCustomTemplate($template))
+        {
             return '<div><small>' . esc_html__('Preview is not available for custom/theme templates.', 'content-egg') . '</small></div>';
+        }
 
         foreach ($attributes as $key => $value)
         {
@@ -203,7 +212,18 @@ class ProductBlock
                 $attributes[$key] = join(',', $attributes[$key]);
             }
             else
+            {
                 $attributes[$key] = sanitize_text_field($value);
+            }
+        }
+
+        if (isset($attributes['async']))
+        {
+            $attributes['async'] = !empty($attributes['async']) ? '1' : '';
+        }
+        if (isset($attributes['lazy']))
+        {
+            $attributes['lazy'] = !empty($attributes['lazy']) ? '1' : '';
         }
 
         $shortcode = '[content-egg-block';

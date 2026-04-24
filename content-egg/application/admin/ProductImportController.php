@@ -11,14 +11,16 @@ use ContentEgg\application\admin\import\FeedImportTab;
 use ContentEgg\application\admin\import\SearchTab;
 use ContentEgg\application\admin\import\AutoImportTab;
 use ContentEgg\application\admin\import\PresetsTab;
-use ContentEgg\application\admin\import\QueueTab;;
+use ContentEgg\application\admin\import\QueueTab;
+
+use function ContentEgg\prnx;;
 
 /**
  * ProductImportController class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 
 class ProductImportController
@@ -36,11 +38,6 @@ class ProductImportController
     public function registerMenu()
     {
         $badge = '';
-
-        if (Plugin::isFree() && time() < strtotime('2025-09-30 23:59:59'))
-        {
-            $badge = ' <span class="update-plugins count-1"><span class="plugin-count">New</span></span>';
-        }
 
         add_submenu_page(
             Plugin::getSlug(),
@@ -91,12 +88,19 @@ class ProductImportController
             ? $requested
             : $this->tabs[0]->getSlug();
 
+        ob_start();
+        require __DIR__ . '/views/_version_badge.php';
+        $version_badge = ob_get_clean();
+
         echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Product Import', 'content-egg');
-
-        echo ' <a href="https://ce-docs.keywordrush.com/set-up-products/import-tools" target="_blank" class="button button-secondary" style="margin-left: 15px;">' . esc_html__('User Guide', 'content-egg') . '</a>';
-
+        echo '<div class="cegg5-container">';
+        echo '<h1 class="h4 d-flex align-items-center justify-content-between mb-2 mt-2" style="height: 30px;"><span>' . esc_html__('Product Import', 'content-egg') . '</span>';
+        echo '<div class="d-flex align-items-center">';
+        echo ' <a href="https://ce-docs.keywordrush.com/set-up-products/import-tools" target="_blank" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center me-4">' . esc_html__('Help', 'content-egg') . '</a>';
+        echo wp_kses_post($version_badge);
+        echo '</div>';
         echo '</h1>';
+        echo '</div>';
         echo '<h2 class="nav-tab-wrapper">';
 
         foreach ($this->tabs as $tab)

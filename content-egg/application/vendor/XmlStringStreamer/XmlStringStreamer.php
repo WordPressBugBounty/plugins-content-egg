@@ -3,7 +3,7 @@
 /*
  * Modified version of XmlStringStreamer, edited namespaces only
  * @author keywordrush.com <support@keywordrush.com>
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 
 /**

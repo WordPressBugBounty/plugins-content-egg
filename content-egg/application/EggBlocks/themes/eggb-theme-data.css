@@ -1,0 +1,197 @@
+/*
+ * eggb-theme-data.css — EggBlocks data theme
+ *
+ * system-ui, tight spacing, spec-sheet feel.
+ * Clinical palette with a sharp blue accent.
+ *
+ * Color philosophy:
+ *   - Cool neutrals: pure white surface, crisp borders
+ *   - system-ui stack for maximum information density
+ *   - Tight padding, compact type scale
+ *   - Accent: sky blue — technical, cool/neutral temperature
+ *
+ * Link AFTER eggb-base.css.
+ */
+
+/* ─────────────────────────────────────────────
+   Root-level token fallbacks
+───────────────────────────────────────────── */
+
+:root {
+  --eggb-text-muted:    #6b7280;
+  --eggb-text-xs:       .6875rem;
+  --eggb-text-sm:       .8125rem;
+  --eggb-text-md:       .9375rem;
+  --eggb-text-lg:       1.625rem;
+  --eggb-sh-title-size: 1.0625rem;
+}
+
+/* ─────────────────────────────────────────────
+   Token overrides on .eggb-block
+───────────────────────────────────────────── */
+
+.eggb-block {
+  /* Accent: sky blue — cool/neutral, spec-sheet feel */
+  --eggb-accent:     #0ea5e9;
+
+  /* Surface: pure white — clinical */
+  --eggb-surface:    #fff;
+
+  /* Border: cool, precise hairline */
+  --eggb-border:     rgba(0, 0, 0, .12);
+
+  /* Muted text: cool gray */
+  --eggb-text-muted: #6b7280;
+
+  /* Shape — minimal, squared-off */
+  --eggb-radius:      2px;
+  --eggb-radius-chip: 2px;
+  --eggb-border-w:    1px;
+
+  /* Tight inner padding */
+  --eggb-block-pad:   .75rem 1rem;
+
+  /* Signal colors */
+  --eggb-positive: #16a34a;
+  --eggb-negative: #dc2626;
+
+  /* Editorial type colors */
+  --eggb-note:    #0ea5e9;
+  --eggb-tip:     #16a34a;
+  --eggb-warning: #d97706;
+  --eggb-insight: #7c3aed;
+
+  /* Text color */
+  --eggb-text: #111827;
+  color: var(--eggb-text);
+
+  /* Type scale — tighter than default */
+  --eggb-text-xs:     .6875rem;
+  --eggb-text-sm:     .8125rem;
+  --eggb-text-md:     .9375rem;
+  --eggb-text-lg:     1.625rem;
+
+  /* Section header — compact */
+  --eggb-sh-title-size: 1.0625rem;
+}
+
+/* ─────────────────────────────────────────────
+   Typography — system-ui, tight leading
+───────────────────────────────────────────── */
+
+.eggb-theme-data .eggb-section-title {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.eggb-theme-data .eggb-score-num {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -.03em;
+}
+
+/* Product / verdict title — light weight, tight leading */
+.eggb-theme-data .eggb-vd-name {
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+/* ─────────────────────────────────────────────
+   Button — compact, utilitarian
+───────────────────────────────────────────── */
+
+.eggb-theme-data .eggb-btn {
+  font-size:      .8125rem;
+  font-weight:    600;
+  letter-spacing: 0;
+  padding:        .4em 1em;
+}
+
+/* ─────────────────────────────────────────────
+   Chip — crisp border, no warmth
+───────────────────────────────────────────── */
+
+.eggb-theme-data .eggb-chip {
+  --eggb-chip-bg:     transparent;
+  --eggb-chip-border: rgba(0, 0, 0, .20);
+  --eggb-chip-color:  rgba(0, 0, 0, .72);
+  font-size:   .6875rem;
+  font-weight: 500;
+}
+
+/* ─────────────────────────────────────────────
+   Award badge
+───────────────────────────────────────────── */
+
+.eggb-theme-data .eggb-award {
+  --eggb-award-bg:     color-mix(in srgb, var(--eggb-accent) 10%, transparent);
+  --eggb-award-border: color-mix(in srgb, var(--eggb-accent) 30%, transparent);
+  --eggb-award-color:  var(--eggb-accent);
+  font-size:   .6875rem;
+  font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────
+   Score
+───────────────────────────────────────────── */
+
+.eggb-theme-data .eggb-score-num {
+  font-size:      2rem;
+}
+
+.eggb-theme-data .eggb-score-denom {
+  opacity: .5;
+}
+
+/* ─────────────────────────────────────────────
+   Price primitives
+───────────────────────────────────────────── */
+
+.eggb-theme-data .eggb-price-old,
+.eggb-theme-data .eggb-price-meta {
+  color: var(--eggb-text-muted);
+}
+
+.eggb-theme-data .eggb-price-old {
+  font-size: var(--eggb-text-sm);
+}
+
+.eggb-theme-data .eggb-price-meta {
+  font-size: var(--eggb-text-xs);
+}
+
+/* ─────────────────────────────────────────────
+   Rule — crisp
+───────────────────────────────────────────── */
+
+.eggb-theme-data .eggb-rule {
+  opacity: .12;
+}
+
+/* ─────────────────────────────────────────────
+   Block panel
+───────────────────────────────────────────── */
+
+.eggb-theme-data.eggb-block--panel {
+  background:    var(--eggb-surface);
+  border:        var(--eggb-border-w) solid var(--eggb-border);
+  border-radius: var(--eggb-radius);
+}
+
+.eggb-theme-data.eggb-block--accented {
+  border-top: 3px solid var(--eggb-accent);
+}
+
+.eggb-theme-data .eggb-card {
+  background:    var(--eggb-surface);
+  border:        var(--eggb-border-w) solid var(--eggb-border);
+  border-radius: var(--eggb-radius);
+}
+
+.eggb-theme-data .eggb-divider-v {
+  width:       1px;
+  background:  currentColor;
+  opacity:     .12;
+  flex-shrink: 0;
+}

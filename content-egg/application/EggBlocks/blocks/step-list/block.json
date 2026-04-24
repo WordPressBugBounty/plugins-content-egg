@@ -1,0 +1,78 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/step-list",
+    "version": "1.0.0",
+    "title": "Step List",
+    "category": "cegg-blocks",
+    "icon": "editor-ol",
+    "description": "Step-by-step instructions in timeline, checklist, card, or grid layouts.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+  "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "checklist", "cards", "card-grid"]
+        },
+        "section_label": {
+            "type": "string",
+            "default": "Step List"
+        },
+        "title": {
+            "type": "string",
+            "default": ""
+        },
+        "heading_tag": {
+            "type": "string",
+            "default": "h2",
+            "enum": ["h1", "h2", "h3", "h4", "div"]
+        },
+        "steps": {
+            "type": "array",
+            "default": []
+        },
+        "note": {
+            "type": "string",
+            "default": ""
+        },
+        "anchor": {
+            "type": "string",
+            "default": ""
+        },
+        "toc_label": {
+            "type": "string",
+            "default": ""
+        },
+        "include_in_toc": {
+            "type": "boolean",
+            "default": false
+        },
+        "level": {
+            "type": "number",
+            "default": 2
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

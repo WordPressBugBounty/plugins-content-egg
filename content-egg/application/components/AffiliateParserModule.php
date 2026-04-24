@@ -6,12 +6,14 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TextHelper;
 
+use function ContentEgg\prnx;
+
 /**
  * AffiliateParserModule abstract class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 abstract class AffiliateParserModule extends ParserModule
 {

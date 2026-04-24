@@ -11,7 +11,7 @@ use ContentEgg\application\libs\RestClient;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  *
  * @link: https://developer.sovrn.com/reference/product-affiliate-api
  *
@@ -53,7 +53,7 @@ class ViglinkApi extends RestClient
 		return $this->_decodeResponse($response);
 	}
 
-	public function restGet($path, array $query = null)
+	public function restGet($path, ?array $query = null)
 	{
 		$this->setCustomHeaders(array('Authorization' => 'secret ' . $this->secretKey));
 		return parent::restGet($path, $query);

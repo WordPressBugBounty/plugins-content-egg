@@ -1,0 +1,67 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/toc",
+    "version": "1.0.0",
+    "title": "Table of Contents",
+    "category": "cegg-blocks",
+    "icon": "list-view",
+    "description": "Collapsible table of contents linking to article anchors.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+  "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "compact", "numbered"]
+        },
+        "label": {
+            "type": "string",
+            "default": "In this article"
+        },
+        "source_mode": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "manual"]
+        },
+        "items": {
+            "type": "array",
+            "default": []
+        },
+        "collapsible": {
+            "type": "boolean",
+            "default": true
+        },
+        "default_open": {
+            "type": "boolean",
+            "default": true
+        },
+        "show_products": {
+            "type": "boolean",
+            "default": false
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

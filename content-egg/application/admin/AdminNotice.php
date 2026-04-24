@@ -9,7 +9,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class AdminNotice
 {
@@ -40,7 +40,8 @@ class AdminNotice
             'preset_saved'         => __('Preset saved successfully.', 'content-egg'),
             'preset_deleted'       => __('Preset deleted.', 'content-egg'),
             'preset_delete_error'  => __('You must have at least one preset. You cannot delete the last one.', 'content-egg'),
-            'preset_in_use'         => __('Cannot delete this preset because it’s still used by active import jobs.', 'content-egg'),
+            'preset_in_use'        => __('Cannot delete this preset because it’s still used by active import jobs.', 'content-egg'),
+            'presets_reset'        => __('All presets have been reset to default settings.', 'content-egg'),
             'import_truncate_success' => __('Cleared all completed and failed jobs from the import queue.', 'content-egg'),
             'import_restart_success' => __('All failed import jobs have been restarted.', 'content-egg'),
             'bulk_import_jobs_added' => __('Bulk import jobs have been added to the queue.', 'content-egg'),

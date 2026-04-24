@@ -14,7 +14,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 abstract class Config
 {
@@ -538,8 +538,7 @@ abstract class Config
                         // check 'when' condition
                         if (!empty($v['when']))
                         {
-                            $when_value = $this->get_submitted_value($v['when']);
-                            if (!$when_value)
+                            if (!$this->evaluate_when_condition($v['when']))
                             {
                                 continue;
                             }
@@ -687,5 +686,87 @@ abstract class Config
         $options[$option] = $value;
 
         return update_option($slug, $options);
+    }
+
+    /**
+     * Evaluates validator "when" condition(s).
+     *
+     * Supported formats:
+     * 1) string: 'is_active' (truthy check of that submitted field)
+     * 2) array:  ['api_mode' => 'creators'] (field == value)
+     * 3) array:  ['is_active' => 1, 'api_mode' => 'creators'] (AND)
+     * 4) array:  ['api_mode' => ['paapi5', 'auto']] (field in list)
+     *
+     * @param mixed $when
+     * @return bool
+     */
+    protected function evaluate_when_condition($when)
+    {
+        // Backward-compatible: string field name means "truthy"
+        if (is_string($when))
+        {
+            $when_value = $this->get_submitted_value($when);
+            return (bool) $when_value;
+        }
+
+        // New: associative array means field === expected (AND across all pairs)
+        if (is_array($when))
+        {
+            foreach ($when as $field => $expected)
+            {
+                $actual = $this->get_submitted_value($field);
+
+                // expected === true => require truthy
+                if ($expected === true)
+                {
+                    if (!(bool) $actual)
+                    {
+                        return false;
+                    }
+                    continue;
+                }
+
+                // expected === false => require falsy
+                if ($expected === false)
+                {
+                    if ((bool) $actual)
+                    {
+                        return false;
+                    }
+                    continue;
+                }
+
+                // expected is array => actual must be in list
+                if (is_array($expected))
+                {
+                    // Compare as strings to avoid '1' vs 1 issues
+                    $actual_str = is_scalar($actual) ? (string) $actual : '';
+                    $expected_strs = array();
+                    foreach ($expected as $e)
+                    {
+                        $expected_strs[] = is_scalar($e) ? (string) $e : '';
+                    }
+                    if (!in_array($actual_str, $expected_strs, true))
+                    {
+                        return false;
+                    }
+                    continue;
+                }
+
+                // Scalar expected => compare as strings (safe for posted form values)
+                $expected_str = is_scalar($expected) ? (string) $expected : '';
+                $actual_str   = is_scalar($actual) ? (string) $actual : '';
+
+                if ($actual_str !== $expected_str)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // Unknown format: fail closed (don’t run validator)
+        return false;
     }
 }

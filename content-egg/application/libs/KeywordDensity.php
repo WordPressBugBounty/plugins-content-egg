@@ -13,7 +13,7 @@ use ContentEgg\application\libs\stopwords\StopWords;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  *
  */
 class KeywordDensity

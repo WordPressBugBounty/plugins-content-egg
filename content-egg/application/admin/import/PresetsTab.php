@@ -18,7 +18,7 @@ defined('ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 
 class PresetsTab extends AbstractTab
@@ -26,6 +26,11 @@ class PresetsTab extends AbstractTab
     public function __construct()
     {
         parent::__construct('presets', __('Presets', 'content-egg'));
+    }
+
+    public function enqueueAssets(): void
+    {
+        wp_enqueue_style('cegg-bootstrap5-full');
     }
 
     /* ------------------------------------------------------------------
@@ -53,6 +58,10 @@ class PresetsTab extends AbstractTab
                 $this->handleDelete((int) ($_GET['preset_id'] ?? 0));
                 break;
 
+            case 'reset_presets':
+                $this->handleResetPresets();
+                break;
+
             case 'list':
             default:
                 $this->renderList();
@@ -61,7 +70,7 @@ class PresetsTab extends AbstractTab
     }
 
     /* ------------------------------------------------------------------
-       Sub-nav (All / Add)
+        Sub-nav (All / Add) + Reset button
     ------------------------------------------------------------------ */
     private function renderSubnav(string $current): void
     {
@@ -70,7 +79,10 @@ class PresetsTab extends AbstractTab
             'add'  => __('Add New',     'content-egg'),
         ];
 
-        echo '<ul class="subsubsub">';
+        echo '<div class="ce-subnav-wrapper" style="position: relative;">';
+
+        // All / Add
+        echo '<ul class="subsubsub" tyle="float: left">';
         foreach ($items as $slug => $label)
         {
             $url = add_query_arg(
@@ -90,7 +102,34 @@ class PresetsTab extends AbstractTab
                 $slug !== array_key_last($items) ? '<span class="separator"> | </span>' : ''
             );
         }
-        echo '</ul><br class="clear">';
+        echo '</ul>';
+
+        // Reset presets
+        $reset_url = wp_nonce_url(
+            add_query_arg(
+                [
+                    'page'   => ProductImportController::SLUG,
+                    'tab'    => $this->getSlug(),
+                    'action' => 'reset_presets',
+                ],
+                admin_url('admin.php')
+            ),
+            'ce_reset_presets'
+        );
+
+        printf(
+            '<div class="ce-subnav-right" style="float: right;margin-top: 10px;">' .
+                '<a href="%1$s" class="button button-secondary" ' .
+                'title="%4$s" ' .
+                'onclick="return confirm(\'%2$s\');">%3$s</a>' .
+                '</div>',
+            esc_url($reset_url),
+            esc_js(__('Are you sure you want to reset all presets to default settings? This will delete all your custom presets.', 'content-egg')),
+            esc_html__('Reset presets', 'content-egg'),
+            esc_attr__('Reset all presets to default settings (this will delete all your custom presets).', 'content-egg')
+        );
+
+        echo '<br class="clear"></div>';
     }
 
     /* ------------------------------------------------------------------
@@ -274,6 +313,33 @@ class PresetsTab extends AbstractTab
         // 3) All checks passed, delete
         wp_delete_post($id, true);
         $redirect_url = AdminNotice::add2Url($redirect_url, 'preset_deleted', 'success');
+        AdminHelper::redirect($redirect_url);
+    }
+
+    /* ------------------------------------------------------------------
+       Reset presets handler
+    ------------------------------------------------------------------ */
+    private function handleResetPresets(): void
+    {
+        if (! current_user_can('manage_options'))
+        {
+            wp_die('You do not have permission to reset presets.');
+        }
+
+        check_admin_referer('ce_reset_presets');
+
+        PresetRepository::resetToDefaults();
+
+        $redirect_url = add_query_arg(
+            [
+                'page'  => ProductImportController::SLUG,
+                'tab'   => $this->getSlug(),
+            ],
+            admin_url('admin.php')
+        );
+
+        $redirect_url = AdminNotice::add2Url($redirect_url, 'presets_reset', 'success');
+
         AdminHelper::redirect($redirect_url);
     }
 

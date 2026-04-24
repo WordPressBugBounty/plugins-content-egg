@@ -1,0 +1,38 @@
+/*
+ * Pros/Cons block — visual CSS only.
+ * Layout uses Bootstrap flex/grid utilities.
+ * All colors, borders, radii come from eggb tokens.
+ */
+
+/* Default variant — monolith block, accent border-top */
+.eggb-pros-cons--default {
+  padding: var(--eggb-block-pad);
+}
+
+/* Highlight variant — fit-for chip rows: label sits inline with chips */
+.eggb-pros-cons--highlight .eggb-section-title {
+  display:       inline;
+  margin-bottom: 0;
+}
+
+/* Highlight variant — quick_take typography */
+.eggb-pc-quicktake {
+  font-size:   var(--eggb-text-sm);
+  line-height: 1.55;
+}
+.eggb-pc-quicktake strong {
+  font-weight:    700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color:          var(--eggb-text-muted);
+}
+
+/* Inline variant — left border, compact text */
+.eggb-pros-cons--inline {
+  border-left:  2px solid var(--eggb-border);
+  font-size:    var(--eggb-text-sm);
+}
+
+.eggb-pc-inline-label          { color: var(--eggb-text-muted); font-weight: 600; }
+.eggb-pc-inline-label--positive { color: var(--eggb-positive); }
+.eggb-pc-inline-label--negative { color: var(--eggb-negative); }

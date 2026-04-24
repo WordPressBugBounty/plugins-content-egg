@@ -11,7 +11,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 
 abstract class AiClient
@@ -31,77 +31,155 @@ abstract class AiClient
 	public static function models()
 	{
 		$models = array(
+
+			// Unified / Router
 			'openrouter/auto' => array(
-				'name' => 'OpenRouter' . ' ' . __('(unified interface)', 'content-egg'),
+				'name'  => 'OpenRouter ' . __('(unified interface)', 'content-egg'),
 				'class' => OpenRouterClient::class,
 			),
+
+			// OpenAI — Recommended
 			'gpt-5-mini' => array(
-				'name' => 'OpenAI: gpt-5-mini' . ' ' . __('(recommended)', 'content-egg'),
+				'name'  => 'OpenAI: gpt-5-mini ' . __('(recommended)', 'content-egg'),
 				'class' => OpenAiClient::class,
 			),
-			'gpt-5-nano' => array(
-				'name' => 'OpenAI: gpt-5-nano',
+
+			// OpenAI — GPT-5 series
+			'gpt-5.4' => array(
+				'name'  => 'OpenAI: gpt-5.4',
+				'class' => OpenAiClient::class,
+			),
+			'gpt-5.2-pro' => array(
+				'name'  => 'OpenAI: gpt-5.2-pro',
+				'class' => OpenAiClient::class,
+			),
+			'gpt-5.2' => array(
+				'name'  => 'OpenAI: gpt-5.2',
+				'class' => OpenAiClient::class,
+			),
+			'gpt-5.1' => array(
+				'name'  => 'OpenAI: gpt-5.1',
 				'class' => OpenAiClient::class,
 			),
 			'gpt-5' => array(
-				'name' => 'OpenAI: gpt-5',
+				'name'  => 'OpenAI: gpt-5',
+				'class' => OpenAiClient::class,
+			),
+			'gpt-5-nano' => array(
+				'name'  => 'OpenAI: gpt-5-nano',
+				'class' => OpenAiClient::class,
+			),
+
+			// OpenAI — GPT-4.1 series
+			'gpt-4.1' => array(
+				'name'  => 'OpenAI: gpt-4.1',
+				'class' => OpenAiClient::class,
+			),
+			'gpt-4.1-mini' => array(
+				'name'  => 'OpenAI: gpt-4.1-mini',
+				'class' => OpenAiClient::class,
+			),
+			'gpt-4.1-nano' => array(
+				'name'  => 'OpenAI: gpt-4.1-nano',
+				'class' => OpenAiClient::class,
+			),
+
+			// OpenAI — GPT-4o series
+			'gpt-4o' => array(
+				'name'  => 'OpenAI: gpt-4o',
 				'class' => OpenAiClient::class,
 			),
 			'gpt-4o-mini' => array(
-				'name' => 'OpenAI: gpt-4o-mini' . ' ' . __('(recommended)', 'content-egg'),
+				'name'  => 'OpenAI: gpt-4o-mini',
 				'class' => OpenAiClient::class,
 			),
-			'gpt-4o' => array(
-				'name' => 'OpenAI: gpt-4o',
-				'class' => OpenAiClient::class,
-			),
-			'gpt-3.5-turbo' => array(
-				'name' => 'OpenAI: gpt-3.5-turbo',
+
+			// OpenAI — Previews
+			'gpt-4.5-preview-2025-02-27' => array(
+				'name'  => 'OpenAI: gpt-4.5-preview-2025-02-27',
 				'class' => OpenAiClient::class,
 			),
 			'gpt-4-turbo-preview' => array(
-				'name' => 'OpenAI: gpt-4-turbo-preview',
+				'name'  => 'OpenAI: gpt-4-turbo-preview',
+				'class' => OpenAiClient::class,
+			),
+
+			// OpenAI — Turbo / older high-intelligence GPT-4 family
+			'gpt-4-turbo' => array(
+				'name'  => 'OpenAI: gpt-4-turbo',
 				'class' => OpenAiClient::class,
 			),
 			'gpt-4' => array(
-				'name' => 'OpenAI: gpt-4',
+				'name'  => 'OpenAI: gpt-4',
 				'class' => OpenAiClient::class,
 			),
-			'gpt-4.5-preview-2025-02-27' => array(
-				'name' => 'OpenAI: gpt-4.5-preview',
+
+			// OpenAI — Legacy
+			'gpt-3.5-turbo' => array(
+				'name'  => 'OpenAI: gpt-3.5-turbo',
 				'class' => OpenAiClient::class,
 			),
-			'claude-3-haiku-20240307' => array(
-				'name' => 'Anthropic: claude-3-haiku-20240307',
+
+			// Anthropic — Latest / Recommended (current generation)
+			'claude-sonnet-4-6' => array(
+				'name'  => 'Anthropic: claude-sonnet-4-6 ' . __('(recommended)', 'content-egg'),
 				'class' => ClaudeClient::class,
 			),
-			'claude-3-5-haiku-latest' => array(
-				'name' => 'Anthropic: claude-3-5-haiku-latest',
+
+			// Anthropic — Current generation
+			'claude-opus-4-6' => array(
+				'name'  => 'Anthropic: claude-opus-4-6',
 				'class' => ClaudeClient::class,
 			),
-			'claude-3-sonnet-20240229' => array(
-				'name' => 'Anthropic: claude-3-sonnet-20240229',
+			'claude-haiku-4-5' => array(
+				'name'  => 'Anthropic: claude-haiku-4-5',
 				'class' => ClaudeClient::class,
 			),
-			'claude-3-5-sonnet-20240620' => array(
-				'name' => 'Anthropic: claude-3-5-sonnet-20240620',
+
+			// Anthropic — Snapshots (stable IDs)
+			'claude-haiku-4-5-20251001' => array(
+				'name'  => 'Anthropic: claude-haiku-4-5-20251001',
+				'class' => ClaudeClient::class,
+			),
+
+			// Anthropic — Legacy (no longer available on Claude API)
+			'claude-3-7-sonnet-latest' => array(
+				'name'  => 'Anthropic: claude-3-7-sonnet-latest ' . __('(legacy)', 'content-egg'),
 				'class' => ClaudeClient::class,
 			),
 			'claude-3-5-sonnet-latest' => array(
-				'name' => 'Anthropic: claude-3-5-sonnet-latest',
+				'name'  => 'Anthropic: claude-3-5-sonnet-latest ' . __('(legacy)', 'content-egg'),
 				'class' => ClaudeClient::class,
 			),
+
+			// Anthropic — Sonnet (legacy snapshots)
+			'claude-3-5-sonnet-20240620' => array(
+				'name'  => 'Anthropic: claude-3-5-sonnet-20240620 ' . __('(legacy)', 'content-egg'),
+				'class' => ClaudeClient::class,
+			),
+			'claude-3-sonnet-20240229' => array(
+				'name'  => 'Anthropic: claude-3-sonnet-20240229 ' . __('(legacy)', 'content-egg'),
+				'class' => ClaudeClient::class,
+			),
+
+			// Anthropic — Opus (legacy snapshot)
 			'claude-3-opus-20240229' => array(
-				'name' => 'Anthropic: claude-3-opus-20240229',
+				'name'  => 'Anthropic: claude-3-opus-20240229 ' . __('(legacy)', 'content-egg'),
 				'class' => ClaudeClient::class,
 			),
-			'claude-3-7-sonnet-latest' => array(
-				'name' => 'Anthropic: claude-3-7-sonnet-latest',
+
+			// Anthropic — Haiku (lighter models)
+			'claude-3-5-haiku-latest' => array(
+				'name'  => 'Anthropic: claude-3-5-haiku-latest ' . __('(legacy)', 'content-egg'),
+				'class' => ClaudeClient::class,
+			),
+			'claude-3-haiku-20240307' => array(
+				'name'  => 'Anthropic: claude-3-haiku-20240307 ' . __('(legacy)', 'content-egg'),
 				'class' => ClaudeClient::class,
 			),
 		);
 
-		$models = \apply_filters('cegg_ai_models', $models);
+		$models = apply_filters('cegg_ai_models', $models);
 		return $models;
 	}
 
@@ -143,7 +221,9 @@ abstract class AiClient
 	{
 		$models = self::models();
 		if (!isset($models[$model]))
+		{
 			throw new \Exception('The AI model is not valid.');
+		}
 
 		$class = $models[$model]['class'];
 

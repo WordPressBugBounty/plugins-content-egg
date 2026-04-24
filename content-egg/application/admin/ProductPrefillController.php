@@ -15,7 +15,7 @@ use ContentEgg\application\ProductPrefillScheduler;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class ProductPrefillController
 {
@@ -295,7 +295,7 @@ class ProductPrefillController
         }
 
         $transient_key = 'cegg_prefill_ids_' . get_current_user_id() . '_' . wp_generate_password(8, false);
-        $transient_expiration = 60 * 60;
+        $transient_expiration = 432000;
         \set_transient($transient_key, $post_ids, $transient_expiration);
 
         $has_ai_api_key = (bool) GeneralConfig::getInstance()->option('system_ai_key');

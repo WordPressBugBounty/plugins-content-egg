@@ -14,7 +14,7 @@ use ContentEgg\application\Plugin;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 abstract class TemplateManager
 {
@@ -212,7 +212,8 @@ abstract class TemplateManager
                     esc_html__('View file "%s" does not exist.', 'content-egg'),
                     esc_html($view_path)
                 )
-            );        }
+            );
+        }
 
         $_data = array_merge($this->last_render_data, $_data);
         extract($_data, EXTR_PREFIX_SAME, 'data');

@@ -9,7 +9,7 @@ use ContentEgg\application\helpers\TextHelper;;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  *
  * Simple Rest Client
  * @todo: PUT/DELETE Request
@@ -133,7 +133,7 @@ class RestClient
      * @param string $path
      * @param array $query Array of GET parameters
      */
-    public function restGet($path, array $query = null)
+    public function restGet($path, ?array $query = null)
     {
         $this->_prepareRest($path);
         $client = self::getHttpClient();
@@ -192,7 +192,7 @@ class RestClient
         return $this->_getResult($client->request('POST'));
     }
 
-    final public function get($path, array $query = null)
+    final public function get($path, ?array $query = null)
     {
         return $this->restGet($path, $query);
     }

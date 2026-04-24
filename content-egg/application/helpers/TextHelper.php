@@ -9,7 +9,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class TextHelper
 {
@@ -376,6 +376,11 @@ class TextHelper
 
     public static function commaList($str, $input_delimer = ',', $return_delimer = ',')
     {
+        if (is_array($str))
+        {
+            $str = implode($input_delimer, $str);
+        }
+
         $parts = explode($input_delimer, $str);
         $parts = array_map('trim', $parts);
 
@@ -403,7 +408,7 @@ class TextHelper
         return $result;
     }
 
-    public static function parsePriceAmount(string $money): float
+    public static function parsePriceAmount(string $money, string $price_decimal_separator = 'auto'): float
     {
         // 1. Keep only digits, dots, commas and minus sign.
         $clean = preg_replace('/[^\d.,-]+/u', '', $money);
@@ -432,41 +437,50 @@ class TextHelper
         // 3. Decide which (if any) mark is the decimal separator.
         $decimalSep = null;
 
-        if ($lastDot !== false && $lastComma !== false)
+        // If a fixed decimal separator is configured, honor it.
+        if ($price_decimal_separator === '.' || $price_decimal_separator === ',')
         {
-            // Both present: whichever comes last is almost always the decimal separator.
-            $decimalSep = ($lastDot > $lastComma) ? '.' : ',';
+            $decimalSep = $price_decimal_separator;
         }
         else
         {
-            // Only one type of separator is present: need heuristics.
-            $sep = null;
-            $pos = null;
-
-            if ($lastDot !== false)
+            // Auto-detect mode
+            if ($lastDot !== false && $lastComma !== false)
             {
-                $sep = '.';
-                $pos = $lastDot;
+                // Both present: whichever comes last is almost always the decimal separator.
+                $decimalSep = ($lastDot > $lastComma) ? '.' : ',';
             }
-            elseif ($lastComma !== false)
+            else
             {
-                $sep = ',';
-                $pos = $lastComma;
-            }
+                // Only one type of separator is present: need heuristics.
+                $sep = null;
+                $pos = null;
 
-            if ($sep !== null && $pos !== null)
-            {
-                $digitsAfter = strlen($clean) - $pos - 1;
-
-                /**
-                 * Heuristic:
-                 *  - 0 digits after: separator is thousands (e.g. "1." → 1).
-                 *  - 1–2 digits after: treat as decimal (e.g. "10,5", "10.50").
-                 *  - ≥3 digits after: treat as thousands (e.g. "10,000", "1.234").
-                 */
-                if ($digitsAfter > 0 && $digitsAfter <= 2)
+                if ($lastDot !== false)
                 {
-                    $decimalSep = $sep;
+                    $sep = '.';
+                    $pos = $lastDot;
+                }
+                elseif ($lastComma !== false)
+                {
+                    $sep = ',';
+                    $pos = $lastComma;
+                }
+
+                if ($sep !== null && $pos !== null)
+                {
+                    $digitsAfter = strlen($clean) - $pos - 1;
+
+                    /**
+                     * Heuristic:
+                     *  - 0 digits after: separator is thousands (e.g. "1." → 1).
+                     *  - 1–2 digits after: treat as decimal (e.g. "10,5", "10.50").
+                     *  - ≥3 digits after: treat as thousands (e.g. "10,000", "1.234").
+                     */
+                    if ($digitsAfter > 0 && $digitsAfter <= 2)
+                    {
+                        $decimalSep = $sep;
+                    }
                 }
             }
         }
@@ -636,6 +650,10 @@ class TextHelper
 
     public static function getArrayFromCommaList($str)
     {
+        if (is_array($str))
+        {
+            return $str;
+        }
         return explode(",", TextHelper::commaList($str));
     }
 

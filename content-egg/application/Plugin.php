@@ -17,20 +17,22 @@ use ContentEgg\application\admin\import\AutoImportScheduler;
 use ContentEgg\application\blocks\productblock\ProductBlock;
 use ContentEgg\application\admin\import\ProductImportScheduler;
 use ContentEgg\application\admin\ProductMapMaintenance;
-use ContentEgg\application\components\LinkIndexIndexer;;
+use ContentEgg\application\components\LinkIndexIndexer;
+use ContentEgg\application\components\OfferCountService;
+use ContentEgg\application\EggBlocks\EggBlocksLoader;;
 
 /**
  * Plugin class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class Plugin
 {
-    const version = '10.1.0';
-    const db_version = 88;
-    const wp_requires = '5.9';
+    const version = '11.0.0';
+    const db_version = 90;
+    const wp_requires = '6.0';
     const slug = 'content-egg';
     const short_slug = 'cegg';
     const name = 'Content Egg';
@@ -74,6 +76,7 @@ class Plugin
             ShortcodePreprocessor::initAction();
             Pattern::initAction();
             ProductBlock::initAction();
+            EggBlocksLoader::initAction();
             GalleryScheduler::initAction();
             ProductMapMaintenance::initAction();
             LinkIndexIndexer::initAction();
@@ -98,10 +101,13 @@ class Plugin
             AutoImportScheduler::initAction();
             LinkIndexScheduler::initAction();
             WooIntegrator::initAction();
+            OfferCountService::initAction();
+            AmazonWooCheckout::initAction();
             ExternalFeaturedImage::initAction();
             AggregateOffer::initAction();
             AffiliateDisclaimer::initAction();
             ClicksRestController::getInstance()->init();
+            BlockRenderRestController::getInstance()->init();
             if (!self::isFree())
             {
                 DataRestController::getInstance()->init();
@@ -123,6 +129,7 @@ class Plugin
         \wp_register_script('cegg-bootstrap5', \ContentEgg\PLUGIN_RES . '/site/bootstrap/js/bootstrap.min.js');
         \wp_register_script('cegg-chartjs', \ContentEgg\PLUGIN_RES . '/vendor/chartjs/chart.js');
         \wp_register_script('cegg-chartjs-adapter-date-fns', \ContentEgg\PLUGIN_RES . '/vendor/chartjs/chartjs-adapter-date-fns.js', array('cegg-chartjs'));
+        \wp_register_script('cegg-products-view', \ContentEgg\PLUGIN_RES . '/js/cegg-products-view-min.js', array(), Plugin::version());
 
         //deprecated
         \wp_register_style('egg-bootstrap', \ContentEgg\PLUGIN_RES . '/bootstrap/css/egg-bootstrap.min.css', array(), Plugin::version());

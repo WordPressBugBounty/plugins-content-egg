@@ -15,7 +15,7 @@ defined('\ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class ShortcodeAtts
 {
@@ -65,16 +65,33 @@ class ShortcodeAtts
             'cols_order' => '',
             'group_pick' => '',
             'link_target' => '',
+            'async' => 0,
+            'lazy' => 0,
         );
 
         $allowed_atts = \apply_filters('cegg_block_shortcode_atts', $allowed_atts);
         return $allowed_atts;
     }
 
+    /**
+     * Normalizes "truthy" shortcode values to 0/1.
+     * Accepts: 1, "1", true, "true", "yes", "on"
+     */
+    private static function toBoolInt($value)
+    {
+        if (is_bool($value))
+        {
+            return $value ? 1 : 0;
+        }
+        $value = strtolower(trim((string) $value));
+        return in_array($value, array('1', 'true', 'yes', 'on'), true) ? 1 : 0;
+    }
+
     public static function prepare($atts)
     {
         $allowed_atts = self::getAllowedAtts();
         $a = \shortcode_atts($allowed_atts, $atts);
+
         $a['next'] = (int) $a['next'];
         $a['limit'] = (int) $a['limit'];
         $a['offset'] = (int) $a['offset'];
@@ -108,6 +125,8 @@ class ShortcodeAtts
         $a['cols_order'] = \sanitize_text_field($a['cols_order']);
         $a['group_pick'] = strtolower(\sanitize_text_field($a['group_pick']));
         $a['link_target'] = strtolower(\sanitize_text_field($a['link_target']));
+        $a['async'] = self::toBoolInt($a['async']);
+        $a['lazy'] = self::toBoolInt($a['lazy']);
 
         if (is_numeric($a['border']))
             $a['border'] = abs($a['border']);
@@ -130,7 +149,7 @@ class ShortcodeAtts
         if ($a['cols'] && !$a['cols_md'])
             $a['cols_md'] = $a['cols'];
 
-        $allowed_link_target = array('affiliate', 'bridge', 'auto');
+        $allowed_link_target = array('affiliate', 'bridge', 'both', 'auto');
         $allowed_group_pick = array('cheapest', 'priciest', 'random');
         $allowed_sort = array('price', 'discount', 'reverse', 'total_price');
         $allowed_order = array('asc', 'desc');

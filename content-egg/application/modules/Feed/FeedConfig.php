@@ -14,7 +14,7 @@ use ContentEgg\application\helpers\TextHelper;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class FeedConfig extends AffiliateFeedParserModuleConfig
 {
@@ -249,7 +249,17 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                 ],
                 'default'          => 'auto',
             ],
-
+            'price_decimal_separator' => [
+                'title'       => __('Decimal separator for price data', 'content-egg'),
+                'description' => __('Choose how to interpret the decimal separator in price fields.', 'content-egg'),
+                'callback'    => [$this, 'render_dropdown'],
+                'dropdown_options' => [
+                    'auto' => __('Auto-detect (recommended)', 'content-egg'),
+                    '.'    => __('Dot (10.99)', 'content-egg'),
+                    ','    => __('Comma (10,99)', 'content-egg'),
+                ],
+                'default' => 'auto',
+            ],
             'xml_processor' => array(
                 'title'       => __('XML Processor', 'content-egg'),
                 'description' => __(

@@ -1,0 +1,82 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/faq",
+    "version": "1.0.0",
+    "title": "FAQ",
+    "category": "cegg-blocks",
+    "icon": "editor-help",
+    "description": "Frequently asked questions with optional FAQ schema.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+  "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "flat"]
+        },
+        "section_label": {
+            "type": "string",
+            "default": "Frequently Asked Questions"
+        },
+        "title": {
+            "type": "string",
+            "default": ""
+        },
+        "heading_tag": {
+            "type": "string",
+            "default": "h2",
+            "enum": ["h1", "h2", "h3", "h4", "div"]
+        },
+        "items": {
+            "type": "array",
+            "default": []
+        },
+        "collapsed_by_default": {
+            "type": "boolean",
+            "default": false
+        },
+        "enable_schema": {
+            "type": "boolean",
+            "default": true
+        },
+        "anchor": {
+            "type": "string",
+            "default": ""
+        },
+        "toc_label": {
+            "type": "string",
+            "default": ""
+        },
+        "include_in_toc": {
+            "type": "boolean",
+            "default": false
+        },
+        "level": {
+            "type": "number",
+            "default": 2
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

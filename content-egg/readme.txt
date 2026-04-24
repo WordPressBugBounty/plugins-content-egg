@@ -1,18 +1,20 @@
 === Content Egg – Affiliate Product Importer & Price Comparison ===
 Contributors: keywordrush
-Tags: affiliate marketing, price comparison, csv import, ai content generation, affiliate links
+Tags: affiliate marketing, price comparison, csv import, ai content generation, gutenberg blocks
 Requires at least: 6.0
-Tested up to: 6.8
+Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 10.1.0
+Stable tag: 11.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Import affiliate products, compare prices, sync to WooCommerce, and auto-generate SEO content with AI — all in one toolkit.
+Import affiliate products, compare prices, and publish structured product reviews with 20+ editorial Gutenberg blocks — all in one affiliate toolkit.
 
 == Description ==
 
-Content Egg is an affiliate marketing plugin for WordPress and WooCommerce. Import products from multiple networks, build price comparison blocks, sync with WooCommerce, and generate SEO-friendly content with AI to boost traffic and affiliate sales.
+Content Egg is an affiliate marketing plugin for WordPress and WooCommerce. Import products from multiple networks, compare prices, sync with WooCommerce, and generate SEO-friendly content with AI to boost traffic and affiliate sales.
+
+Built for sites that turn structured content into trust, clicks, and conversions — with 20+ editorial Gutenberg blocks, the blocks AI search actually cites.
 
 = What is this plugin for? =
 
@@ -47,7 +49,7 @@ AI Power: [www.keywordrush.com/toomuchniche](https://www.keywordrush.com/toomuch
 * Clicks statistics reports
 * Add offers by keyword or product URL
 * Auto-insert affiliate IDs in links
-* Gutenberg blocks support for the block editor
+* 20+ Egg Blocks — editorial Gutenberg blocks for product reviews, roundups, and buying guides
 * Price comparison blocks with multiple offers
 * High-conversion templates (ready-made or custom)
 * Create custom templates with ChatGPT
@@ -74,7 +76,7 @@ Get access to advanced modules, integrations, and automation tools that take you
 Includes `CSV-XML Feed`, `CJ Links`, `Coupon`, `GdeSlon`, `Google Images`, `Offer`, `Pixabay`, `Related Keywords`, `RSS Fetcher`, `Skimlinks Coupons`, `Sovrn`, `YouTube`.
 
 **PRO Adds Even More:**
-Includes `Aliexpress`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`, `Bol.com`, `CJ Products`, `CityAds.com`, `Coupang`, `Clickbank`, `Daisycon`, `eBay`, `Envato`, `Flipkart`, `Impact Radius`, `Kelkoogroup`, `Kieskeurig.nl`, `Linkwise`, `Lomadee.com`, `Paytm.com`, `Pepperjam`, `Rakuten (LinkShare)`, `Shopee`, `Walmart`, `Webgains`.
+Includes `Aliexpress`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`, `Billigerde`, `Bol.com`, `CJ Products`, `CityAds.com`, `Coupang`, `Clickbank`, `Daisycon`, `eBay`, `Envato`, `Flipkart`, `Geizhalsde`, `Impact Radius`, `Kelkoogroup`, `Kieskeurig.nl`, `Linkwise`, `Lomadee.com`, `Paytm.com`, `Pepperjam`, `Rakuten (LinkShare)`, `Shopee`, `Walmart`, `Webgains`.
 
 ➡️ Visit us at [www.keywordrush.com/contentegg](https://www.keywordrush.com/contentegg "Content Egg PRO")
 
@@ -83,6 +85,28 @@ Includes `Aliexpress`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`,
 No more copy-pasting product details. With Content Egg, you can import supplier data in one click and instantly turn it into SEO-friendly articles or WooCommerce products — ready to publish and monetize.
 
 [youtube https://www.youtube.com/watch?v=4EI_WLQaWPc]
+
+= Egg Blocks — 20+ Editorial Gutenberg Blocks =
+
+Stop building product reviews from generic paragraphs and shortcodes. Egg Blocks are 20+ purpose-built Gutenberg blocks designed for affiliate content — each one semantically labelled, schema-ready, and wired directly to your Content Egg products.
+
+**Article structure:** intro, conclusion, section header, table of contents, FAQ, callout, step list
+
+**Editorial insights:** key takeaways, criteria, methodology, definitions, myth vs fact, pros & cons
+
+**Product & commerce:** product card, quick picks, where to buy, comparison table, verdict, rating breakdown, specifications
+
+**Navigation:** related posts
+
+Every block shares one design system. Product-bound blocks (product card, quick picks, comparison table, where to buy) pull live prices, stock status, merchant logo, and affiliate URL from Content Egg automatically — no stale prices, no manual updates.
+
+**Why it matters for SEO:** AI search engines (Google AI Overviews, Perplexity, ChatGPT) cite chunks of content, not whole pages. Egg Blocks break your article into self-contained, machine-readable sections — a labeled FAQ block, a methodology block, a pros/cons section — each one a candidate for AI citation and rich results. The FAQ block emits FAQPage structured data automatically.
+
+**EggBlocks Writer:** a free external skill you paste into ChatGPT, Claude, or any capable AI chat. Ask for a full article and the AI outputs ready-to-paste Gutenberg markup using real Egg Blocks. Copy, paste into the WordPress Code Editor, assign your Content Egg products, publish.
+
+[youtube https://www.youtube.com/watch?v=szeXafqiS3I]
+
+▶ [AI Generation & FAQ](https://ce-docs.keywordrush.com/egg-blocks/ai-generation-and-faq)
 
 = Bridge Pages =
 
@@ -190,20 +214,38 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 
 == Changelog ==
 
-Got it — here’s your **single, clean list** in the exact requested format:
+= 11.0.0 =
 
-= Version 10.1.0 =
+* New: Egg Blocks — 21 purpose-built Gutenberg blocks for product reviews, roundups, and buying guides.
+* New: Article structure blocks: intro, conclusion, section-header, toc, faq, callout, step-list.
+* New: Editorial insight blocks: key-takeaways, criteria, methodology, definitions, myth-fact, pros-cons.
+* New: Product & commerce blocks: product-card, quick-picks, where-to-buy, comparison-table, verdict, rating-breakdown, specifications.
+* New: Navigation block: related-posts.
+* New: Product-bound blocks pull live price, stock, merchant logo, and affiliate URL from Content Egg automatically.
+* New: EggBlocks Writer skill — a free external skill for ChatGPT, Claude, and other AI chats that generates complete articles in Egg Blocks markup, ready to paste into WordPress.
+* New: Global theme and color scheme settings (light / dark / auto) for consistent styling across all blocks.
+* New: Product Blocks/Shortcodes — added optional async (AJAX) rendering with lazy loading support.
+* New: Added a "Both (affiliate and bridge)" link destination option for dual action buttons.
+* New: Import Presets — added two new custom prompts.
+* New: Import Presets — added two new AI-powered sections for generating custom post content in separate blocks.
+* New: Import Presets — added a custom AI model selection option.
+* New: Offers Count Shortcodes — added `[content-egg-offers-count]` and `[content-egg-offers-badge]` for displaying offers count anywhere.
+* New: Added offers count badge support for WooCommerce shop and archive pages.
+* New: Feed module — added "Decimal separator for price data" option.
+* New: Added "Reset presets" action in Import Presets tab, allowing quick restoration of all built-in presets.
+
+= 10.1.0 =
 
 * New: SubID tracking parameters for the Feed module.
 * New: SubID option for the Awin module with dynamic placeholders.
 * New: Added support for syncing GTIN to WooCommerce native field.
-* New: Added “Avoid Duplicates by WooCommerce GTIN/EAN” import preset option.
+* New: Added "Avoid Duplicates by WooCommerce GTIN/EAN" import preset option.
 * New: The Price Comparison feature in Import Tools now also searches within the main module.
 * New: Feed module — added manual CSV Delimiter option for custom field separation.
 * New: Feed module — added manual CSV Enclosure option for defining text qualifiers.
 * Fix: Uninstall processing.
 
-= Version 10.0.0 =
+= 10.0.0 =
 
 * New: Clicks Statistics dashboard.
 * New: Track Clicks With Redirect - record aggregated clicks for local redirect links.
@@ -213,7 +255,7 @@ Got it — here’s your **single, clean list** in the exact requested format:
 * New: Safe placeholders to use for SubIDs/deeplinks.
 * New: Click Stats Retention (days) setting.
 * New: Redirect Status Code setting for local redirects.
-* New: “All Products” admin table - shows total clicks and last 30 days.
+* New: "All Products" admin table - shows total clicks and last 30 days.
 * New: Post edit screen — per-product total and last 30 days clicks.
 * New: Deeplinks - support for advanced placeholders.
 * New: Preset option — make imported Bridge Pages canonical.
@@ -230,16 +272,16 @@ Got it — here’s your **single, clean list** in the exact requested format:
 * Improved: Feed module — added XML processor option.
 * Deprecated: ShareASale is shutting down and is fully transitioning to the Awin platform.
 
-= Version 9.0.2 =
+= 9.0.2 =
 
 * Fix: Importing to the selected category.
 * Fix: Unable to disable "Skip import if product already exists" option.
 
-= Version 9.0.1 =
+= 9.0.1 =
 
 * Fix: Wp-admin UI bug fixes.
 
-= Version 9.0.0 =
+= 9.0.0 =
 
 * New: Search and import products by keywords.
 * New: Bulk import using multiple keywords or product URLs.
@@ -271,7 +313,7 @@ Got it — here’s your **single, clean list** in the exact requested format:
 * New: Prefill button on the post edit page to automatically add product offers.
 * New: Export/Import plugin settings to a file.
 * New: Export/Import module settings to a file.
-* Improved: "All Products" page now ignore trashed posts.
+* Improved: "All Products" page now ignores trashed posts.
 * Improved: Autoblogging now supports Draft and Private post statuses.
 * Improved: Significantly reduced memory usage when processing large ZIP-compressed feeds.
 * Deprecated: Autoblogging feature.

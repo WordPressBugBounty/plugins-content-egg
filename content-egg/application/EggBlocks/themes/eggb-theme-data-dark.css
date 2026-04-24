@@ -1,0 +1,91 @@
+/*
+ * eggb-theme-data-dark.css — EggBlocks data theme, dark tokens
+ *
+ * Two triggers:
+ *
+ *   1. @media (prefers-color-scheme: dark) with :not([data-theme="light"])
+ *      guard — respects OS preference when color_scheme is "auto".
+ *
+ *   2. [data-theme="dark"] — explicit override set by PHP when the
+ *      per-block or plugin-level color_scheme is "dark".
+ *
+ * Link AFTER eggb-theme-data.css.
+ */
+
+
+/* ─────────────────────────────────────────────
+   Dark token mixin — applied by both triggers below.
+───────────────────────────────────────────── */
+
+/* 1. OS preference — active when color_scheme is "auto" and OS is dark */
+@media (prefers-color-scheme: dark) {
+  .eggb-theme-data:not([data-theme="light"]) {
+    /* Text color — cool near-white */
+    --eggb-text: #e5e7eb;
+
+    /* Accent: lighter sky blue for dark surfaces */
+    --eggb-accent:     #38bdf8;
+
+    /* Surface: dark cool-gray panel */
+    --eggb-surface:    #111827;
+
+    /* Border: subtle cool hairline */
+    --eggb-border:     rgba(255, 255, 255, .12);
+
+    /* Muted text */
+    --eggb-text-muted: #9ca3af;
+
+    /* Signal colors — vivid on dark */
+    --eggb-positive: #4ade80;
+    --eggb-negative: #f87171;
+
+    /* Editorial colors */
+    --eggb-note:    #38bdf8;
+    --eggb-tip:     #4ade80;
+    --eggb-warning: #fbbf24;
+    --eggb-insight: #a78bfa;
+  }
+
+  /* Chip */
+  .eggb-theme-data:not([data-theme="light"]) .eggb-chip {
+    --eggb-chip-border: rgba(255, 255, 255, .25);
+    --eggb-chip-color:  rgba(255, 255, 255, .75);
+  }
+
+  /* Award badge */
+  .eggb-theme-data:not([data-theme="light"]) .eggb-award {
+    --eggb-award-bg:     color-mix(in srgb, #38bdf8 12%, transparent);
+    --eggb-award-border: color-mix(in srgb, #38bdf8 35%, transparent);
+    --eggb-award-color:  #38bdf8;
+  }
+}
+
+
+/* 2. Explicit data-theme="dark" — set by PHP for forced dark */
+.eggb-theme-data[data-theme="dark"] {
+  --eggb-text: #e5e7eb;
+
+  --eggb-accent:     #38bdf8;
+  --eggb-surface:    #111827;
+  --eggb-border:     rgba(255, 255, 255, .12);
+  --eggb-text-muted: #9ca3af;
+
+  --eggb-positive: #4ade80;
+  --eggb-negative: #f87171;
+
+  --eggb-note:    #38bdf8;
+  --eggb-tip:     #4ade80;
+  --eggb-warning: #fbbf24;
+  --eggb-insight: #a78bfa;
+}
+
+.eggb-theme-data[data-theme="dark"] .eggb-chip {
+  --eggb-chip-border: rgba(255, 255, 255, .25);
+  --eggb-chip-color:  rgba(255, 255, 255, .75);
+}
+
+.eggb-theme-data[data-theme="dark"] .eggb-award {
+  --eggb-award-bg:     color-mix(in srgb, #38bdf8 12%, transparent);
+  --eggb-award-border: color-mix(in srgb, #38bdf8 35%, transparent);
+  --eggb-award-color:  #38bdf8;
+}

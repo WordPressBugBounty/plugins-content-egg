@@ -6,16 +6,20 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\helpers\CsvReader;
 use ContentEgg\application\helpers\CsvSettingsDetector;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\Plugin;
+
+use function ContentEgg\prn;
+use function ContentEgg\prnx;
 
 /**
  * AffiliateFeedParserModule abstract class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 abstract class AffiliateFeedParserModule extends AffiliateParserModule
 {
@@ -123,13 +127,13 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         if ($time === null)
             $time = time();
 
-        \set_transient(self::TRANSIENT_LAST_IMPORT_DATE . $this->getId(), $time);
+        \set_transient(self::TRANSIENT_LAST_IMPORT_DATE . $this->getId(), $time, DAY_IN_SECONDS * 30);
     }
 
     public function setLastImportError($error)
     {
         $error = TextHelper::truncate($error, 500);
-        \set_transient(self::TRANSIENT_LAST_IMPORT_ERROR . $this->getId(), $error);
+        \set_transient(self::TRANSIENT_LAST_IMPORT_ERROR . $this->getId(), $error, DAY_IN_SECONDS * 30);
     }
 
     public function maybeImportProducts()
@@ -792,8 +796,9 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         ];
 
         $escape = '\\';
+        $reader = new CsvReader($handle, $delimiter, $enclosure, $escape);
 
-        while (($data = fgetcsv($handle, null, $delimiter, $enclosure, $escape)) !== false)
+        while (($data = $reader->readRow()) !== false)
         {
             $data = self::convertEncoding($data, $encoding);
 
@@ -802,6 +807,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 // first row → header
                 $data   = str_replace("\xEF\xBB\xBF", '', $data);   // strip BOM
                 $fields = array_map('trim', $data);
+                $reader->setExpectedColumns(count($fields));
                 continue;
             }
 
@@ -1026,11 +1032,36 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         return $flags;
     }
 
-    /** Identify real top-level product nodes (skip inner <URL><product>) */
+    /**
+     * Identify real top-level product nodes by checking common identifying fields.
+     */
     protected function isTopLevelProductNode(\SimpleXMLElement $n)
     {
-        // Most “product” entries in these feeds have @product_id
-        return isset($n['product_id']) && (string)$n['product_id'] !== '';
+        // Common fields usually present on real product entries
+        $fields = [
+            'product_id',
+            'id',
+            'title',
+            'name',
+            'description',
+        ];
+
+        foreach ($fields as $field)
+        {
+            // Check attribute: <product product_id="123">
+            if (isset($n[$field]) && trim((string)$n[$field]) !== '')
+            {
+                return true;
+            }
+
+            // Check child element: <product><title>Foo</title></product>
+            if (isset($n->$field) && trim((string)$n->$field) !== '')
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** =======================================
@@ -1311,6 +1342,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
             libxml_clear_errors();
             $node = @simplexml_load_string($nodeXml, 'SimpleXMLElement', $xmlFlags);
+
             if ($node === false)
             {
                 $err = libxml_get_last_error();
@@ -1382,7 +1414,6 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         $attributes = $node->attributes();
         $children   = get_object_vars($node);
-
         foreach ($fields as $field)
         {
             $value = $this->extractXmlField($node, $field, $attributes, $children);

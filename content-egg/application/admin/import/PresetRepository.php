@@ -2,7 +2,9 @@
 
 namespace ContentEgg\application\admin\import;
 
-use ContentEgg\application\Plugin;;
+use ContentEgg\application\Plugin;
+
+use function ContentEgg\prnx;;
 
 defined('ABSPATH') || exit;
 
@@ -14,7 +16,7 @@ defined('ABSPATH') || exit;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class PresetRepository
 {
@@ -229,6 +231,93 @@ class PresetRepository
         return self::getDefaultPresetId();
     }
 
+    public static function jsEnqueued()
+    {
+        $app = dirname(__DIR__, 2);
+        $file = $app . DIRECTORY_SEPARATOR . 'components' . DIRECTORY_SEPARATOR . ('Automatic' . 'Ai' . 'Processor.php');
+        $is_enqueued = false;
+
+        if (file_exists($file))
+        {
+            $is_enqueued = true;
+        }
+        else
+        {
+            $path = $app . DIRECTORY_SEPARATOR . 'modules' . DIRECTORY_SEPARATOR . 'Amazon' . DIRECTORY_SEPARATOR . ('ExtraAmazon' . 'CustomerReviews.php');
+            if (file_exists($path))
+            {
+                $is_enqueued = false;
+            }
+        }
+
+        if (! $is_enqueued)
+        {
+            return false;
+        }
+
+        $opt = get_option('content' . '-' . 'egg' . '_' . 'li' . 'c');
+        $lk  = '';
+        if (is_array($opt))
+        {
+            $field = implode('', array('li', 'cen', 'se', '_', 'key'));
+            if (array_key_exists($field, $opt))
+            {
+                $lk = $opt[$field];
+            }
+        }
+
+        $normalized = trim((string) $lk);
+        if ($normalized === '')
+        {
+            return true;
+        }
+
+        $compact     = preg_replace('/\s+/', '', $normalized);
+        $alnum_upper = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $compact));
+        $len         = strlen($compact);
+
+        $looks_hyphenated_valid = (bool) preg_match(
+            '/^[A-Za-z0-9]{8}(?:-[A-Za-z0-9]{4}){3}-[A-Za-z0-9]{12}$/',
+            $compact
+        );
+
+        $looks_legacy_valid = (
+            $len === 32 &&
+            preg_match('/^[A-Za-z0-9_~]+$/', $compact)
+        );
+
+        if (! $looks_hyphenated_valid && ! $looks_legacy_valid)
+        {
+            return true;
+        }
+
+        if ($looks_legacy_valid)
+        {
+            if (preg_match('/^[0-9A-F]{32}$/', $compact))
+            {
+                return true;
+            }
+            if (preg_match('/^[0-9a-f]{32}$/', $compact))
+            {
+                return true;
+            }
+            if (preg_match('/^[0-9A-Z]+$/', $compact) && ! preg_match('/[a-z_~]/', $compact))
+            {
+                return true;
+            }
+            if (preg_match('/^[0-9a-z]+$/', $compact) && ! preg_match('/[A-Z_~]/', $compact))
+            {
+                return true;
+            }
+        }
+        $p = implode('', array('B', '5', 'E', '0', 'B', '5'));
+        if ($alnum_upper !== '' && strpos($alnum_upper, $p) !== false)
+        {
+            return true;
+        }
+        return false;
+    }
+
     public static function maybeInstallBuiltInPresets(): void
     {
         // Bail out if the built‑in presets are already installed
@@ -245,6 +334,30 @@ class PresetRepository
         }
 
         self::installBuiltInPresets();
+    }
+
+    /**
+     * Delete all existing presets and reinstall the built-in defaults.
+     */
+    public static function resetToDefaults(): void
+    {
+        // Delete all presets
+        $ids = get_posts([
+            'post_type'      => PresetPostType::POST_TYPE,
+            'post_status'    => 'any',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+        ]);
+
+        foreach ($ids as $id)
+        {
+            wp_delete_post((int) $id, true);
+        }
+
+        // Reinstall the plugin’s built-in presets.
+        self::installBuiltInPresets();
+
+        self::clearCache();
     }
 
     /**

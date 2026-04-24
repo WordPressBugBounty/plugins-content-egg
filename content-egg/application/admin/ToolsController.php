@@ -17,7 +17,7 @@ use ContentEgg\application\helpers\LogoHelper;;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link httsp://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class ToolsController
 {

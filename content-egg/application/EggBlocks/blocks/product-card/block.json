@@ -1,0 +1,119 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/product-card",
+    "version": "1.0.0",
+    "title": "Product Card",
+    "category": "cegg-blocks",
+    "icon": "products",
+    "description": "Roundup-style product card with default, featured, and compact layouts.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+  "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "featured", "compact"]
+        },
+        "product_ref": {
+            "type": "object",
+            "default": {}
+        },
+        "section_label": {
+            "type": "string",
+            "default": ""
+        },
+        "block_title": {
+            "type": "string",
+            "default": ""
+        },
+        "heading_tag": {
+            "type": "string",
+            "default": "h2",
+            "enum": ["h1", "h2", "h3", "h4", "div"]
+        },
+        "title": {
+            "type": "string",
+            "default": ""
+        },
+        "rank": {
+            "type": "string",
+            "default": ""
+        },
+        "badge": {
+            "type": "string",
+            "default": ""
+        },
+        "score": {
+            "type": "string",
+            "default": ""
+        },
+        "subtitle": {
+            "type": "string",
+            "default": ""
+        },
+        "chips": {
+            "type": "array",
+            "default": []
+        },
+        "description": {
+            "type": "string",
+            "default": ""
+        },
+        "merchant": {
+            "type": "string",
+            "default": ""
+        },
+        "cta_label": {
+            "type": "string",
+            "default": ""
+        },
+        "anchor": {
+            "type": "string",
+            "default": ""
+        },
+        "toc_label": {
+            "type": "string",
+            "default": ""
+        },
+        "include_in_toc": {
+            "type": "boolean",
+            "default": false
+        },
+        "level": {
+            "type": "number",
+            "default": 2
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "enable_schema": {
+            "type": "boolean",
+            "default": true
+        },
+        "seeded_for": {
+            "type": "string",
+            "default": ""
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

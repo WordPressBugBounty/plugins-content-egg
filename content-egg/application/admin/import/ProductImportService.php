@@ -18,12 +18,14 @@ use ContentEgg\application\helpers\WooHelper;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\WooIntegrator;
 
+use function ContentEgg\prnx;
+
 /**
  * Class ProductImportService
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class ProductImportService
 {
@@ -255,8 +257,11 @@ class ProductImportService
         $comparison_product_data = [];
         if (!empty($preset['price_comparison']) && $preset['price_comparison'] === 'enabled')
         {
-            $max = (int) \apply_filters('cegg_import_price_comparison_max_products', 5);
-            $comparison_product_data = $this->findPriceComparisonProducts($product, $max);
+            $max     = (int) apply_filters('cegg_import_price_comparison_max_products', 5);
+            $keyword = isset($row['keyword']) ? $row['keyword'] : '';
+            $ean = TextHelper::isEan($keyword) ? $keyword : '';
+
+            $comparison_product_data = $this->findPriceComparisonProducts($product, $max, $ean);
 
             if (!empty($comparison_product_data))
             {
@@ -389,7 +394,7 @@ class ProductImportService
             return [];
     }
 
-    public function findPriceComparisonProducts(array $product, $max = 3)
+    public function findPriceComparisonProducts(array $product, $max = 3, $ean = '')
     {
         if (empty($product['module_id']) || empty($product['unique_id']))
         {
@@ -515,9 +520,15 @@ class ProductImportService
         foreach ($modules_settings as $module_id => $settings)
         {
             if ($amazon_product_found && strstr($module_id, 'Amazon'))
+            {
                 continue;
+            }
 
-            if ($product['ean'] && $settings['is_ean_search'])
+            if ($ean && $settings['is_ean_search'])
+            {
+                $keyword = $ean;
+            }
+            elseif ($product['ean'] && $settings['is_ean_search'])
             {
                 $keyword = $product['ean'];
             }
@@ -621,8 +632,10 @@ class ProductImportService
 
         $ai = [
             'AI.title' => '',
-            'AI.content'   => '',
-            'AI.short_desc'   => '',
+            'AI.content' => '',
+            'AI.short_desc' => '',
+            'AI.extra_section1' => '',
+            'AI.extra_section2' => '',
         ];
 
         // ---------- 0.1 AI product processing ----------
@@ -663,10 +676,12 @@ class ProductImportService
 
             $customPrompts = array_intersect_key(
                 $preset,
-                array_flip(['prompt1', 'prompt2', 'prompt3'])
+                array_flip(['prompt1', 'prompt2', 'prompt3', 'prompt4', 'prompt5'])
             );
 
-            $postPrompt = self::createPostPrompt();
+            $custom_ai_model = isset($preset['ai_model']) ? $preset['ai_model'] : '';
+
+            $postPrompt = self::createPostPrompt($custom_ai_model);
             $postPrompt->setSourceProduct($sourceProduct);
             $postPrompt->setProduct($product);
             $postPrompt->setCustomPrompts($customPrompts);
@@ -739,6 +754,52 @@ class ProductImportService
                     $this->logger->notice(sprintf(
                         __('AI short desc generated: %s.', 'content-egg'),
                         $ai_short_desc_method_key
+                    ));
+                }
+            }
+
+            if (!empty($preset['ai_extra_section1']))
+            {
+                $ai_extra_section1_method_key = $preset['ai_extra_section1'];
+                if ((bool)$postPrompt->getExtraSectionMethod($ai_extra_section1_method_key))
+                {
+                    try
+                    {
+                        $ai['AI.extra_section1'] = $postPrompt->generateExtraSection($ai_extra_section1_method_key);
+                    }
+                    catch (\Exception $e)
+                    {
+                        throw new \RuntimeException(
+                            'AI: Post Extra Section 1 generation error: ' . esc_html($e->getMessage())
+                        );
+                    }
+
+                    $this->logger->notice(sprintf(
+                        __('AI extra section 1 generated: %s.', 'content-egg'),
+                        $ai_extra_section1_method_key
+                    ));
+                }
+            }
+
+            if (!empty($preset['ai_extra_section2']))
+            {
+                $ai_extra_section2_method_key = $preset['ai_extra_section2'];
+                if ((bool)$postPrompt->getExtraSectionMethod($ai_extra_section2_method_key))
+                {
+                    try
+                    {
+                        $ai['AI.extra_section2'] = $postPrompt->generateExtraSection($ai_extra_section2_method_key);
+                    }
+                    catch (\Exception $e)
+                    {
+                        throw new \RuntimeException(
+                            'AI: Post Extra Section 2 generation error: ' . esc_html($e->getMessage())
+                        );
+                    }
+
+                    $this->logger->notice(sprintf(
+                        __('AI extra section 2 generated: %s.', 'content-egg'),
+                        $ai_extra_section1_method_key
                     ));
                 }
             }
@@ -994,29 +1055,37 @@ class ProductImportService
         return $postId;
     }
 
-    public static function createPostPrompt(): ImportPostPromptPro
+    public static function createPostPrompt($custom_ai_model = null): ImportPostPromptPro
     {
-        $config    = GeneralConfig::getInstance();
-        $apiKeys   = explode(',', $config->option('ai_key'));
-        $api_key   = trim($apiKeys[array_rand($apiKeys)]);
-        $model     = $config->option('ai_model');
-        $lang      = $config->option('ai_language');
-        $temp      = $config->option('ai_temperature');
+        $config = GeneralConfig::getInstance();
+
+        // Pick random API key
+        $keys = array_filter(array_map('trim', explode(',', (string) $config->option('ai_key'))));
+        $apiKey = $keys ? $keys[array_rand($keys)] : '';
+
+        // Resolve model: custom → global
+        $model = $custom_ai_model ?: $config->option('ai_model');
+
+        $lang = $config->option('ai_language');
+        $temp = $config->option('ai_temperature');
+
         $extraOpts = [];
 
+        // OpenRouter unified router
         if ($model === 'openrouter/auto')
         {
-            $openList   = $config->option('openrouter_models');
-            $extraOpts  = TextHelper::getArrayFromCommaList($openList);
+            $extraOpts = TextHelper::getArrayFromCommaList(
+                (string) $config->option('openrouter_models')
+            );
         }
 
-        // reproducible in dev
+        // Reproducible randomness in dev
         if (\ContentEgg\application\Plugin::isDevEnvironment())
         {
             mt_srand(12345678);
         }
 
-        $prompt = new ImportPostPromptPro($api_key, $model, $extraOpts);
+        $prompt = new ImportPostPromptPro($apiKey, $model, $extraOpts);
         $prompt->setLang($lang);
         $prompt->setTemperature($temp);
 

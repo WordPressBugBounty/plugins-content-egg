@@ -1,0 +1,226 @@
+/*
+ * Related Posts block — internal navigation linking to related articles.
+ * Structural block — flows with article prose, no panel background.
+ * Visual tokens come from the active EggBlocks theme.
+ */
+
+/* ── Shared primitives ── */
+
+/* Link resets — override Bootstrap defaults inherited via .cegg5-container */
+.cegg5-container .eggb-related-posts .eggb-rp-title,
+.cegg5-container .eggb-related-posts .eggb-rp-title:visited,
+.cegg5-container .eggb-related-posts .eggb-rp-title:focus,
+.cegg5-container .eggb-related-posts .eggb-rp-title:active {
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+  line-height: 1.35;
+}
+
+.cegg5-container .eggb-related-posts .eggb-rp-title:hover {
+  color: var(--eggb-accent);
+  text-decoration: none;
+}
+
+.cegg5-container .eggb-related-posts .eggb-rp-badge,
+.cegg5-container .eggb-related-posts .eggb-rp-badge:visited,
+.cegg5-container .eggb-related-posts .eggb-rp-badge:focus,
+.cegg5-container .eggb-related-posts .eggb-rp-badge:active {
+  font-size: var(--eggb-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--eggb-accent);
+  text-decoration: none;
+}
+
+.cegg5-container .eggb-related-posts .eggb-rp-badge:hover {
+  color: var(--eggb-accent);
+  text-decoration: none;
+  opacity: 1;
+}
+
+.eggb-rp-snippet {
+  font-size: var(--eggb-text-xs);
+  color: var(--eggb-text-muted);
+  line-height: 1.45;
+}
+
+.eggb-rp-excerpt {
+  font-size: var(--eggb-text-sm);
+  color: var(--eggb-text-muted);
+  line-height: 1.5;
+}
+
+.eggb-rp-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: var(--eggb-border-w) solid var(--eggb-border);
+  border-radius: var(--eggb-radius);
+  background: var(--eggb-surface);
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.eggb-rp-thumb img {
+  width: 100%;
+  height: 100%;
+  -o-object-fit: cover;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Variant: compact — tight text-only list ── */
+
+.eggb-related-posts--compact {
+  font-size: var(--eggb-text-sm);
+}
+
+.eggb-rp-compact-item {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  padding: .45rem 0;
+}
+
+.eggb-rp-compact-item + .eggb-rp-compact-item {
+  border-top: 1px dashed rgba(28, 20, 10, .18);
+}
+
+.eggb-rp-compact-item .eggb-rp-title {
+  font-size: var(--eggb-text-sm);
+  font-weight: 500;
+}
+
+.eggb-rp-compact-icon {
+  color: color-mix(in srgb, var(--eggb-accent) 40%, transparent);
+  flex-shrink: 0;
+  margin-top: .25em;
+}
+
+.eggb-rp-compact-icon .eggb-icon {
+  width: .7rem;
+  height: .7rem;
+  display: block;
+}
+
+.eggb-rp-compact-icon .eggb-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Variant: media-list — thumbnail + title + excerpt rows ── */
+
+.eggb-rp-media-item {
+  display: flex;
+  align-items: flex-start;
+  gap: .875rem;
+  padding: .85rem 0;
+}
+
+.eggb-rp-media-item + .eggb-rp-media-item {
+  border-top: var(--eggb-border-w) dashed rgba(28, 20, 10, .18);
+}
+
+.eggb-related-posts--media-list .eggb-rp-thumb {
+  width: 96px;
+  height: 72px;
+}
+
+.eggb-related-posts--media-list .eggb-rp-title {
+  font-size: var(--eggb-text-md);
+}
+
+@media (max-width: 520px) {
+  .eggb-related-posts--media-list .eggb-rp-thumb {
+    width: 76px;
+    height: 57px;
+  }
+
+  .eggb-related-posts--media-list .eggb-rp-title {
+    font-size: var(--eggb-text-sm);
+  }
+}
+
+/* ── Variant: cards — 2-col grid of post cards ── */
+
+.eggb-rp-card {
+  overflow: hidden;
+}
+
+.eggb-rp-card .eggb-rp-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 0;
+  border: 0;
+  border-bottom: var(--eggb-border-w) solid var(--eggb-border);
+}
+
+.eggb-rp-card-body {
+  padding: .75rem;
+}
+
+.eggb-rp-card .eggb-rp-title {
+  font-size: var(--eggb-text-md);
+}
+
+.eggb-rp-card .eggb-rp-excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Variant: featured — one hero post + compact list ── */
+
+.eggb-rp-featured-hero {
+  overflow: hidden;
+}
+
+.eggb-rp-featured-hero .eggb-rp-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 0;
+  border: 0;
+  border-bottom: var(--eggb-border-w) solid var(--eggb-border);
+}
+
+.eggb-rp-featured-body {
+  padding: .875rem;
+}
+
+.eggb-rp-featured-hero .eggb-rp-title {
+  font-size: clamp(1.05rem, .9rem + .5vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.eggb-rp-featured-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  padding: .65rem 0;
+}
+
+.eggb-rp-featured-list-item + .eggb-rp-featured-list-item {
+  border-top: var(--eggb-border-w) dashed rgba(28, 20, 10, .18);
+}
+
+.eggb-rp-featured-list-item .eggb-rp-thumb {
+  width: 72px;
+  height: 54px;
+}
+
+.eggb-rp-featured-list-item .eggb-rp-title {
+  font-size: var(--eggb-text-sm);
+  font-weight: 500;
+}
+
+@media (max-width: 767.98px) {
+  .eggb-rp-featured-layout {
+    grid-template-columns: 1fr !important;
+  }
+}

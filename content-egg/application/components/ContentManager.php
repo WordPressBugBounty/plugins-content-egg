@@ -13,18 +13,17 @@ use ContentEgg\application\helpers\CurrencyHelper;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\ImageProxy;
-use ContentEgg\application\LocalRedirect;
 use ContentEgg\application\LocalRedirector;
 use ContentEgg\application\models\ProductMapModel;
 
-
+use function ContentEgg\prnx;
 
 /**
  * ContentManager class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class ContentManager
 {
@@ -620,21 +619,21 @@ class ContentManager
 
             // 2) Decide link destination preference (shortcode param wins; 'auto' falls back to global)
             $linkPref = isset($params['link_target']) ? strtolower(trim((string) $params['link_target'])) : 'auto';
-            if (!in_array($linkPref, array('affiliate', 'bridge', 'auto'), true))
+            if (!in_array($linkPref, array('affiliate', 'bridge', 'both', 'auto'), true))
             {
                 $linkPref = 'auto';
             }
             if ($linkPref === 'auto')
             {
                 $linkPref = GeneralConfig::getInstance()->option('link_destination', 'affiliate'); // 'affiliate' | 'bridge'
-                if (!in_array($linkPref, array('affiliate', 'bridge'), true))
+                if (!in_array($linkPref, array('affiliate', 'bridge', 'both'), true))
                 {
                     $linkPref = 'affiliate';
                 }
             }
 
             // 3) Apply Bridge URLs only if requested
-            if ($linkPref === 'bridge')
+            if ($linkPref === 'bridge' || $linkPref === 'both')
             {
                 $data = self::applyBridgeUrlsForModuleFrontend($data, $module->getId(), (int) $post_id);
             }

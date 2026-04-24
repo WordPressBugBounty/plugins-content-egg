@@ -11,7 +11,7 @@ use ContentEgg\application\libs\RestClient;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  *
  * @link: http://publisher.affili.net/Solutions/Webservices_Webservices.aspx?nr=1&pnp=54#Voucher
  * @link: http://publisher.affili.net/HtmlContent/de/downloads/Web%20Services/Documentation_SearchVoucherCodes.pdf

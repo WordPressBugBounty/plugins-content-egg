@@ -1,0 +1,86 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/verdict",
+    "version": "1.0.0",
+    "title": "Verdict",
+    "category": "cegg-blocks",
+    "icon": "star-filled",
+    "description": "Single-product verdict block with score, highlights, and CTA.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+  "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "compact", "summary"]
+        },
+        "score": {
+            "type": "string",
+            "default": ""
+        },
+        "score_denom": {
+            "type": "string",
+            "default": "/ 10"
+        },
+        "score_label": {
+            "type": "string",
+            "default": "Score"
+        },
+        "title": {
+            "type": "string",
+            "default": ""
+        },
+        "award_label": {
+            "type": "string",
+            "default": ""
+        },
+        "chips": {
+            "type": "array",
+            "default": []
+        },
+        "verdict_text": {
+            "type": "string",
+            "default": ""
+        },
+        "cta_label": {
+            "type": "string",
+            "default": ""
+        },
+        "cta_url": {
+            "type": "string",
+            "default": ""
+        },
+        "product_ref": {
+            "type": "object",
+            "default": {}
+        },
+        "band_label": {
+            "type": "string",
+            "default": "Our Verdict"
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

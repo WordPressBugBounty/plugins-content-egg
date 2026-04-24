@@ -1,0 +1,96 @@
+/*
+ * eggb-theme-default-dark.css — EggBlocks default theme, dark tokens
+ *
+ * Two triggers — always loaded alongside eggb-theme-default.css:
+ *
+ *   1. @media (prefers-color-scheme: dark) with :not([data-theme="light"])
+ *      guard — respects OS preference when color_scheme is "auto".
+ *
+ *   2. [data-theme="dark"] — explicit override set by PHP when the
+ *      per-block or plugin-level color_scheme is "dark".
+ *
+ * [data-theme="light"] is never matched here — the light tokens in
+ * eggb-theme-default.css already apply and the @media block is suppressed
+ * by the :not() guard, so no extra rule is needed for forced light.
+ *
+ * Link AFTER eggb-theme-default.css.
+ */
+
+
+/* ─────────────────────────────────────────────
+   Dark token mixin — applied by both triggers below.
+   Override every token set in eggb-theme-default.css.
+───────────────────────────────────────────── */
+
+/* 1. OS preference — active when color_scheme is "auto" and OS is dark */
+@media (prefers-color-scheme: dark) {
+  .eggb-theme-default:not([data-theme="light"]) {
+    /* Text color — warm near-white for dark surfaces */
+    --eggb-text: #e8e6e3;
+
+    /* Accent: slightly desaturated blue — vibrant enough on dark bg */
+    --eggb-accent:     #5b8df6;
+
+    /* Surface: dark panel, slightly lighter than the page background */
+    --eggb-surface:    #1e2025;
+
+    /* Border: soft light hairline */
+    --eggb-border:     rgba(255, 255, 255, .10);
+
+    /* Muted text: cool light gray */
+    --eggb-text-muted: #9ca3af;
+
+    /* Signal colors — softer on dark */
+    --eggb-positive: #4ade80;
+    --eggb-negative: #f87171;
+
+    /* Editorial colors */
+    --eggb-note:    #60a5fa;
+    --eggb-tip:     #4ade80;
+    --eggb-warning: #fbbf24;
+    --eggb-insight: #a78bfa;
+  }
+
+  /* Chip — warm ink → cool light border on dark */
+  .eggb-theme-default:not([data-theme="light"]) .eggb-chip {
+    --eggb-chip-border: rgba(255, 255, 255, .28);
+    --eggb-chip-color:  rgba(255, 255, 255, .82);
+  }
+
+  /* Award badge — accent-tinted on dark */
+  .eggb-theme-default:not([data-theme="light"]) .eggb-award {
+    --eggb-award-bg:     color-mix(in srgb, #5b8df6 15%, transparent);
+    --eggb-award-border: color-mix(in srgb, #5b8df6 40%, transparent);
+    --eggb-award-color:  #5b8df6;
+  }
+}
+
+
+/* 2. Explicit data-theme="dark" — set by PHP for forced dark */
+.eggb-theme-default[data-theme="dark"] {
+  --eggb-text: #e8e6e3;
+
+  --eggb-accent:     #5b8df6;
+  --eggb-surface:    #1e2025;
+  --eggb-border:     rgba(255, 255, 255, .10);
+  --eggb-text-muted: #9ca3af;
+
+  --eggb-positive: #4ade80;
+  --eggb-negative: #f87171;
+
+  --eggb-note:    #60a5fa;
+  --eggb-tip:     #4ade80;
+  --eggb-warning: #fbbf24;
+  --eggb-insight: #a78bfa;
+}
+
+.eggb-theme-default[data-theme="dark"] .eggb-chip {
+  --eggb-chip-border: rgba(255, 255, 255, .28);
+  --eggb-chip-color:  rgba(255, 255, 255, .82);
+}
+
+.eggb-theme-default[data-theme="dark"] .eggb-award {
+  --eggb-award-bg:     color-mix(in srgb, #5b8df6 15%, transparent);
+  --eggb-award-border: color-mix(in srgb, #5b8df6 40%, transparent);
+  --eggb-award-color:  #5b8df6;
+}

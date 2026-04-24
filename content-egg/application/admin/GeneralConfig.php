@@ -16,11 +16,11 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\LocalRedirector;
 
 /**
- * GeneralSettings class file
+ * GeneralConfig class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class GeneralConfig extends Config
 {
@@ -47,6 +47,8 @@ class GeneralConfig extends Config
         return array(
             'EXPERT SCORE' => __('EXPERT SCORE', 'content-egg-tpl'),
             'Amazon price updated:' => __('Amazon price updated:', 'content-egg-tpl'),
+            'Updated:' => __('Updated:', 'content-egg-tpl'),
+            'Offers:' => __('Offers:', 'content-egg-tpl'),
             'in stock' => __('in stock', 'content-egg-tpl'),
             'out of stock' => __('out of stock', 'content-egg-tpl'),
             'Show Code' => __('Show Code', 'content-egg-tpl'),
@@ -83,6 +85,7 @@ class GeneralConfig extends Config
             'Search Results for "%s"' => __('Search Results for "%s"', 'content-egg-tpl'),
             'Price per unit: %s' => __('Price per unit: %s', 'content-egg-tpl'),
             'today' => __('today', 'content-egg-tpl'),
+            '%s ago' => __('%s ago', 'content-egg-tpl'),
             '%d day ago' => __('%d day ago', 'content-egg-tpl'),
             '%d days ago' => __('%d days ago', 'content-egg-tpl'),
             'Shop %d Offers' => __('Shop %d Offers', 'content-egg-tpl'),
@@ -97,6 +100,7 @@ class GeneralConfig extends Config
             '+ Delivery *' => __('+ Delivery *', 'content-egg-tpl'),
             '* Delivery cost shown at checkout.' => __('* Delivery cost shown at checkout.', 'content-egg-tpl'),
             'Last Amazon price update was: %s' => __('Last Amazon price update was: %s', 'content-egg-tpl'),
+            'Checkout on Amazon' => __('Checkout on Amazon', 'content-egg-tpl'),
         );
     }
 
@@ -155,11 +159,11 @@ class GeneralConfig extends Config
         $options = array_merge(
             $this->getGeneralOptions(),
             $this->getFrontendOptions(),
+            $this->getEggBlocksOptions(),
             $this->getAiOptions(),
             $this->getWooCommerceOptions(),
             $this->getPriceAlertOptions(),
             $this->getFrontendSearchOptions(),
-            $this->getFrontendOptions(),
             $this->getShopsOptions(),
             $this->getDeprecatedOptions(),
         );
@@ -414,7 +418,7 @@ class GeneralConfig extends Config
                 'title' => __('AI Model', 'content-egg'),
                 'callback' => array($this, 'render_dropdown'),
                 'dropdown_options' => self::getAiModelList(),
-                'default' => 'gpt-4o-mini',
+                'default' => 'gpt-5-mini',
                 'description' => __('Please be cautious with your model settings, as some AI models may be significantly more expensive than others.', 'content-egg') . '<br><br>' .
                     __('Note: Our default prompts are optimized for OpenAI GPT and Claude models. Results may be unpredictable when using other models via OpenRouter.', 'content-egg') . '<br><br>' .
                     __('For pricing details, please visit the <a href="https://platform.openai.com/docs/pricing" target="_blank">Pricing</a> page.', 'content-egg'),
@@ -711,15 +715,24 @@ class GeneralConfig extends Config
             ),
             'link_destination' => array(
                 'title' => __('Link destination preference', 'content-egg'),
-                'description' => __('Choose where product links should send visitors when a Bridge Page exists. You can override this behavior using the link_target shortcode parameter.', 'content-egg'),
+                'description' => __(
+                    'Select where product links should lead when a Bridge Page is available.
+    This setting can be overridden using the <code>link_target</code> shortcode parameter.
+    <br>Note: The <em>Both (affiliate and bridge)</em> option is not supported by all templates.
+    When unsupported, it will automatically fall back to the <em>Bridge</em> option.',
+                    'content-egg'
+                ),
+
                 'callback' => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
                     'affiliate' => __('Prefer Merchant (affiliate)', 'content-egg'),
-                    'bridge' => __('Prefer Bridge Page (on your site)', 'content-egg'),
+                    'bridge'    => __('Prefer Bridge Page (on your site)', 'content-egg'),
+                    'both'      => __('Both (affiliate and bridge)', 'content-egg'),
                 ),
-                'default' => 'bridge',
+                'default' => 'both',
                 'section' => __('Frontend', 'content-egg'),
             ),
+
             'logos' => array(
                 'title' => __('Merchant Logos', 'content-egg'),
                 'description' => __('Specify the URLs for your custom logos.', 'content-egg'),
@@ -761,6 +774,38 @@ class GeneralConfig extends Config
         ));
 
         return $options;
+    }
+
+    private function getEggBlocksOptions()
+    {
+        return array(
+            'eggb_default_theme' => array(
+                'title'            => __('Default Theme', 'content-egg'),
+                'description'      => __('Visual personality applied to all Egg Blocks.', 'content-egg'),
+                'callback'         => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'default'    => __('Default (warm neutrals)', 'content-egg'),
+                    'editorial'  => __('Editorial (Georgia serif, generous leading)', 'content-egg'),
+                    'data'       => __('Data (system-ui, tight, spec-sheet)', 'content-egg'),
+                    'conversion' => __('Conversion (bold system-ui, affiliate-focused)', 'content-egg'),
+                    'magazine'   => __('Magazine (elegant weight-400)', 'content-egg'),
+                ),
+                'default'          => 'default',
+                'section'          => __('Egg Blocks', 'content-egg'),
+            ),
+            'eggb_color_scheme' => array(
+                'title'            => __('Color Scheme', 'content-egg'),
+                'description'      => __('Default dark/light mode for all Egg Blocks. "Auto" follows the visitor\'s OS preference via CSS and loads the dark stylesheet. Individual blocks can override this.', 'content-egg'),
+                'callback'         => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'light' => __('Light', 'content-egg'),
+                    'auto'  => __('Auto (OS preference)', 'content-egg'),
+                    'dark'  => __('Dark', 'content-egg'),
+                ),
+                'default'          => 'light',
+                'section'          => __('Egg Blocks', 'content-egg'),
+            ),
+        );
     }
 
     private function getWooCommerceOptions()
@@ -989,6 +1034,41 @@ class GeneralConfig extends Config
                     ),
                 ),
             ),
+            'amazon_checkout_button' => array(
+                'title'       => __('Amazon Checkout Button', 'content-egg'),
+                'description' => __(
+                    'Replaces the WooCommerce checkout button with a “Checkout on Amazon” button when the cart contains Amazon products. ' .
+                        'See setup guide: <a href="https://ce-docs.keywordrush.com/faq/checkout-on-amazon-feature" target="_blank">Checkout on Amazon Feature</a>.',
+                    'content-egg'
+                ),
+                'callback'    => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'enabled'  => __('Enable Amazon checkout button', 'content-egg'),
+                    'disabled' => __('Disable Amazon checkout button', 'content-egg'),
+                ),
+                'default' => 'disabled',
+                'section' => __('WooCommerce', 'content-egg'),
+            ),
+            'woocommerce_offers_count_badge_hook' => array(
+                'title' => __('Offers Count Badge Position', 'content-egg'),
+                'description' => __(
+                    'Choose where to display the offers count badge in WooCommerce product loops (shop/category/tag/search). ' .
+                        'Learn more in the <a href="https://ce-docs.keywordrush.com/woocommerce/offers-count-badge-and-shortcodes" target="_blank">Offers Count Badge & Shortcodes documentation</a>.',
+                    'content-egg'
+                ),
+
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'woocommerce_before_shop_loop_item_title' => __('Before product title (near image)', 'content-egg'),
+                    'woocommerce_shop_loop_item_title'        => __('Inside product title area', 'content-egg'),
+                    'woocommerce_after_shop_loop_item_title'  => __('After title (before price in many themes)', 'content-egg'),
+                    'woocommerce_after_shop_loop_item'        => __('After product item (near button)', 'content-egg'),
+                    'disabled'                                => __('Disabled (do not output automatically)', 'content-egg'),
+                ),
+                'default' => 'disabled',
+                'section' => __('WooCommerce', 'content-egg'),
+            ),
+
         );
     }
 
@@ -1260,6 +1340,7 @@ class GeneralConfig extends Config
             'da' => 'Danish',
             'nl' => 'Dutch',
             'en' => 'English',
+            'et' => 'Estonian',
             'tl' => 'Filipino',
             'fi' => 'Finnish',
             'fr' => 'French',
@@ -1298,11 +1379,11 @@ class GeneralConfig extends Config
     public static function getAiCreativitiesList()
     {
         return array(
-            '0.0' => __('Min (more factual, but repetiteve)', 'content-egg'),
+            '0.0' => __('Min (more factual, but repetitive)', 'content-egg'),
             '0.5' => __('Low', 'content-egg'),
             '0.75' => __('Optimal', 'content-egg') . ' ' . __('(recommended)', 'content-egg'),
             '1.0' => __('Optimal+', 'content-egg'),
-            '1.2' => __('Hight', 'content-egg'),
+            '1.2' => __('High', 'content-egg'),
             '1.5' => __('Max (less factual, but creative)', 'content-egg'),
         );
     }
@@ -1319,17 +1400,20 @@ class GeneralConfig extends Config
             return 'English';
     }
 
-    public static function getAiModelList()
+    public static function getAiModelList($exclude_openroute = false)
     {
         $models = AiClient::models();
         $res = array();
+
         foreach ($models as $key => $model)
         {
+            if ($exclude_openroute && strpos($key, 'openrouter/') === 0)
+            {
+                continue;
+            }
+
             $res[$key] = $model['name'];
         }
-
-        asort($res);
-        $res = array_reverse($res, true);
 
         return $res;
     }

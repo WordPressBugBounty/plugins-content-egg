@@ -1,0 +1,154 @@
+/*
+ * Rating Breakdown block.
+ * Visual tokens come from the active EggBlocks theme.
+ */
+
+.eggb-rb-bar-track {
+  height: 6px;
+  background: color-mix(in srgb, var(--eggb-accent) 12%, transparent);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.eggb-rb-bar-fill {
+  height: 100%;
+  background: var(--eggb-accent);
+  border-radius: 3px;
+}
+
+.eggb-rb-cat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--eggb-text-muted);
+}
+
+.eggb-rb-cat-score {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.eggb-rb-overall-score {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.eggb-rb-stars {
+  color: var(--eggb-warning);
+  display: inline-flex;
+  gap: 0.1rem;
+  align-items: center;
+}
+
+.eggb-rb-stars .eggb-icon {
+  width: 0.95em;
+  height: 0.95em;
+}
+
+.eggb-rb-star--empty {
+  opacity: 0.35;
+}
+
+.eggb-rb--compact .eggb-rb-overall-score {
+  font-size: 1.75rem;
+}
+
+.eggb-rb--compact .eggb-rb-bar-track {
+  height: 4px;
+}
+
+.eggb-rb--compact .eggb-rb-cat-label {
+  font-size: 0.6875rem;
+}
+
+.eggb-rb--compact .eggb-rb-cat-score {
+  font-size: 0.85rem;
+}
+
+.eggb-rb-cat-label--compact {
+  min-width: 120px;
+}
+
+.eggb-rb-cat-score--compact {
+  min-width: 24px;
+  text-align: right;
+}
+
+.eggb-rb--grid {
+  overflow: hidden;
+}
+
+.eggb-rb-hero {
+  background: var(--eggb-accent);
+  color: var(--eggb-surface);
+  min-width: 110px;
+}
+
+.eggb-rb-hero .eggb-rb-overall-score {
+  font-size: 2.6rem;
+  color: inherit;
+}
+
+.eggb-rb-hero .eggb-rb-stars {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  color: inherit;
+}
+
+.eggb-rb-grid-cells {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+}
+
+.eggb-rb-cell {
+  border-bottom: var(--eggb-border-w) solid var(--eggb-border);
+  border-right: 0;
+}
+
+.eggb-rb-cell-label {
+  margin-bottom: 0.35rem;
+}
+
+.eggb-rb-cell-score {
+  margin-bottom: 0.15rem;
+}
+
+.eggb-rb--grid .eggb-rb-cat-score {
+  color: var(--eggb-accent);
+  font-size: 1rem;
+}
+
+.eggb-rb--grid .eggb-rb-bar-track {
+  height: 3px;
+}
+
+.eggb-rb--default .eggb-rb-cat-label,
+.eggb-rb--category-grid .eggb-rb-cat-label {
+  font-size: 0.8125rem;
+}
+
+.eggb-rb--default .eggb-rb-cat-score,
+.eggb-rb--category-grid .eggb-rb-cat-score {
+  font-size: 1rem;
+}
+
+@media (min-width: 576px) {
+  .eggb-rb-grid-cells {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .eggb-rb-cell {
+    border-right: var(--eggb-border-w) solid var(--eggb-border);
+  }
+
+  .eggb-rb-cell:nth-child(3n) {
+    border-right: 0;
+  }
+
+  .eggb-rb-cell:nth-last-child(-n + 3) {
+    border-bottom: 0;
+  }
+}

@@ -1,0 +1,108 @@
+/*
+ * Criteria block — buying criteria with importance levels and guidance.
+ * Visual tokens come from the active EggBlocks theme.
+ */
+
+.eggb-cr-importance {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 0.25rem;
+  padding: 0.15em 0.5em;
+}
+
+.eggb-cr-importance--high {
+  background: color-mix(in srgb, var(--eggb-accent) 12%, transparent);
+  color: var(--eggb-accent);
+}
+
+.eggb-cr-importance--medium {
+  background: color-mix(in srgb, var(--eggb-text-muted) 12%, transparent);
+  color: var(--eggb-text-muted);
+}
+
+.eggb-cr-importance--low {
+  background: color-mix(in srgb, var(--eggb-border) 50%, var(--eggb-surface));
+  color: var(--eggb-text-muted);
+}
+
+.eggb-cr-title {
+  font-weight: 600;
+}
+
+.eggb-cr-sub-label--positive {
+  color: var(--eggb-positive);
+}
+
+.eggb-cr-sub-label--negative {
+  color: var(--eggb-negative);
+}
+
+.eggb-cr-sub-text {
+  font-size: var(--eggb-text-sm);
+}
+
+.eggb-cr-num {
+  font-size: var(--eggb-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--eggb-accent);
+}
+
+.eggb-criteria--default {
+  padding: var(--eggb-block-pad);
+}
+
+.eggb-cr-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .eggb-cr-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+
+  .eggb-cr-grid > div {
+    padding: 0 1.25rem 1.5rem;
+  }
+
+  .eggb-cr-grid > div:nth-child(odd) {
+    padding-left: 0;
+    border-right: var(--eggb-border-w) solid var(--eggb-border);
+  }
+
+  .eggb-cr-grid > div:nth-child(even) {
+    padding-right: 0;
+    padding-left: 1.5rem;
+  }
+
+  .eggb-cr-grid > div:nth-child(n+3) {
+    padding-top: 1.5rem;
+    border-top: var(--eggb-border-w) solid var(--eggb-border);
+  }
+}
+
+.eggb-criteria--list .eggb-cr-list > li:last-child .eggb-timeline-connector {
+  display: none;
+}
+
+.cegg5-container .eggb-criteria--list .eggb-cr-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.eggb-cr-good {
+  border-left: 2px solid color-mix(in srgb, var(--eggb-positive) 40%, transparent);
+  padding-left: 0.6rem;
+}
+
+.eggb-cr-avoid {
+  border-left: 2px solid color-mix(in srgb, var(--eggb-negative) 35%, transparent);
+  padding-left: 0.6rem;
+}

@@ -1,0 +1,54 @@
+/*
+ * Intro block — structural article intro block.
+ * Visual tokens come from the active EggBlocks theme.
+ */
+
+.eggb-intro-title {
+  /* Uses shared defaults: 1.25rem / 700 / 1.3 from .eggb-block-title */
+  letter-spacing: -0.01em;
+}
+
+.eggb-intro-lead {
+  font-size: var(--eggb-text-md);
+  color: var(--eggb-text-muted);
+}
+
+.eggb-intro-point-icon {
+  color: var(--eggb-accent);
+}
+
+.eggb-intro .eggb-btn,
+.eggb-intro .eggb-btn:hover,
+.eggb-intro .eggb-btn:focus,
+.eggb-intro .eggb-btn:active {
+  text-decoration: none;
+}
+
+.eggb-intro-body {
+  margin: 0;
+}
+
+.eggb-block .eggb-intro-body p {
+  margin: 0 0 0.75rem;
+}
+
+.eggb-block .eggb-intro-body p:last-child {
+  margin-bottom: 0;
+}
+
+.eggb-intro--compact .eggb-intro-compact-inner {
+  border-left: 3px solid var(--eggb-accent);
+  padding-left: 1rem;
+}
+
+.eggb-intro--compact .eggb-intro-title {
+  --eggb-block-title-size: 1rem;
+}
+
+.eggb-intro--compact .eggb-intro-lead {
+  font-size: var(--eggb-text-sm);
+}
+
+.eggb-intro--compact .eggb-intro-body {
+  font-size: var(--eggb-text-sm);
+}

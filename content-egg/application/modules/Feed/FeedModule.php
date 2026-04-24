@@ -21,7 +21,7 @@ use function ContentEgg\prnx;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 class FeedModule extends AffiliateFeedParserModule
 {
@@ -182,13 +182,15 @@ class FeedModule extends AffiliateFeedParserModule
             return false;
         }
 
+        $price_decimal_separator = $this->config('price_decimal_separator');
+
         if (isset($mapped_data['sale price']) && (float) $mapped_data['sale price'])
         {
-            $product['price'] = (float) TextHelper::parsePriceAmount($mapped_data['sale price']);
+            $product['price'] = (float) TextHelper::parsePriceAmount($mapped_data['sale price'], $price_decimal_separator);
         }
         else
         {
-            $product['price'] = (float) TextHelper::parsePriceAmount($mapped_data['price']);
+            $product['price'] = (float) TextHelper::parsePriceAmount($mapped_data['price'], $price_decimal_separator);
         }
 
         $product['stock_status'] = ContentProduct::STOCK_STATUS_UNKNOWN;
@@ -323,17 +325,19 @@ class FeedModule extends AffiliateFeedParserModule
                 $items[$key]['shipping_cost'] = null;
 
             $items[$key]['stock_status'] = $product['stock_status'];
+
+            $price_decimal_separator = $this->config('price_decimal_separator');
             if (!empty($r['sale price']))
             {
-                $items[$key]['price'] = (float) TextHelper::parsePriceAmount($r['sale price']);
-                if (isset($r['price']) && (float) TextHelper::parsePriceAmount($r['price']) > $items[$key]['price'])
+                $items[$key]['price'] = (float) TextHelper::parsePriceAmount($r['sale price'], $price_decimal_separator);
+                if (isset($r['price']) && (float) TextHelper::parsePriceAmount($r['price'], $price_decimal_separator) > $items[$key]['price'])
                 {
-                    $items[$key]['priceOld'] = (float) TextHelper::parsePriceAmount($r['price']);
+                    $items[$key]['priceOld'] = (float) TextHelper::parsePriceAmount($r['price'], $price_decimal_separator);
                 }
             }
             else
             {
-                $items[$key]['price'] = (float) TextHelper::parsePriceAmount($r['price']);
+                $items[$key]['price'] = (float) TextHelper::parsePriceAmount($r['price'], $price_decimal_separator);
                 $items[$key]['priceOld'] = 0;
             }
 
@@ -367,17 +371,19 @@ class FeedModule extends AffiliateFeedParserModule
             $content->title = $r['title'];
             $content->url = $r['affiliate link'];
 
+            $price_decimal_separator = $this->config('price_decimal_separator');
+
             if (!empty($r['sale price']))
             {
-                $content->price = (float) TextHelper::parsePriceAmount($r['sale price']);
-                if (isset($r['price']) && (float) TextHelper::parsePriceAmount($r['price']) > $content->price)
+                $content->price = (float) TextHelper::parsePriceAmount($r['sale price'], $price_decimal_separator);
+                if (isset($r['price']) && (float) TextHelper::parsePriceAmount($r['price'], $price_decimal_separator) > $content->price)
                 {
-                    $content->priceOld = (float) TextHelper::parsePriceAmount($r['price']);
+                    $content->priceOld = (float) TextHelper::parsePriceAmount($r['price'], $price_decimal_separator);
                 }
             }
             else
             {
-                $content->price = (float) TextHelper::parsePriceAmount($r['price']);
+                $content->price = (float) TextHelper::parsePriceAmount($r['price'], $price_decimal_separator);
             }
 
             if ($content->price)
@@ -473,9 +479,14 @@ class FeedModule extends AffiliateFeedParserModule
             {
                 $content->availability = $r['availability'];
             }
-            if (isset($r['image ​​link']) && filter_var($r['image ​​link'], FILTER_VALIDATE_URL))
+            if (isset($r['image ​​link']))
             {
-                $content->img = $r['image ​​link'];
+                $img = $r['image ​​link'];
+                $img = self::normalizeImageUrl($img);
+                if (filter_var($img, FILTER_VALIDATE_URL))
+                {
+                    $content->img = $img;
+                }
             }
 
             $content->orig_url = $product['orig_url'];
@@ -933,5 +944,39 @@ class FeedModule extends AffiliateFeedParserModule
             'min' => 'price_min',
             'max' => 'price_max',
         ];
+    }
+
+    public static function normalizeImageUrl($url, $defaultScheme = 'https', $baseUrl = null)
+    {
+        if (!$url)
+        {
+            return $url;
+        }
+
+        $url = trim($url);
+
+        if (strpos($url, '//') === 0)
+        {
+            $scheme = rtrim($defaultScheme, ':');
+            return $scheme . ':' . $url;
+        }
+
+        if (preg_match('#^https?://#i', $url))
+        {
+            return $url;
+        }
+
+        if (preg_match('#^(data:|blob:)#i', $url))
+        {
+            return $url;
+        }
+
+        if ($baseUrl !== null && strpos($url, '/') === 0)
+        {
+            $baseUrl = rtrim($baseUrl, '/');
+            return $baseUrl . $url;
+        }
+
+        return $url;
     }
 }

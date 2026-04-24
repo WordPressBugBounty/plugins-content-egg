@@ -3,8 +3,6 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-
-
 ?>
 
 <div class="row">
@@ -15,11 +13,11 @@ use ContentEgg\application\helpers\TemplateHelper;
 
 <?php
 $lowest_over_time = TemplateHelper::getPriceHistoryLowestItem();
-if (!$lowest_over_time)
+if (!$lowest_over_time || empty($lowest_over_time['merchant']))
     return;
 $highest_over_time = TemplateHelper::getPriceHistoryHighestItem();
 
-if (!$highest_over_time)
+if (!$highest_over_time || empty($highest_over_time['merchant']))
     return;
 $since = TemplateHelper::getPriceHistorySince();
 $lowest_now = TemplateHelper::getLowestPriceItem($items);

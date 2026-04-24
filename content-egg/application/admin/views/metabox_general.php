@@ -113,6 +113,9 @@ if (!$global_keyword = \get_post_meta($post->ID, '_cegg_global_autoupdate_keywor
             <?php if ($dataExist) : ?>
                 <input type="submit" id="cegg_update_prices" class="btn btn-sm btn-outline-primary ms-3" value="<?php esc_html_e('Update prices', 'content-egg'); ?>" title="<?php esc_html_e('Force update all product prices', 'content-egg'); ?>">
             <?php endif; ?>
+            <button ng-show="global_isAddedResults()" ng-click="copyAllProductsToClipboard($event)" type="button" class="btn btn-sm btn-outline-primary ms-2" title="<?php esc_html_e('Copy all product references...', 'content-egg'); ?>">
+                <i class="bi bi-clipboard"></i>
+            </button>
 
         </div>
     </div>

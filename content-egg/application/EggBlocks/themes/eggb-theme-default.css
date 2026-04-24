@@ -1,0 +1,189 @@
+/*
+ * eggb-theme-default.css — EggBlocks default theme
+ *
+ * Warm neutral + confident accent.
+ * No custom fonts — inherits from the active WordPress theme.
+ *
+ * Color philosophy:
+ *   - Neutrals do 90% of the work (surface, border, muted text)
+ *   - Warm palette: off-white surface, ink text — paper-and-print feel
+ *   - One accent only: CTA, score numeral, key border
+ *   - Accent falls back to #1d4ed8 (confident blue) when no WP theme
+ *     palette is configured; overridden by --wp--preset--color--primary
+ *
+ * Fallback chain:
+ *   block-level inline style  →  wp theme.json preset  →  warm neutral fallback
+ *
+ * Link AFTER eggb-base.css.
+ */
+
+/* ─────────────────────────────────────────────
+   Root-level token fallbacks
+   Required so token-dependent primitives (e.g. .eggb-price-meta)
+   resolve correctly when used outside an .eggb-block wrapper.
+───────────────────────────────────────────── */
+
+:root {
+  --eggb-text-muted:    #6b7280;
+  --eggb-text-xs:       .6875rem;
+  --eggb-text-sm:       .875rem;
+  --eggb-text-md:       1.0625rem;
+  --eggb-text-lg:       1.75rem;
+  --eggb-sh-title-size: 1.25rem;
+}
+
+/* ─────────────────────────────────────────────
+   Token overrides on .eggb-block
+───────────────────────────────────────────── */
+
+.eggb-block {
+  /* Accent: WP primary → confident blue (not black) */
+  --eggb-accent:     var(--wp--preset--color--primary, #1d4ed8);
+
+  /* Surface: WP base-2 (elevated card surface in TT4-style themes) → base (body bg in TT5) → #fff */
+  --eggb-surface:    var(--wp--preset--color--base-2, var(--wp--preset--color--base, #fff));
+
+  /* Border: warm hairline — slightly warmer than rgba(0,0,0,.12) */
+  --eggb-border:     rgba(28, 20, 10, .10);
+
+  /* Muted text: warm dark gray, not Bootstrap's cool #6c757d */
+  --eggb-text-muted: #6b7280;
+
+  /* Shape — minimal, non-Bootstrap */
+  --eggb-radius:      3px;
+  --eggb-radius-chip: 3px;
+  --eggb-border-w:    1px;
+
+  /* Inner padding for semantic panel blocks */
+  --eggb-block-pad:   1rem 1.125rem;
+
+  /* Signal colors — positive/negative indicators (pros, cons, success, error) */
+  --eggb-positive: #2d6a4f;
+  --eggb-negative: #9b2335;
+
+  /* Editorial type colors — callout types, step types, alert states */
+  --eggb-note:    #1d4ed8;
+  --eggb-tip:     #2d6a4f;
+  --eggb-warning: #92400e;
+  --eggb-insight: #6f42c1;
+
+  /* Text color — scoped so dark blocks on light pages stay readable */
+  --eggb-text: inherit;
+  color: var(--eggb-text);
+
+  /* Type scale — use instead of hardcoded rem values */
+  --eggb-text-xs:     .6875rem;   /* labels, badges, band text */
+  --eggb-text-sm:     .875rem;    /* secondary body, captions */
+  --eggb-text-md:     1.0625rem;  /* product names, slightly above base */
+  --eggb-text-lg:     1.75rem;    /* score numerals, hero values */
+
+  /* Section header — title size for default/accent variants.
+     Override this to let a WP theme control the heading size. */
+  --eggb-sh-title-size: 1.25rem;
+}
+
+/* ─────────────────────────────────────────────
+   Button
+   Outline style — accent color only, not filled.
+───────────────────────────────────────────── */
+
+.eggb-btn {
+  --eggb-btn-fg: var(--eggb-accent);
+  font-size:      .8125rem;
+  font-weight:    600;
+  letter-spacing: .01em;
+  padding:        .45em 1.1em;
+}
+
+/* ─────────────────────────────────────────────
+   Chip — warm ink border + text, no background
+───────────────────────────────────────────── */
+
+.eggb-chip {
+  --eggb-chip-bg:     transparent;
+  --eggb-chip-border: rgba(28, 20, 10, .35);
+  --eggb-chip-color:  rgba(28, 20, 10, .82);
+  font-size:   .75rem;
+  font-weight: 500;
+}
+
+/* ─────────────────────────────────────────────
+   Award badge — Option A: explicit dark color
+───────────────────────────────────────────── */
+
+.eggb-award {
+  --eggb-award-bg:     color-mix(in srgb, var(--eggb-accent) 12%, transparent);
+  --eggb-award-border: color-mix(in srgb, var(--eggb-accent) 35%, transparent);
+  --eggb-award-color:  var(--eggb-accent);
+  font-size:   .6875rem;
+  font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────
+   Score
+───────────────────────────────────────────── */
+
+.eggb-score-num {
+  font-size:      2.25rem;
+  letter-spacing: -.04em;
+}
+
+.eggb-score-denom {
+  opacity: .6;
+}
+
+/* ─────────────────────────────────────────────
+   Shared price primitives
+───────────────────────────────────────────── */
+
+.eggb-price-old,
+.eggb-price-meta {
+  color: var(--eggb-text-muted);
+}
+
+.eggb-price-old {
+  font-size: var(--eggb-text-sm);
+}
+
+.eggb-price-meta {
+  font-size: var(--eggb-text-xs);
+}
+
+/* ─────────────────────────────────────────────
+   Rule
+───────────────────────────────────────────── */
+
+.eggb-rule {
+  opacity: .10;
+}
+
+/* ─────────────────────────────────────────────
+   Block panel — semantic blocks get a surface +
+   subtle warm border.
+───────────────────────────────────────────── */
+
+.eggb-block--panel {
+  background:    var(--eggb-surface);
+  border:        var(--eggb-border-w) solid var(--eggb-border);
+  border-radius: var(--eggb-radius);
+}
+
+/* Top accent rule — marks the block as "special" */
+.eggb-block--accented {
+  border-top: 3px solid var(--eggb-accent);
+}
+
+/* Inner card — standalone surface used inside blocks (FAQ items, TOC, product cards) */
+.eggb-card {
+  background:    var(--eggb-surface);
+  border:        var(--eggb-border-w) solid var(--eggb-border);
+  border-radius: var(--eggb-radius);
+}
+
+/* Vertical hairline divider — separates score column from content (verdict, rating-breakdown) */
+.eggb-divider-v {
+  width:       1px;
+  background:  currentColor;
+  opacity:     .12;
+  flex-shrink: 0;
+}

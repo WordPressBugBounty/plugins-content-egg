@@ -1,0 +1,80 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/pros-cons",
+    "version": "1.0.0",
+    "title": "Pros & Cons",
+    "category": "cegg-blocks",
+    "icon": "yes-alt",
+    "description": "Structured pros and cons list for product reviews.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+  "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default"
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "pros": {
+            "type": "array",
+            "default": []
+        },
+        "cons": {
+            "type": "array",
+            "default": []
+        },
+        "best_for": {
+            "type": "array",
+            "default": []
+        },
+        "not_for": {
+            "type": "array",
+            "default": []
+        },
+        "quick_take": {
+            "type": "string",
+            "default": ""
+        },
+        "label_pros": {
+            "type": "string",
+            "default": ""
+        },
+        "label_cons": {
+            "type": "string",
+            "default": ""
+        },
+        "label_best_for": {
+            "type": "string",
+            "default": ""
+        },
+        "label_not_for": {
+            "type": "string",
+            "default": ""
+        },
+        "label_quick_take": {
+            "type": "string",
+            "default": ""
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

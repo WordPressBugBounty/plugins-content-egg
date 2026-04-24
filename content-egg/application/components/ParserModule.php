@@ -6,8 +6,6 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\ImageHelper;
 use ContentEgg\application\helpers\TextHelper;
-use ContentEgg\application\LocalRedirect;
-use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\Plugin;
 
 /**
@@ -15,7 +13,7 @@ use ContentEgg\application\Plugin;
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
- * @copyright Copyright &copy; 2025 keywordrush.com
+ * @copyright Copyright &copy; 2026 keywordrush.com
  */
 abstract class ParserModule extends Module
 {
