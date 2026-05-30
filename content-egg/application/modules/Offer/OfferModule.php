@@ -147,7 +147,7 @@ class OfferModule extends AffiliateParserModule
             $item['description'] = trim(\wp_kses_post($item['description']));
 
             $item['orig_url'] = trim(strip_tags($item['orig_url']));
-            if (!filter_var($item['orig_url'], FILTER_VALIDATE_URL))
+            if ($item['orig_url'] !== '#' && !filter_var($item['orig_url'], FILTER_VALIDATE_URL))
                 continue;
 
             $item['img'] = trim(strip_tags($item['img']));

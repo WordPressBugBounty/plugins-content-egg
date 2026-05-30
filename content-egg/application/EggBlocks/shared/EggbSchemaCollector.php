@@ -239,10 +239,16 @@ final class EggbSchemaCollector
     {
         $graph = [];
 
+        $author = self::resolveReviewAuthor();
+
         foreach (self::$products as $product)
         {
             if (($product['name'] ?? '') !== '')
             {
+                if (isset($product['review']) && !isset($product['review']['author']))
+                {
+                    $product['review']['author'] = $author;
+                }
                 $graph[] = $product;
             }
         }
@@ -293,6 +299,17 @@ final class EggbSchemaCollector
         self::$products = [];
         self::$faqItems = [];
         self::$lastProductKey = null;
+    }
+
+    private static function resolveReviewAuthor(): array
+    {
+        if (is_singular()) {
+            $name = (string) get_the_author_meta('display_name', (int) get_post_field('post_author', get_the_ID()));
+            if ($name !== '') {
+                return ['@type' => 'Person', 'name' => $name];
+            }
+        }
+        return ['@type' => 'Organization', 'name' => get_bloginfo('name')];
     }
 
     private static function productKey(?array $productRef): ?string

@@ -1,0 +1,80 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/testimonial",
+    "version": "1.0.0",
+    "title": "Testimonial",
+    "category": "cegg-blocks",
+    "icon": "format-quote",
+    "description": "Customer or user quotes for social proof. Supports single, cluster, and inline layouts.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+    "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "cards", "inline"]
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "data_source": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "manual"]
+        },
+        "title": {
+            "type": "string",
+            "default": ""
+        },
+        "heading_tag": {
+            "type": "string",
+            "default": "h3",
+            "enum": ["h1", "h2", "h3", "h4", "div"]
+        },
+        "aggregate_rating": {
+            "type": "number",
+            "default": 0
+        },
+        "aggregate_rating_max": {
+            "type": "number",
+            "default": 5
+        },
+        "aggregate_count": {
+            "type": "number",
+            "default": 0
+        },
+        "aggregate_source": {
+            "type": "string",
+            "default": ""
+        },
+        "items": {
+            "type": "array",
+            "default": []
+        },
+        "items_limit": {
+            "type": "integer",
+            "default": 3
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

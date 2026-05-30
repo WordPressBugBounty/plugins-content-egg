@@ -1,0 +1,92 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/pricing",
+    "version": "1.0.0",
+    "title": "Pricing",
+    "category": "cegg-blocks",
+    "icon": "tag",
+    "description": "Structured pricing block for service tiers, SaaS plans, and editorial recommendations.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+    "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "pricing-list",
+            "enum": ["pricing-list", "pricing-cards", "pricing-highlight"]
+        },
+        "heading_tag": {
+            "type": "string",
+            "default": "h2",
+            "enum": ["h1", "h2", "h3", "h4", "div"]
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "data_source": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "manual"]
+        },
+        "title": {
+            "type": "string",
+            "default": ""
+        },
+        "intro_text": {
+            "type": "string",
+            "default": ""
+        },
+        "general_price_note": {
+            "type": "string",
+            "default": ""
+        },
+        "promotions": {
+            "type": "array",
+            "default": []
+        },
+        "cta_label": {
+            "type": "string",
+            "default": ""
+        },
+        "cta_url": {
+            "type": "string",
+            "default": ""
+        },
+        "cta_url_source": {
+            "type": "string",
+            "default": ""
+        },
+        "featured_label": {
+            "type": "string",
+            "default": ""
+        },
+        "items_limit": {
+            "type": "integer",
+            "default": 6
+        },
+        "items": {
+            "type": "array",
+            "default": []
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

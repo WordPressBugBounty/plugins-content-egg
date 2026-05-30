@@ -28,7 +28,9 @@ class ShelvesVariant
                 <div class="eggb-qp-group-list">
                     <?php foreach ($payload['items'] as $item) : ?>
                         <article class="eggb-qp-group-item">
-                            <?php self::renderGroupThumb($item); ?>
+                            <?php if ($payload['has_any_image']) : ?>
+                                <?php self::renderGroupThumb($item); ?>
+                            <?php endif; ?>
 
                             <div class="eggb-qp-group-product d-flex flex-column gap-2">
                                 <?php if ($item['badge'] !== '') : ?>

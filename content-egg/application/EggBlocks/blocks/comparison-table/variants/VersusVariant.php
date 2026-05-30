@@ -138,6 +138,10 @@ class VersusVariant
 
     private static function getHeaderImageHtml(array $item): string
     {
+        if (empty($item['product_item']['img'])) {
+            return '';
+        }
+
         return self::captureOutput(static function () use ($item): void {
             TemplateHelper::displayImage($item['product_item'], 300, 300, ['class' => 'eggb-ct-img']);
         });

@@ -1,0 +1,71 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/trust-signals",
+    "version": "1.0.0",
+    "title": "Trust Signals",
+    "category": "cegg-blocks",
+    "icon": "shield",
+    "description": "Institutional proof signals — review score, numeric metrics, guarantees, certifications.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+    "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "inline"]
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "data_source": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "manual"]
+        },
+        "aggregate_rating": {
+            "type": "number",
+            "default": 0
+        },
+        "aggregate_rating_max": {
+            "type": "number",
+            "default": 5
+        },
+        "aggregate_count": {
+            "type": "number",
+            "default": 0
+        },
+        "aggregate_source": {
+            "type": "string",
+            "default": ""
+        },
+        "metrics": {
+            "type": "array",
+            "default": []
+        },
+        "badges": {
+            "type": "array",
+            "default": []
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

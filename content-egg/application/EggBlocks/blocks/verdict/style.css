@@ -115,6 +115,7 @@
 
 .eggb-verdict--summary .eggb-vd-score-col {
   width: auto;
+  max-width: 5.5rem;
   padding-left: 0.875rem;
   border-left: 2px solid var(--eggb-accent);
 }
@@ -126,6 +127,10 @@
   letter-spacing: 0.1em;
   color: var(--eggb-text-muted);
   margin-bottom: 0.125rem;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .eggb-verdict--summary .eggb-score-num {

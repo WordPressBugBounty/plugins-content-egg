@@ -29,7 +29,9 @@ class AlternativesVariant
                 <?php foreach ($payload['items'] as $item) : ?>
                     <article class="eggb-qp-alt-item">
                         <div class="eggb-qp-alt-media">
-                            <?php self::renderAltThumb($item); ?>
+                            <?php if ($payload['has_any_image']) : ?>
+                                <?php self::renderAltThumb($item); ?>
+                            <?php endif; ?>
 
                             <?php if ($item['score'] !== '') : ?>
                                 <div class="eggb-qp-alt-score" aria-label="<?php echo esc_attr(trim($item['score'] . ' / 10')); ?>">

@@ -48,7 +48,9 @@ class HighlightVariant
     {
         ?>
         <article class="eggb-qp-highlight-card eggb-card eggb-qp-highlight-card--lead d-flex">
-            <?php self::renderMedia($item, 'eggb-qp-highlight-media'); ?>
+            <?php if ($payload['has_any_image']) : ?>
+                <?php self::renderMedia($item, 'eggb-qp-highlight-media'); ?>
+            <?php endif; ?>
 
             <div class="p-3 d-flex flex-column gap-3 flex-grow-1 min-w-0">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -103,7 +105,9 @@ class HighlightVariant
     {
         ?>
         <article class="eggb-qp-highlight-alt">
-            <?php self::renderMedia($item, 'eggb-qp-highlight-alt-media'); ?>
+            <?php if ($payload['has_any_image']) : ?>
+                <?php self::renderMedia($item, 'eggb-qp-highlight-alt-media'); ?>
+            <?php endif; ?>
 
             <div class="eggb-qp-highlight-alt-body d-flex flex-column gap-2">
                 <div class="d-flex flex-column gap-1">

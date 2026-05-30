@@ -24,6 +24,8 @@ abstract class MyFeedProductModel extends FeedProductModel
                     price float(12,2) DEFAULT NULL,
                     title text,
                     ean varchar(13) DEFAULT NULL,
+                    category varchar(191) DEFAULT NULL,
+                    brand varchar(191) DEFAULT NULL,
                     orig_url text,
                     product text,
                     KEY id (id(32)),
@@ -31,6 +33,8 @@ abstract class MyFeedProductModel extends FeedProductModel
                     KEY orig_url (orig_url(60)),
                     KEY ean (ean(13)),
                     KEY price (price),
+                    KEY category (category),
+                    KEY brand (brand),
                     FULLTEXT (title)
                     ) $this->charset_collate;";
     }

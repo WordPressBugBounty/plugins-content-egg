@@ -268,16 +268,20 @@
 }
 
 .eggb-pc-compact-img {
-  width: 56px;
-  height: 56px;
+  width: 80px;
+  height: 80px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .eggb-pc-compact-title {
-  font-size: var(--eggb-text-sm);
+  font-size: var(--eggb-text-md);
   font-weight: 600;
   line-height: 1.35;
+}
+
+.eggb-product-card--compact .eggb-btn {
+  font-size: var(--eggb-text-sm);
 }
 
 .cegg5-container .eggb-block .eggb-pc-heading {

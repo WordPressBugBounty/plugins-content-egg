@@ -546,3 +546,160 @@ body .cegg_nomargin_components .components-range-control .components-base-contro
 .cegg-thumbnail-ratio {
   --bs-aspect-ratio: calc(3 / 2.5 * 100%);
 }
+
+/* ========================================================================
+   Module Settings sidebar (right column) — card layout
+   ======================================================================== */
+.cegg-card {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+
+.cegg-card__header {
+    padding: 8px 12px;
+    background: #f6f7f7;
+    border-bottom: 1px solid #dcdcde;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #50575e;
+}
+
+.cegg-card__body {
+    padding: 12px;
+}
+
+.cegg-card__footer {
+    padding: 10px 12px;
+    background: #f6f7f7;
+    border-top: 1px solid #dcdcde;
+}
+
+/* Stat rows: label (left) + value (right) */
+.cegg-stats {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.cegg-stats > li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 0 6px 0;
+    font-size: 13px;
+    color: #50575e;
+}
+
+.cegg-stats > li:last-child {
+    margin-bottom: 0;
+}
+
+.cegg-stats__value {
+    font-weight: 600;
+    color: #1d2327;
+}
+
+/* Empty-state hint inside a card body */
+.cegg-empty-state {
+    margin: 0;
+    font-size: 13px;
+    color: #646970;
+    line-height: 1.5;
+}
+
+/* Inline status badge */
+.cegg-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.cegg-badge::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.cegg-badge--idle {
+    background: #edfaef;
+    color: #2c8b3c;
+}
+
+.cegg-badge--progress {
+    background: #fcf4dd;
+    color: #996800;
+}
+
+.cegg-badge--stale {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.cegg-badge--scheduled {
+    background: #e5f0fb;
+    color: #1d4ed8;
+}
+
+/* Inline notices inside the card body — tighter than WP defaults */
+.cegg-card .notice.inline {
+    margin: 10px 0 0 0;
+    padding: 6px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.cegg-card .notice.inline p {
+    margin: 0;
+    padding: 0;
+}
+
+/* Export buttons — compact wrap */
+.cegg-export-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cegg-export-row .button {
+    flex: 1 1 auto;
+    text-align: center;
+    min-width: 0;
+}
+
+/* Module identity line at top of Actions card */
+.cegg-module-id {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    color: #646970;
+    font-family: Consolas, Monaco, monospace;
+    word-break: break-all;
+}
+
+.cegg-module-id strong {
+    color: #1d2327;
+}
+
+/* Stack actions vertically with consistent spacing */
+.cegg-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cegg-actions .button-link-delete {
+    align-self: flex-start;
+    font-size: 12px;
+}

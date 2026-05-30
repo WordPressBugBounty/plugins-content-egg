@@ -45,6 +45,10 @@ abstract class AiClient
 			),
 
 			// OpenAI — GPT-5 series
+			'gpt-5.5' => array(
+				'name'  => 'OpenAI: gpt-5.5',
+				'class' => OpenAiClient::class,
+			),
 			'gpt-5.4' => array(
 				'name'  => 'OpenAI: gpt-5.4',
 				'class' => OpenAiClient::class,

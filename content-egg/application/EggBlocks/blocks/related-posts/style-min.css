@@ -41,7 +41,7 @@
 }
 
 .eggb-rp-snippet {
-  font-size: var(--eggb-text-xs);
+  font-size: var(--eggb-text-sm);
   color: var(--eggb-text-muted);
   line-height: 1.45;
 }

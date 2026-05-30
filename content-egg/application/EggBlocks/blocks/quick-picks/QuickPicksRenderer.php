@@ -156,6 +156,7 @@ class QuickPicksRenderer
                 'id' => (string) ($raw_item['id'] ?? ''),
                 'product_ref' => is_array($raw_item['product_ref'] ?? null) ? $raw_item['product_ref'] : [],
                 'product_item' => $product_item,
+                'has_image' => !empty($product_item['img']),
                 'has_link' => !empty($product_item['url']),
                 'title' => $title,
                 'subtitle' => $subtitle,
@@ -180,6 +181,7 @@ class QuickPicksRenderer
             'heading_tag' => $heading_tag,
             'cta_label' => trim((string) ($attributes['cta_label'] ?? '')),
             'items' => $items,
+            'has_any_image' => !empty(array_filter($items, fn($i) => $i['has_image'])),
             'amazon_update_html' => self::captureAmazonUpdate($items_by_module),
         ];
     }

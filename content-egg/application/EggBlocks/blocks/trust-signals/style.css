@@ -1,0 +1,190 @@
+/*
+ * Trust Signals block — visual CSS only.
+ * Layout uses flex utilities + bespoke per-variant CSS.
+ * All colors, borders come from eggb tokens.
+ *
+ * Variants:
+ *   .eggb-trust--default  — panel surface, metric columns, hairline separators
+ *   .eggb-trust--inline   — hairlines top/bottom, single-row flow, space-between layout
+ */
+
+
+/* ─── Shared stars ───────────────────────── */
+
+.eggb-trust-stars {
+  display:     inline-flex;
+  align-items: center;
+  gap:         .05em;
+  color:       var(--eggb-accent);
+  font-size:   .75rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.eggb-trust-stars .eggb-icon {
+  display:        inline-flex;
+  width:          1em;
+  height:         1em;
+  vertical-align: 0;
+}
+
+.eggb-trust-stars .eggb-icon svg {
+  display: block;
+  width:   100%;
+  height:  100%;
+}
+
+
+/* ════════════════════════════════════════════
+   VARIATION: DEFAULT
+   Panel surface. Signals as columns separated
+   by vertical hairlines. Two item shapes:
+     · metric — value stacked above label
+     · badge  — icon + label on one line
+════════════════════════════════════════════ */
+
+.eggb-trust--default {
+  padding: var(--eggb-block-pad);
+}
+
+.eggb-trust--default .eggb-trust-items {
+  display:         flex;
+  flex-wrap:       wrap;
+  align-items:     center;
+  justify-content: space-between;
+  row-gap:         .85rem;
+  column-gap:      0;
+}
+
+.eggb-trust--default .eggb-trust-item {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  text-align:     center;
+  flex:           1;
+  gap:            .1rem;
+  border-right:   var(--eggb-border-w) solid var(--eggb-border);
+}
+
+.eggb-trust--default .eggb-trust-item:last-child { border-right: none; }
+
+.eggb-trust-value {
+  font-size:      var(--eggb-text-md);
+  font-weight:    700;
+  letter-spacing: -.01em;
+  line-height:    1.2;
+  color:          inherit;
+}
+
+.eggb-trust-value-max {
+  font-size:      var(--eggb-text-xs);
+  font-weight:    400;
+  color:          var(--eggb-text-muted);
+  letter-spacing: 0;
+}
+
+.eggb-trust-label {
+  font-size:   var(--eggb-text-xs);
+  color:       var(--eggb-text-muted);
+  line-height: 1.35;
+}
+
+.eggb-trust--default .eggb-trust-value-row {
+  display:     flex;
+  align-items: center;
+  gap:         .35em;
+}
+
+.eggb-trust-item--rating .eggb-trust-value {
+  color: var(--eggb-accent);
+}
+
+.eggb-trust-item--badge {
+  flex-direction: row;
+  align-items:    center;
+  gap:            .45em;
+  font-size:      var(--eggb-text-sm);
+  font-weight:    500;
+}
+
+.eggb-trust-item--badge .eggb-icon {
+  display:        inline-flex;
+  width:          1.1em;
+  height:         1.1em;
+  flex-shrink:    0;
+  color:          var(--eggb-accent);
+  opacity:        .9;
+  vertical-align: -.1em;
+}
+
+.eggb-trust-item--badge .eggb-icon svg {
+  display: block;
+  width:   100%;
+  height:  100%;
+}
+
+
+/* ════════════════════════════════════════════
+   VARIATION: INLINE
+   No panel. Hairlines top + bottom. Single-row
+   flow — value + label inline, space-between.
+════════════════════════════════════════════ */
+
+.eggb-trust--inline {
+  display:         flex;
+  flex-wrap:       wrap;
+  align-items:     center;
+  justify-content: space-between;
+  gap:             .25rem 1.35rem;
+  padding:         .85rem 0;
+  border-top:      var(--eggb-border-w) solid var(--eggb-border);
+  border-bottom:   var(--eggb-border-w) solid var(--eggb-border);
+}
+
+.eggb-trust--inline .eggb-trust-item {
+  display:        flex;
+  align-items:    center;
+  gap:            .4em;
+  flex-direction: row;
+  font-size:      var(--eggb-text-sm);
+  white-space:    nowrap;
+}
+
+
+.eggb-trust--inline .eggb-trust-value {
+  font-size:      inherit;
+  font-weight:    700;
+  color:          var(--eggb-accent);
+  letter-spacing: -.005em;
+}
+
+.eggb-trust--inline .eggb-trust-label {
+  font-size: inherit;
+  color:     inherit;
+}
+
+.eggb-trust--inline .eggb-trust-stars {
+  font-size: .7rem;
+}
+
+.eggb-trust--inline .eggb-icon {
+  display:        inline-flex;
+  width:          1em;
+  height:         1em;
+  flex-shrink:    0;
+  color:          var(--eggb-accent);
+  opacity:        .85;
+  vertical-align: -.1em;
+}
+
+.eggb-trust--inline .eggb-icon svg {
+  display: block;
+  width:   100%;
+  height:  100%;
+}
+
+@media (max-width: 540px) {
+  .eggb-trust--inline {
+    gap: .25rem .9rem;
+  }
+}

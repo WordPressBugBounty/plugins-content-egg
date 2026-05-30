@@ -208,8 +208,11 @@ class ContentManager
             }
             else
             {
-                $data = \wp_sanitize_redirect($data);
-                $data = filter_var($data, FILTER_SANITIZE_URL);
+                if ($data !== '#')
+                {
+                    $data = \wp_sanitize_redirect($data);
+                    $data = filter_var($data, FILTER_SANITIZE_URL);
+                }
             }
         }
         elseif ($key === 'description')

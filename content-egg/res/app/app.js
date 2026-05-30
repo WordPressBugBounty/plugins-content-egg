@@ -140,6 +140,21 @@ contentEgg.controller(
           detail: snapshot,
         })
       );
+
+      // Propagate to Gutenberg parent frame when CE meta box is rendered in
+      // the meta-box iframe, so blocks in the main editor window can see it.
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.ceggEditorProducts = snapshot;
+          window.parent.dispatchEvent(
+            new CustomEvent("ceggEditorProductsUpdated", {
+              detail: snapshot,
+            })
+          );
+        }
+      } catch (e) {
+        // Cross-origin or other access error — safe to ignore.
+      }
     }
 
     function scheduleEditorProductsSync() {

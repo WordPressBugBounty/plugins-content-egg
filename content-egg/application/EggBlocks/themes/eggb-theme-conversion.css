@@ -18,9 +18,9 @@
 ───────────────────────────────────────────── */
 
 :root {
-  --eggb-text-muted:    #6b7280;
-  --eggb-text-xs:       .6875rem;
-  --eggb-text-sm:       .875rem;
+  --eggb-text-muted:    #4b5563;
+  --eggb-text-xs:       .75rem;
+  --eggb-text-sm:       .9375rem;
   --eggb-text-md:       1.0625rem;
   --eggb-text-lg:       1.75rem;
   --eggb-sh-title-size: 1.25rem;
@@ -41,7 +41,7 @@
   --eggb-border:     rgba(28, 20, 10, .10);
 
   /* Muted text: warm gray */
-  --eggb-text-muted: #6b7280;
+  --eggb-text-muted: #4b5563;
 
   /* Shape — slightly rounded, approachable */
   --eggb-radius:      4px;
@@ -66,8 +66,8 @@
   color: var(--eggb-text);
 
   /* Type scale */
-  --eggb-text-xs:     .6875rem;
-  --eggb-text-sm:     .875rem;
+  --eggb-text-xs:     .75rem;
+  --eggb-text-sm:     .9375rem;
   --eggb-text-md:     1.0625rem;
   --eggb-text-lg:     1.75rem;
 

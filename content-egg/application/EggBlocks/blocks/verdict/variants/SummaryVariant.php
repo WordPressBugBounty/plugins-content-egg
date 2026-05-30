@@ -27,7 +27,7 @@ class SummaryVariant
                             <?php if ($has_score) : ?>
                                 <div class="eggb-vd-score-col d-flex flex-column align-items-center gap-1" aria-label="<?php echo esc_attr(trim($data['score'] . ' ' . $data['score_denom'])); ?>">
                                     <?php if ($data['score_label'] !== '') : ?>
-                                        <span class="eggb-vd-score-label"><?php echo esc_html($data['score_label']); ?></span>
+                                        <span class="eggb-vd-score-label" title="<?php echo esc_attr($data['score_label']); ?>"><?php echo esc_html($data['score_label']); ?></span>
                                     <?php endif; ?>
                                     <span class="eggb-score-num"><?php echo esc_html($data['score']); ?></span>
                                     <?php if ($data['score_denom'] !== '') : ?>

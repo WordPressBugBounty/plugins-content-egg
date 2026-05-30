@@ -66,7 +66,7 @@ class PluginAdmin
         else
             SystemScheduler::addScheduleEvent('weekly', time() + rand(259200, 604800));
 
-        if (Plugin::isFree() || (Plugin::isPro() && Plugin::isActivated()) || Plugin::isEnvato())
+        if (Plugin::isFree() || (Plugin::isPro() && Plugin::isActivated()) || (Plugin::isEnvato() && Plugin::isActivated()))
         {
             PresetRepository::init();
             GeneralConfig::getInstance()->adminInit();

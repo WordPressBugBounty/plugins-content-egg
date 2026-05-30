@@ -348,7 +348,6 @@ class PriceAlert
             $this->sendAlertEmails($subscribers, $d, $post_id);
         }
 
-        // clean up & optimize
         if ($total && rand(1, 5) == 5)
             PriceAlertModel::model()->cleanOld(PriceAlertModel::CLEAN_DELETED_DAYS);
     }

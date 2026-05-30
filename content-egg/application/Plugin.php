@@ -19,6 +19,7 @@ use ContentEgg\application\admin\import\ProductImportScheduler;
 use ContentEgg\application\admin\ProductMapMaintenance;
 use ContentEgg\application\components\LinkIndexIndexer;
 use ContentEgg\application\components\OfferCountService;
+use ContentEgg\application\components\TemplateManager;
 use ContentEgg\application\EggBlocks\EggBlocksLoader;;
 
 /**
@@ -30,7 +31,7 @@ use ContentEgg\application\EggBlocks\EggBlocksLoader;;
  */
 class Plugin
 {
-    const version = '11.0.0';
+    const version = '11.1.0';
     const db_version = 90;
     const wp_requires = '6.0';
     const slug = 'content-egg';
@@ -69,7 +70,7 @@ class Plugin
     {
         $this->loadTextdomain();
 
-        if (self::isFree() || (self::isPro() && self::isActivated()) || self::isEnvato())
+        if (self::isFree() || (self::isPro() && self::isActivated()) || (self::isEnvato() && self::isActivated()))
         {
             EggShortcode::getInstance();
             BlockShortcode::getInstance();
@@ -126,6 +127,12 @@ class Plugin
         \wp_register_style('cegg-bootstrap5', \ContentEgg\PLUGIN_RES . '/site/bootstrap/css/cegg-bootstrap.min.css', array(), Plugin::version());
         \wp_register_style('cegg-bootstrap5-full', \ContentEgg\PLUGIN_RES . '/site/bootstrap/css/cegg-bootstrap.full.min.css', array(), Plugin::version());
         \wp_register_style('cegg-products', \ContentEgg\PLUGIN_RES . '/site/css/cegg-products.min.css', array(), Plugin::version());
+        // Attach color-variant CSS to the handle so it travels with cegg-products
+        // wherever it's loaded (including the iframed block editor canvas).
+        if ($variant_css = TemplateManager::getVariantCss())
+        {
+            \wp_add_inline_style('cegg-products', $variant_css);
+        }
         \wp_register_script('cegg-bootstrap5', \ContentEgg\PLUGIN_RES . '/site/bootstrap/js/bootstrap.min.js');
         \wp_register_script('cegg-chartjs', \ContentEgg\PLUGIN_RES . '/vendor/chartjs/chart.js');
         \wp_register_script('cegg-chartjs-adapter-date-fns', \ContentEgg\PLUGIN_RES . '/vendor/chartjs/chartjs-adapter-date-fns.js', array('cegg-chartjs'));

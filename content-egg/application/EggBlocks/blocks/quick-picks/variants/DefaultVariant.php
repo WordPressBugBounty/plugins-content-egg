@@ -24,7 +24,9 @@ class DefaultVariant
                                 <span class="eggb-qp-rank"><?php echo esc_html($item['rank_display']); ?></span>
                             </div>
 
-                            <?php self::renderThumb($item); ?>
+                            <?php if ($payload['has_any_image']) : ?>
+                                <?php self::renderThumb($item); ?>
+                            <?php endif; ?>
 
                             <div class="eggb-qp-main d-flex flex-column gap-2">
                                 <div class="eggb-qp-topline d-flex flex-wrap align-items-center gap-2" data-rank="<?php echo esc_attr($item['rank_display'] . ' Pick'); ?>">
@@ -207,8 +209,6 @@ class DefaultVariant
 
         if ($price_html !== '') : ?>
             <span class="<?php echo esc_attr($class); ?>"><?php echo $price_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-        <?php else : ?>
-            <span class="<?php echo esc_attr($class); ?>">&ndash;</span>
         <?php
         endif;
     }

@@ -292,6 +292,21 @@
   background: color-mix(in srgb, var(--eggb-text-muted) 10%, transparent);
 }
 
+.eggb-toc-product-rank {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.25rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--eggb-accent) 10%, transparent);
+  color: var(--eggb-accent);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .eggb-toc-product-item {
   max-width: 11rem;
 }

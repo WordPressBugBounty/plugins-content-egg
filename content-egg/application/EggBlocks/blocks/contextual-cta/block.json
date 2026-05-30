@@ -1,0 +1,100 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/contextual-cta",
+    "version": "1.0.0",
+    "title": "Contextual CTA",
+    "category": "cegg-blocks",
+    "icon": "megaphone",
+    "description": "Single-action conversion block for in-article calls-to-action.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+    "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "default",
+            "enum": ["default", "highlight", "inline", "split"]
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "heading_tag": {
+            "type": "string",
+            "default": "h3",
+            "enum": ["h1", "h2", "h3", "h4", "div"]
+        },
+        "data_source": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "manual"]
+        },
+        "eyebrow": {
+            "type": "string",
+            "default": ""
+        },
+        "headline": {
+            "type": "string",
+            "default": ""
+        },
+        "text": {
+            "type": "string",
+            "default": ""
+        },
+        "primary_label": {
+            "type": "string",
+            "default": ""
+        },
+        "primary_url": {
+            "type": "string",
+            "default": ""
+        },
+        "primary_url_source": {
+            "type": "string",
+            "default": ""
+        },
+        "primary_meta": {
+            "type": "string",
+            "default": ""
+        },
+        "secondary_label": {
+            "type": "string",
+            "default": ""
+        },
+        "secondary_url": {
+            "type": "string",
+            "default": ""
+        },
+        "secondary_url_source": {
+            "type": "string",
+            "default": ""
+        },
+        "context": {
+            "type": "string",
+            "default": ""
+        },
+        "logo": {
+            "type": "string",
+            "default": ""
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

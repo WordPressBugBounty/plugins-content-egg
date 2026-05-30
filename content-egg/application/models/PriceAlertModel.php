@@ -69,7 +69,7 @@ class PriceAlertModel extends Model
 		return parent::save($item);
 	}
 
-	public function cleanOld($days, $optimize = true, $date_field = 'complet_date')
+	public function cleanOld($days, $optimize = false, $date_field = 'complet_date')
 	{
 		$this->deleteAll('status = ' . self::STATUS_DELETED . ' AND TIMESTAMPDIFF( DAY, ' . $date_field . ', "' . \current_time('mysql') . '") > ' . $days);
 		if ($optimize)

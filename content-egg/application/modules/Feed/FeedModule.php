@@ -230,6 +230,18 @@ class FeedModule extends AffiliateFeedParserModule
             $product['ean'] = '';
         }
 
+        $product['category'] = '';
+        if (!empty($mapped_data['category']))
+        {
+            $product['category'] = mb_substr(sanitize_text_field((string) $mapped_data['category']), 0, 191);
+        }
+
+        $product['brand'] = '';
+        if (!empty($mapped_data['brand']))
+        {
+            $product['brand'] = mb_substr(sanitize_text_field((string) $mapped_data['brand']), 0, 191);
+        }
+
         if (!empty($mapped_data['direct link']))
         {
             $product['orig_url'] = $mapped_data['direct link'];

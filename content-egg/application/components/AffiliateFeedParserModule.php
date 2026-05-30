@@ -24,11 +24,15 @@ use function ContentEgg\prnx;
 abstract class AffiliateFeedParserModule extends AffiliateParserModule
 {
     const TRANSIENT_LAST_IMPORT_DATE = 'cegg_products_last_import_';
+    const TRANSIENT_LAST_IMPORT_NOTICE = 'cegg_last_import_notice_';
     const PRODUCTS_TTL = 43200;
     const MULTIPLE_INSERT_ROWS = 100;
     const IMPORT_TIME_LIMT = 600;
     const DATAFEED_DIR_NAME = 'cegg-datafeeds';
     const TRANSIENT_LAST_IMPORT_ERROR = 'cegg_last_import_error_';
+
+    /** Bump whenever any feed product table schema (base or per-network override) changes. */
+    const SCHEMA_VERSION = '3';
 
     protected $rmdir;
     protected $product_model;
@@ -98,9 +102,19 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
     public function maybeCreateProductTable()
     {
+        $current = (string) static::SCHEMA_VERSION;
+
         if (!$this->product_model->isTableExists())
         {
             $this->dbDelta();
+            $this->setSchemaVersion($current);
+            return;
+        }
+
+        if ($this->getSchemaVersion() !== $current)
+        {
+            $this->dbDelta();
+            $this->setSchemaVersion($current);
         }
     }
 
@@ -110,6 +124,21 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         $sql = $this->product_model->getDump();
         dbDelta($sql);
+    }
+
+    protected function getSchemaVersion(): string
+    {
+        return (string) \get_option($this->schemaVersionOption(), '');
+    }
+
+    protected function setSchemaVersion(string $version): void
+    {
+        \update_option($this->schemaVersionOption(), $version, false);
+    }
+
+    protected function schemaVersionOption(): string
+    {
+        return 'cegg_feed_' . $this->getId() . '_schema_version';
     }
 
     public function getLastImportDate()
@@ -136,6 +165,65 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         \set_transient(self::TRANSIENT_LAST_IMPORT_ERROR . $this->getId(), $error, DAY_IN_SECONDS * 30);
     }
 
+    public function getLastImportNotice()
+    {
+        return \get_transient(self::TRANSIENT_LAST_IMPORT_NOTICE . $this->getId());
+    }
+
+    public function setLastImportNotice($notice)
+    {
+        $notice = TextHelper::truncate($notice, 500);
+        \set_transient(self::TRANSIENT_LAST_IMPORT_NOTICE . $this->getId(), $notice, DAY_IN_SECONDS * 30);
+    }
+
+    /**
+     * Import products only when the local DB is empty, regardless of TTL.
+     *
+     * Returns true if an import was triggered, false if products already exist.
+     * Throws when an import is already in progress.
+     */
+    public function importIfEmpty(): bool
+    {
+        $last_export = $this->getLastImportDate();
+
+        if ($last_export && $last_export < 0)
+        {
+            if (time() + $last_export > static::IMPORT_TIME_LIMT)
+                $last_export = 0;
+            else
+                throw new \Exception('Product import is in progress. Try later.');
+        }
+
+        if ($this->getProductCount() > 0)
+        {
+            return false;
+        }
+
+        $hook = 'cegg_' . $this->getId() . '_init_products';
+        if (\wp_next_scheduled($hook, array('module_id' => $this->getId())))
+        {
+            \wp_unschedule_event(\wp_next_scheduled($hook, array('module_id' => $this->getId())), $hook, array('module_id' => $this->getId()));
+        }
+
+        $this->deleteTemporaryFiles();
+        $this->setLastImportDate(time() * -1);
+        $this->maybeCreateProductTable();
+
+        if (!$this->product_model->isTableExists())
+        {
+            throw new \Exception(
+                sprintf(
+                    esc_html__('Table %s does not exist', 'content-egg'),
+                    esc_html($this->product_model->tableName())
+                )
+            );
+        }
+
+        $this->importProducts($this->getFeedUrl());
+
+        return true;
+    }
+
     public function maybeImportProducts()
     {
         $last_export = $this->getLastImportDate();
@@ -151,6 +239,11 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         if ($this->isImportTime())
         {
+            // Allow external code to suppress a TTL-triggered re-import when
+            // stale data is acceptable (e.g. batch searches during plan import).
+            if (!\apply_filters('cegg_allow_feed_import', true, $this->getId()))
+                return false;
+
             // remove shedule if exists
             $hook = 'cegg_' . $this->getId() . '_init_products';
             if (\wp_next_scheduled($hook, array('module_id' => $this->getId())))
@@ -209,6 +302,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         \wp_raise_memory_limit();
         $this->setLastImportError('');
+        $this->setLastImportNotice('');
         register_shutdown_function(array($this, 'fatalHandler'));
         $this->product_model->truncateTable();
         $file = $this->downloadFeed($feed_url);
@@ -745,6 +839,10 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         // Read optional manual overrides
         $custom_csv_delimiter = $this->config('csv_delimiter', 'auto'); // 'auto', "\t", ';', ',', '|'
+        if ($custom_csv_delimiter == 'tab')
+        {
+            $custom_csv_delimiter = "\t";
+        }
         $custom_csv_enclosure = $this->config('csv_enclosure', 'auto'); // 'auto', '"', "'", 'none'
 
         // Decide delimiter and enclosure:
@@ -793,7 +891,10 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             'exception'            => 0,
             'empty_product'        => 0,
             'out_of_stock'         => 0,
+            'variation'            => 0,
         ];
+
+        $variationFilter = $this->config('filter_variations') ? new FeedVariationFilter() : null;
 
         $escape = '\\';
         $reader = new CsvReader($handle, $delimiter, $enclosure, $escape);
@@ -864,6 +965,16 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 continue;
             }
 
+            if ($variationFilter !== null && $variationFilter->isVariation(
+                (string) ($product['title'] ?? ''),
+                (string) ($product['orig_url'] ?? ''),
+                (string) ($product['ean'] ?? '')
+            ))
+            {
+                ++$skipped['variation'];
+                continue;
+            }
+
             $products[] = $product;
             ++$inserted;
 
@@ -879,17 +990,16 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
         }
 
-        // build warning about skipped products
+        // build notice about skipped products
         $skipped = array_filter($skipped);
-        if (Plugin::isDevEnvironment() && $skipped)
+        if ($skipped)
         {
             $parts = [];
             foreach ($skipped as $reason => $count)
             {
-                $parts[] = sprintf('%d %s', $count, str_replace('_', ' ', $reason));
+                $parts[] = sprintf('%s %s', number_format_i18n($count), str_replace('_', ' ', $reason));
             }
-            $warning_skipped_products = 'Skipped products: ' . implode(', ', $parts);
-            $this->setLastImportError($warning_skipped_products);
+            $this->setLastImportNotice(__('Skipped rows', 'content-egg') . ': ' . implode(', ', $parts));
         }
 
         fclose($handle);
@@ -925,6 +1035,8 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         }
 
         $i = 0;
+        $variationsSkipped = 0;
+        $variationFilter = $this->config('filter_variations') ? new FeedVariationFilter() : null;
         foreach ($json_arr[$node] as $data)
         {
             if (!$data)
@@ -964,6 +1076,16 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 continue;
             }
 
+            if ($variationFilter !== null && $variationFilter->isVariation(
+                (string) ($product['title'] ?? ''),
+                (string) ($product['orig_url'] ?? ''),
+                (string) ($product['ean'] ?? '')
+            ))
+            {
+                ++$variationsSkipped;
+                continue;
+            }
+
             $products[] = $product;
             $i++;
             if ($i % static::MULTIPLE_INSERT_ROWS == 0)
@@ -976,6 +1098,13 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         if ($products)
         {
             $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
+        }
+        if ($variationsSkipped > 0)
+        {
+            $this->setLastImportNotice(sprintf(
+                __('Skipped rows', 'content-egg') . ': %s variation',
+                number_format_i18n($variationsSkipped)
+            ));
         }
     }
 
@@ -1095,6 +1224,8 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         $i = 0;
         $products = array();
+        $variationsSkipped = 0;
+        $variationFilter = $this->config('filter_variations') ? new FeedVariationFilter() : null;
 
         while ($node_string = $streamer->getNode())
         {
@@ -1181,6 +1312,16 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                                 continue;
                             }
 
+                            if ($variationFilter !== null && $variationFilter->isVariation(
+                                (string) ($product['title'] ?? ''),
+                                (string) ($product['orig_url'] ?? ''),
+                                (string) ($product['ean'] ?? '')
+                            ))
+                            {
+                                ++$variationsSkipped;
+                                continue;
+                            }
+
                             $products[] = $product;
                             $i++;
                             if ($i % static::MULTIPLE_INSERT_ROWS == 0)
@@ -1237,6 +1378,16 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 continue;
             }
 
+            if ($variationFilter !== null && $variationFilter->isVariation(
+                (string) ($product['title'] ?? ''),
+                (string) ($product['orig_url'] ?? ''),
+                (string) ($product['ean'] ?? '')
+            ))
+            {
+                ++$variationsSkipped;
+                continue;
+            }
+
             $products[] = $product;
             $i++;
             if ($i % static::MULTIPLE_INSERT_ROWS == 0)
@@ -1254,6 +1405,13 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         if ($products)
         {
             $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
+        }
+        if ($variationsSkipped > 0)
+        {
+            $this->setLastImportNotice(sprintf(
+                __('Skipped rows', 'content-egg') . ': %s variation',
+                number_format_i18n($variationsSkipped)
+            ));
         }
     }
 
@@ -1299,6 +1457,8 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         $i = 0;
         $products = array();
+        $variationsSkipped = 0;
+        $variationFilter = $this->config('filter_variations') ? new FeedVariationFilter() : null;
 
         while ($reader->read())
         {
@@ -1383,6 +1543,16 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 continue;
             }
 
+            if ($variationFilter !== null && $variationFilter->isVariation(
+                (string) ($product['title'] ?? ''),
+                (string) ($product['orig_url'] ?? ''),
+                (string) ($product['ean'] ?? '')
+            ))
+            {
+                ++$variationsSkipped;
+                continue;
+            }
+
             $products[] = $product;
             $i++;
 
@@ -1403,6 +1573,13 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         if ($products)
         {
             $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
+        }
+        if ($variationsSkipped > 0)
+        {
+            $this->setLastImportNotice(sprintf(
+                __('Skipped rows', 'content-egg') . ': %s variation',
+                number_format_i18n($variationsSkipped)
+            ));
         }
     }
 

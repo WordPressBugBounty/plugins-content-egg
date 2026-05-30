@@ -199,13 +199,16 @@ class DefaultVariant
 
     private static function renderImage(array $item): void
     {
+        if (empty($item['product_item']['img'])) {
+            return;
+        }
+
         $image_html = self::captureOutput(static function () use ($item): void {
             TemplateHelper::displayImage($item['product_item'], 300, 300, ['class' => 'eggb-ct-img d-block w-100 mx-auto']);
         });
 
         if ($image_html === '')
         {
-            echo '<span class="eggb-ct-img-placeholder" aria-hidden="true"></span>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
             return;
         }
 

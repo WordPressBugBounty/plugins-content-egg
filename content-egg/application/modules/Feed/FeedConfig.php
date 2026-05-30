@@ -230,7 +230,7 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                 'callback'         => [$this, 'render_dropdown'],
                 'dropdown_options' => [
                     'auto' => __('Auto-detect (recommended)', 'content-egg'),
-                    "\t"   => __('Tab (\\t)', 'content-egg'),
+                    'tab'   => __('Tab (\\t)', 'content-egg'),
                     ';'    => __('Semicolon (;)', 'content-egg'),
                     ','    => __('Comma (,)', 'content-egg'),
                     '|'    => __('Pipe (|)', 'content-egg'),

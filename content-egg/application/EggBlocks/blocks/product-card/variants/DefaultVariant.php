@@ -212,7 +212,7 @@ class DefaultVariant
 
     public static function hasImage(array $card): bool
     {
-        return !empty($card['product_item']);
+        return !empty($card['product_item']['img']);
     }
 
     public static function hasSupplementalMeta(array $card): bool

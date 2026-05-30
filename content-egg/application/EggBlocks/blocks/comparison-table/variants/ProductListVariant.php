@@ -110,6 +110,10 @@ class ProductListVariant
 
     private static function renderThumb(array $item): void
     {
+        if (empty($item['product_item']['img'])) {
+            return;
+        }
+
         $image_html = self::captureOutput(static function () use ($item): void {
             TemplateHelper::displayImage($item['product_item'], 160, 160, ['class' => 'eggb-ct-thumb-img']);
         });

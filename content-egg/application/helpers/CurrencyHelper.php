@@ -5,7 +5,7 @@ namespace ContentEgg\application\helpers;
 defined('\ABSPATH') || exit;
 
 /**
- * Currency class file
+ * CurrencyHelper class file
  *
  * @author keywordrush.com <support@keywordrush.com>
  * @link https://www.keywordrush.com
@@ -82,7 +82,7 @@ class CurrencyHelper
 
     public static function currencies()
     {
-        return array(
+        $currencies = array(
             'USD' => array(
                 'currency_symbol' => '$',
                 'currency_pos' => 'left',
@@ -188,6 +188,14 @@ class CurrencyHelper
                 'decimal_sep'     => ',',
                 'num_decimals'    => 3,
                 'name'            => __('Tunisian dinar', 'content-egg-tpl'),
+            ),
+            'DZD' => array(
+                'currency_symbol' => 'DA',
+                'currency_pos' => 'right_space',
+                'thousand_sep' => '.',
+                'decimal_sep' => ',',
+                'num_decimals' => 0,
+                'name' => __('Algerian Dinar', 'content-egg-tpl'),
             ),
             'NGN' => array(
                 'currency_symbol' => '₦',
@@ -598,6 +606,8 @@ class CurrencyHelper
                 'name' => __('Swiss Franc', 'content-egg-tpl'),
             ),
         );
+
+        return \apply_filters('cegg_currencies', $currencies);
     }
 
     public function setLocale($locale)

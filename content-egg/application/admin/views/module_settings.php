@@ -86,158 +86,187 @@ defined('\ABSPATH') || exit; ?>
 
             <div class="cegg-rightcol">
 
-                <pre><?php echo esc_html(__('Module ID:', 'content-egg')); ?> <?php echo esc_html($module->getId()); ?></pre>
+                <?php if (! empty($module) && $module->isFeedModule()) :
+                    $last_import    = $module->getLastImportDateReadable();
+                    $product_count  = (int) $module->getProductCount();
+                    $last_error     = $module->getLastImportError();
+                    $last_notice    = $module->getLastImportNotice();
+                    $is_import_in_progress = $module->isImportInProgress();
+                    $is_import_scheduled = $module->isImportScheduled();
+                    $tools_page_url = admin_url('admin.php?page=content-egg-tools');
 
-                <div>
+                    $status_label = '';
+                    $status_class = '';
+                    if ($is_import_in_progress) {
+                        $status_label = __('In progress', 'content-egg');
+                        $status_class = 'cegg-badge--progress';
+                    } elseif ($is_import_scheduled) {
+                        $status_label = __('Scheduled', 'content-egg');
+                        $status_class = 'cegg-badge--scheduled';
+                    } elseif ($product_count > 0) {
+                        if ($module->isImportTime()) {
+                            $status_label = __('Sync due', 'content-egg');
+                            $status_class = 'cegg-badge--stale';
+                        } else {
+                            $status_label = __('Ready', 'content-egg');
+                            $status_class = 'cegg-badge--idle';
+                        }
+                    }
 
-                    <?php if (ModuleCloneManager::isCloningAllowed($module->getId())): ?>
-                        <hr style="margin-bottom: 20px;">
+                    $has_body_content = $last_import || $is_import_in_progress || $is_import_scheduled || $last_error || $last_notice;
+                ?>
 
-                        <a class="page-title-action" href="<?php echo esc_url_raw(
-                                                                wp_nonce_url(
-                                                                    get_admin_url(
-                                                                        get_current_blog_id(),
-                                                                        'admin.php?page=content-egg-modules&action=clone&module=' . urlencode($module->getId())
-                                                                    ),
-                                                                    'ce_clone_module_action'
-                                                                )
-                                                            ); ?>">
-                            <?php esc_html_e('Clone This Module', 'content-egg'); ?>
-                        </a>
-                    <?php endif; ?>
-                    <?php if ($module->isFeedParser() || $module->isClone()): ?>
-                        <hr style="margin-bottom: 20px;">
-                        <a class="button-link-delete"
-                            href="<?php echo esc_url_raw(
-                                        wp_nonce_url(
-                                            get_admin_url(
-                                                get_current_blog_id(),
-                                                'admin.php?page=content-egg-modules&action=delete_clone&module=' . urlencode($module->getId())
-                                            ),
-                                            'ce_remove_module_action'
-                                        )
-                                    ); ?>"
-                            onclick="return confirm('Are you sure you want to delete this module? This action will PERMANENTLY REMOVE all module settings and associated products!');">
-                            <?php esc_html_e('Delete This Module', 'content-egg'); ?>
-                        </a>
+                    <!-- Feed Status card -->
+                    <div class="cegg-card">
+                        <div class="cegg-card__header"><?php esc_html_e('Feed Status', 'content-egg'); ?></div>
+                        <div class="cegg-card__body">
+                            <?php if ($has_body_content) : ?>
+                                <ul class="cegg-stats">
+                                    <?php if ($last_import) : ?>
+                                        <li>
+                                            <span><?php esc_html_e('Products', 'content-egg'); ?></span>
+                                            <span class="cegg-stats__value"><?php echo esc_html(number_format_i18n($product_count)); ?></span>
+                                        </li>
+                                        <li>
+                                            <span><?php esc_html_e('Last sync', 'content-egg'); ?></span>
+                                            <span class="cegg-stats__value"><?php echo esc_html($last_import); ?></span>
+                                        </li>
+                                    <?php endif; ?>
+                                    <?php if ($status_label) : ?>
+                                        <li>
+                                            <span><?php esc_html_e('Status', 'content-egg'); ?></span>
+                                            <span class="cegg-badge <?php echo esc_attr($status_class); ?>"><?php echo esc_html($status_label); ?></span>
+                                        </li>
+                                    <?php endif; ?>
+                                </ul>
 
-                    <?php endif; ?>
+                                <?php if ($is_import_in_progress) : ?>
+                                    <div class="notice notice-warning inline">
+                                        <p><?php esc_html_e('Feed sync in progress. Please wait until it completes.', 'content-egg'); ?></p>
+                                    </div>
+                                <?php elseif ($is_import_scheduled) : ?>
+                                    <div class="notice notice-info inline">
+                                        <p><?php esc_html_e('Feed sync scheduled. It will run automatically soon.', 'content-egg'); ?></p>
+                                    </div>
+                                <?php endif; ?>
 
-                    <?php if (! empty($module) && $module->isFeedModule()) :
-                        $last_import    = $module->getLastImportDateReadable();
-                        $product_count  = (int) $module->getProductCount();
-                        $last_error     = $module->getLastImportError();
-                        $is_import_in_progress = $module->isImportInProgress();
-                        $is_import_scheduled = $module->isImportScheduled();
-                        $tools_page_url = admin_url('admin.php?page=content-egg-tools');
-                    ?>
+                                <?php if ($last_error) : ?>
+                                    <div class="notice notice-error inline">
+                                        <p>
+                                            <strong><?php esc_html_e('Last error:', 'content-egg'); ?></strong>
+                                            <?php echo esc_html($last_error); ?>
+                                        </p>
+                                    </div>
+                                <?php endif; ?>
 
-                        <ul class="ce-feed-info" style="margin-top:20px;">
-                            <?php if ($last_import) : ?>
-                                <li>
-                                    <?php
-                                    printf(
-                                        esc_html__('Total products: %s', 'content-egg'),
-                                        esc_html(number_format_i18n($product_count))
-                                    );
-                                    ?>
-
-                                </li>
-                                <li>
-                                    <?php printf(
-                                        esc_html__('Last feed sync: %s', 'content-egg'),
-                                        esc_html($last_import)
-                                    ); ?>
-
-                                </li>
-
+                                <?php if ($last_notice) : ?>
+                                    <div class="notice notice-info inline">
+                                        <p><?php echo esc_html($last_notice); ?></p>
+                                    </div>
+                                <?php endif; ?>
+                            <?php else : ?>
+                                <p class="cegg-empty-state"><?php esc_html_e('No imports yet. The feed will be imported automatically by cron.', 'content-egg'); ?></p>
                             <?php endif; ?>
-
-                            <?php if ($last_error) : ?>
-                                <li class="error" style="color: red;"><?php printf(
-                                                                            esc_html__('Last error: %s', 'content-egg'),
-                                                                            esc_html($last_error)
-                                                                        ); ?></li>
-                            <?php endif; ?>
-                        </ul>
-
-                        <?php if ($is_import_in_progress) : ?>
-                            <div class="notice notice-warning inline ce-feed-status">
-                                <p>
-                                    <strong><?php esc_html_e('Feed sync in progress.', 'content-egg'); ?></strong>
-                                    <?php esc_html_e('Please wait until it completes.', 'content-egg'); ?>
-                                </p>
-                            </div>
-                        <?php endif; ?>
-
-                        <?php if ($is_import_scheduled) : ?>
-                            <div class="notice notice-info inline ce-feed-status">
-                                <p>
-                                    <strong><?php esc_html_e('Feed sync scheduled.', 'content-egg'); ?></strong>
-                                    <?php esc_html_e('It will run automatically soon.', 'content-egg'); ?>
-                                </p>
-                            </div>
-                        <?php endif; ?>
+                        </div>
 
                         <?php if ($is_import_in_progress || $is_import_scheduled) : ?>
-                            <div class="ce-refresh-action" style="margin-top:20px;">
-                                <button
-                                    type="button"
-                                    class="page-title-action"
-                                    onclick="window.location.reload();">
-                                    <?php esc_html_e('Refresh Feed Status', 'content-egg'); ?>
+                            <div class="cegg-card__footer">
+                                <button type="button" class="button button-secondary" onclick="window.location.reload();">
+                                    <?php esc_html_e('Refresh Status', 'content-egg'); ?>
                                 </button>
                             </div>
-                        <?php endif; ?>
-
-                        <!-- Export Links -->
-                        <?php if ($last_import && $product_count) : ?>
-                            <hr />
-                            <div class="ce-export-actions" style="margin-top:20px;">
+                        <?php elseif ($module->isActive()) : ?>
+                            <div class="cegg-card__footer">
                                 <?php
-                                $exports = [
-                                    'url'             => __('Export product URLs', 'content-egg'),
-                                    'ean'             => __('Export product EANs', 'content-egg'),
-                                    'ean_duplicate'   => __('Export duplicate EANs', 'content-egg'),
-                                ];
-
-                                foreach ($exports as $field => $label) :
-                                    $raw_url   = add_query_arg([
-                                        'action' => 'feed-export',
-                                        'field'  => $field,
-                                        'module' => rawurlencode($module->getId()),
-                                    ], $tools_page_url);
-                                    $nonce_url = wp_nonce_url($raw_url, 'cegg_feed-export');
-                                ?>
-                                    <div>
-                                        <a href="<?php echo esc_url($nonce_url); ?>" class="page-title-action" target="_blank" rel="noopener">
-                                            <?php echo esc_html($label); ?>
-                                        </a>
-                                    </div>
-                                    <br />
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-
-                        <!-- Reset Feed Button -->
-                        <?php if ($last_import && !$is_import_in_progress) : ?>
-                            <div class="ce-reset-action">
-                                <?php
-                                $reset_raw   = add_query_arg([
+                                $reset_raw = add_query_arg([
                                     'action' => 'feed-reset',
                                     'module' => rawurlencode($module->getId()),
                                 ], $tools_page_url);
-                                $reset_url   = wp_nonce_url($reset_raw, 'cegg_feed-reset');
+                                $reset_url = wp_nonce_url($reset_raw, 'cegg_feed-reset');
                                 ?>
-                                <a href="<?php echo esc_url($reset_url); ?>" class="page-title-action" rel="noopener">
-                                    <?php esc_html_e('Reload Feed Data Now', 'content-egg'); ?>
+                                <a href="<?php echo esc_url($reset_url); ?>" class="button button-primary" rel="noopener">
+                                    <?php echo $last_import
+                                        ? esc_html__('Reload Feed Data Now', 'content-egg')
+                                        : esc_html__('Import Feed Now', 'content-egg'); ?>
                                 </a>
                             </div>
                         <?php endif; ?>
+                    </div>
 
+                    <!-- Export Tools card -->
+                    <?php if ($last_import && $product_count) : ?>
+                        <div class="cegg-card">
+                            <div class="cegg-card__header"><?php esc_html_e('Export Tools', 'content-egg'); ?></div>
+                            <div class="cegg-card__body">
+                                <div class="cegg-export-row">
+                                    <?php
+                                    $exports = [
+                                        'url'           => __('URLs', 'content-egg'),
+                                        'ean'           => __('EANs', 'content-egg'),
+                                        'ean_duplicate' => __('Duplicate EANs', 'content-egg'),
+                                    ];
+                                    foreach ($exports as $field => $label) :
+                                        $raw_url   = add_query_arg([
+                                            'action' => 'feed-export',
+                                            'field'  => $field,
+                                            'module' => rawurlencode($module->getId()),
+                                        ], $tools_page_url);
+                                        $nonce_url = wp_nonce_url($raw_url, 'cegg_feed-export');
+                                    ?>
+                                        <a href="<?php echo esc_url($nonce_url); ?>" class="button" target="_blank" rel="noopener">
+                                            <?php echo esc_html($label); ?>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
                     <?php endif; ?>
 
+                <?php endif; ?>
+
+                <!-- Module Actions card -->
+                <div class="cegg-card">
+                    <div class="cegg-card__header"><?php esc_html_e('Module', 'content-egg'); ?></div>
+                    <div class="cegg-card__body">
+                        <p class="cegg-module-id">
+                            <strong><?php esc_html_e('ID:', 'content-egg'); ?></strong>
+                            <?php echo esc_html($module->getId()); ?>
+                        </p>
+
+                        <div class="cegg-actions">
+                            <?php if (ModuleCloneManager::isCloningAllowed($module->getId())): ?>
+                                <a class="button button-secondary" href="<?php echo esc_url_raw(
+                                                                                wp_nonce_url(
+                                                                                    get_admin_url(
+                                                                                        get_current_blog_id(),
+                                                                                        'admin.php?page=content-egg-modules&action=clone&module=' . urlencode($module->getId())
+                                                                                    ),
+                                                                                    'ce_clone_module_action'
+                                                                                )
+                                                                            ); ?>">
+                                    <?php esc_html_e('Clone This Module', 'content-egg'); ?>
+                                </a>
+                            <?php endif; ?>
+
+                            <?php if ($module->isFeedParser() || $module->isClone()): ?>
+                                <a class="button-link-delete"
+                                    href="<?php echo esc_url_raw(
+                                                wp_nonce_url(
+                                                    get_admin_url(
+                                                        get_current_blog_id(),
+                                                        'admin.php?page=content-egg-modules&action=delete_clone&module=' . urlencode($module->getId())
+                                                    ),
+                                                    'ce_remove_module_action'
+                                                )
+                                            ); ?>"
+                                    onclick="return confirm('Are you sure you want to delete this module? This action will PERMANENTLY REMOVE all module settings and associated products!');">
+                                    <?php esc_html_e('Delete This Module', 'content-egg'); ?>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </div>
+
             </div>
         </div>
 

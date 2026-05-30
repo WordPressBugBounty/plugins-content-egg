@@ -1,0 +1,244 @@
+/*
+ * Testimonial block — visual CSS only.
+ * Layout uses Bootstrap flex/grid utilities + bespoke per-variant CSS.
+ * All colors, borders, radii come from eggb tokens.
+ *
+ * Variants:
+ *   .eggb-testimonial--default  — single panel, aggregate header, decorative quote mark
+ *   .eggb-testimonial--cards  — responsive card grid, compact quotes
+ *   .eggb-testimonial--inline   — left accent border aside, flows with prose
+ */
+
+
+/* ─── Shared icon sizing ─────────────────── */
+
+.eggb-testimonial .eggb-icon {
+  display:        inline-flex;
+  width:          1em;
+  height:         1em;
+  vertical-align: -.125em;
+}
+
+.eggb-testimonial .eggb-icon svg {
+  display: block;
+  width:   100%;
+  height:  100%;
+}
+
+
+/* ─── Shared title ──────────────────────── */
+
+.eggb-testimonial {
+  --eggb-block-title-size:   1.1875rem;
+  --eggb-block-title-weight: 700;
+}
+
+.cegg5-container .eggb-testimonial-title,
+.cegg5-container h1.eggb-testimonial-title,
+.cegg5-container h2.eggb-testimonial-title,
+.cegg5-container h3.eggb-testimonial-title,
+.cegg5-container h4.eggb-testimonial-title,
+.cegg5-container div.eggb-testimonial-title {
+  font-size:      1.125rem;
+  font-weight:    700;
+  line-height:    1.3;
+  letter-spacing: -.005em;
+  margin:         0 0 .5rem;
+  padding:        0;
+  color:          var(--eggb-text, inherit);
+  max-width:      none;
+  text-decoration: none;
+}
+
+
+/* ─── Shared primitives ──────────────────── */
+
+.eggb-testimonial-quote {
+  font-style:  italic;
+  line-height: 1.6;
+  margin:      0;
+  color:       inherit;
+}
+
+.eggb-testimonial-stars {
+  display:     inline-flex;
+  align-items: center;
+  gap:         .1em;
+  color:       var(--eggb-accent);
+  font-size:   .875rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.eggb-testimonial-author {
+  font-size:      var(--eggb-text-sm);
+  font-weight:    700;
+  letter-spacing: -.005em;
+  line-height:    1.25;
+  margin:         0 0 .1rem;
+}
+
+.eggb-testimonial-attribution {
+  font-size:   var(--eggb-text-xs);
+  color:       var(--eggb-text-muted);
+  line-height: 1.4;
+  margin:      0;
+}
+
+.eggb-testimonial-aggregate {
+  display:     flex;
+  align-items: baseline;
+  gap:         .5rem;
+  flex-wrap:   wrap;
+}
+
+.eggb-testimonial-aggregate-score {
+  font-size:      1.0625rem;
+  font-weight:    700;
+  letter-spacing: -.01em;
+  color:          var(--eggb-accent);
+}
+
+.eggb-testimonial-aggregate-meta {
+  font-size:   var(--eggb-text-xs);
+  color:       var(--eggb-text-muted);
+  line-height: 1.4;
+}
+
+
+/* ════════════════════════════════════════════
+   VARIATION: DEFAULT
+   Single prominent testimonial. Panel surface.
+   Decorative opening mark. Aggregate header strip.
+════════════════════════════════════════════ */
+
+.eggb-testimonial--default {
+  padding:  0;
+  overflow: hidden;
+}
+
+.eggb-testimonial--default .eggb-testimonial-aggregate {
+  padding:        .65rem 1.125rem;
+  border-bottom:  var(--eggb-border-w) solid var(--eggb-border);
+  background:     color-mix(in srgb, var(--eggb-border) 8%, var(--eggb-surface));
+}
+
+.eggb-testimonial--default .eggb-testimonial-body {
+  padding:        1.25rem 1.125rem 1rem;
+  display:        flex;
+  flex-direction: column;
+  gap:            .85rem;
+}
+
+
+.eggb-testimonial--default .eggb-testimonial-quote {
+  font-size: 1.125rem;
+}
+
+.eggb-testimonial--default .eggb-testimonial-author-row {
+  display:        flex;
+  flex-direction: column;
+  gap:            .1rem;
+}
+
+.eggb-testimonial--default .eggb-testimonial-entry {
+  display:        flex;
+  flex-direction: column;
+  gap:            .85rem;
+}
+
+.eggb-testimonial--default .eggb-testimonial-entry + .eggb-testimonial-entry {
+  border-top:  var(--eggb-border-w) solid var(--eggb-border);
+  padding-top: .85rem;
+}
+
+
+/* ════════════════════════════════════════════
+   VARIATION: CLUSTER
+   2–3 side-by-side cards. Optional title +
+   aggregate above. Compact serif quote.
+════════════════════════════════════════════ */
+
+.eggb-testimonial--cards {
+  padding: 0;
+}
+
+.eggb-testimonial--cards .eggb-testimonial-head {
+  display:        flex;
+  flex-direction: column;
+  gap:            .25rem;
+  margin-bottom:  .85rem;
+}
+
+.eggb-testimonial--cards .eggb-testimonial-title {
+  letter-spacing: -.005em;
+}
+
+.eggb-testimonial--cards .eggb-testimonial-items {
+  display:               grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:                   1rem;
+}
+
+.eggb-testimonial--cards .eggb-testimonial-items[data-count="1"] { grid-template-columns: 1fr; }
+.eggb-testimonial--cards .eggb-testimonial-items[data-count="2"] { grid-template-columns: repeat(2, 1fr); }
+
+@media (max-width: 767.98px) {
+  .eggb-testimonial--cards .eggb-testimonial-items,
+  .eggb-testimonial--cards .eggb-testimonial-items[data-count="2"],
+  .eggb-testimonial--cards .eggb-testimonial-items[data-count="3"] {
+    grid-template-columns: 1fr;
+  }
+}
+
+.eggb-testimonial--cards .eggb-testimonial-item {
+  background:     var(--eggb-surface);
+  border:         var(--eggb-border-w) solid var(--eggb-border);
+  border-radius:  var(--eggb-radius);
+  padding:        1rem;
+  display:        flex;
+  flex-direction: column;
+  gap:            .65rem;
+}
+
+.eggb-testimonial--cards .eggb-testimonial-quote {
+  font-size: var(--eggb-text-sm);
+  flex-grow: 1;
+}
+
+.eggb-testimonial--cards .eggb-testimonial-author {
+  font-size: var(--eggb-text-xs);
+}
+
+.eggb-testimonial--cards .eggb-testimonial-attribution {
+  font-size: .6875rem;
+}
+
+
+/* ════════════════════════════════════════════
+   VARIATION: INLINE
+   Compact aside inside prose.
+   Left accent border. Quote + attribution only.
+════════════════════════════════════════════ */
+
+.eggb-testimonial--inline {
+  display:        flex;
+  flex-direction: column;
+  gap:            .75rem;
+  padding:        .5rem 0 .5rem .9rem;
+  border-left:    3px solid var(--eggb-accent);
+}
+
+.eggb-testimonial--inline .eggb-testimonial-quote {
+  font-size: var(--eggb-text-sm);
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.eggb-testimonial--inline .eggb-testimonial-attribution-line {
+  display:    block;
+  font-style: normal;
+  font-size:  var(--eggb-text-xs);
+  color:      var(--eggb-text-muted);
+  margin-top: .35rem;
+}

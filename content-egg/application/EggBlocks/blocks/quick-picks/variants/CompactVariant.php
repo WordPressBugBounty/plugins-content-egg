@@ -11,7 +11,7 @@ class CompactVariant
     public static function render(array $payload, string $theme_class, string $data_theme): void
     {
         ?>
-        <div class="eggb-block eggb-quick-picks eggb-quick-picks--compact<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+        <div class="eggb-block eggb-quick-picks eggb-quick-picks--compact<?php echo !$payload['has_any_image'] ? ' eggb-quick-picks--compact-no-image' : ''; ?><?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
             <?php if ($payload['section_label'] !== '' || $payload['title'] !== '') : ?>
                 <div class="d-flex flex-column gap-1 mb-3">
                     <?php if ($payload['section_label'] !== '') : ?>
@@ -31,7 +31,9 @@ class CompactVariant
                             <span class="eggb-qp-rank"><?php echo esc_html($item['rank_display']); ?></span>
                         </div>
 
-                        <?php DefaultVariant::renderThumb($item); ?>
+                        <?php if ($payload['has_any_image']) : ?>
+                            <?php DefaultVariant::renderThumb($item); ?>
+                        <?php endif; ?>
 
                         <div class="eggb-qp-main d-flex flex-column gap-1">
                             <div class="eggb-qp-topline d-flex flex-wrap align-items-center gap-2">
@@ -51,15 +53,17 @@ class CompactVariant
                         </div>
 
                         <div class="eggb-qp-rail d-flex align-items-center gap-3">
-                            <div class="eggb-qp-score eggb-qp-compact-meta" aria-label="<?php echo esc_attr(self::buildCompactMetaLabel($item)); ?>">
-                                <?php if ($item['score'] !== '') : ?>
+                            <?php if ($item['score'] !== '') : ?>
+                                <div class="eggb-qp-score eggb-qp-compact-meta" aria-label="<?php echo esc_attr(self::buildCompactMetaLabel($item)); ?>">
                                     <span class="eggb-score-num"><?php echo esc_html($item['score']); ?></span>
                                     <span class="eggb-score-denom">/ 10</span>
-                                <?php endif; ?>
-                                <?php DefaultVariant::renderPrice($item, 'eggb-price eggb-price--md eggb-qp-price'); ?>
-                            </div>
+                                </div>
+                            <?php endif; ?>
 
-                            <?php DefaultVariant::renderCta($item, QuickPicksRenderer::resolveCtaLabel($payload, $item['product_item']), 'eggb-btn eggb-btn--filled eggb-qp-cta'); ?>
+                            <div class="eggb-qp-cta-col d-flex flex-column align-items-end gap-1">
+                                <?php DefaultVariant::renderPrice($item, 'eggb-price eggb-price--md eggb-qp-price'); ?>
+                                <?php DefaultVariant::renderCta($item, QuickPicksRenderer::resolveCtaLabel($payload, $item['product_item']), 'eggb-btn eggb-btn--filled eggb-qp-cta'); ?>
+                            </div>
                         </div>
                     </article>
                 <?php endforeach; ?>

@@ -35,7 +35,9 @@ class GridVariant
                             </div>
 
                             <div class="d-flex align-items-start gap-3">
-                                <?php self::renderGridMedia($item); ?>
+                                <?php if ($payload['has_any_image']) : ?>
+                                    <?php self::renderGridMedia($item); ?>
+                                <?php endif; ?>
                                 <div class="d-flex flex-column gap-2 min-w-0">
                                     <?php DefaultVariant::renderTitle($item, 'eggb-qp-grid-title'); ?>
                                     <?php if ($item['subtitle'] !== '') : ?>

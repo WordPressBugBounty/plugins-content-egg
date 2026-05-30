@@ -2,19 +2,19 @@
 Contributors: keywordrush
 Tags: affiliate marketing, price comparison, csv import, ai content generation, gutenberg blocks
 Requires at least: 6.0
-Tested up to: 6.9
+Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 11.0.0
+Stable tag: 11.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Import affiliate products, compare prices, and publish structured product reviews with 20+ editorial Gutenberg blocks — all in one affiliate toolkit.
+Import affiliate products, compare prices, and publish structured product reviews with 25+ editorial Gutenberg blocks — all in one affiliate toolkit.
 
 == Description ==
 
 Content Egg is an affiliate marketing plugin for WordPress and WooCommerce. Import products from multiple networks, compare prices, sync with WooCommerce, and generate SEO-friendly content with AI to boost traffic and affiliate sales.
 
-Built for sites that turn structured content into trust, clicks, and conversions — with 20+ editorial Gutenberg blocks, the blocks AI search actually cites.
+Built for sites that turn structured content into trust, clicks, and conversions — with 25+ editorial Gutenberg blocks, the blocks AI search actually cites.
 
 = What is this plugin for? =
 
@@ -25,7 +25,8 @@ Built for sites that turn structured content into trust, clicks, and conversions
 ✔ Daily deals & coupons
 
 Official website: [www.keywordrush.com/contentegg](https://www.keywordrush.com/contentegg "Content Egg Pro WP Plugin")
-Demo: [demo.keywordrush.com](https://demo.keywordrush.com/content-egg-pro-output-demo/ "Content Egg output demo")
+Egg Blocks demo: [best-noise-cancelling-headphones](https://demo.keywordrush.com/best-noise-cancelling-headphones/ "Egg Blocks demo article")
+Product templates demo: [content-egg-pro-output-demo](https://demo.keywordrush.com/content-egg-pro-output-demo/ "Content Egg product templates demo")
 Documentation: [ce-docs.keywordrush.com](https://ce-docs.keywordrush.com/ "Content Egg Documentation")
 Video Guides: [YouTube Playlist](https://www.youtube.com/playlist?list=PLGL4BDiCFIaoOUj8DrbjOF1q3u5Xct5_a "Content Egg Video Tutorials")
 AI Power: [www.keywordrush.com/toomuchniche](https://www.keywordrush.com/toomuchniche "Too Much Niche WP Plugin")
@@ -35,8 +36,6 @@ AI Power: [www.keywordrush.com/toomuchniche](https://www.keywordrush.com/toomuch
 * **Activate the modules** you need
 * **Add or import products** from supported networks and stores
 * **Publish content and start earning** affiliate commissions
-
-[youtube https://www.youtube.com/watch?v=yN2ceEDDWe4]
 
 = Plugin Features =
 
@@ -49,7 +48,7 @@ AI Power: [www.keywordrush.com/toomuchniche](https://www.keywordrush.com/toomuch
 * Clicks statistics reports
 * Add offers by keyword or product URL
 * Auto-insert affiliate IDs in links
-* 20+ Egg Blocks — editorial Gutenberg blocks for product reviews, roundups, and buying guides
+* 25+ Egg Blocks — editorial Gutenberg blocks for product reviews, roundups, and buying guides
 * Price comparison blocks with multiple offers
 * High-conversion templates (ready-made or custom)
 * Create custom templates with ChatGPT
@@ -86,9 +85,9 @@ No more copy-pasting product details. With Content Egg, you can import supplier 
 
 [youtube https://www.youtube.com/watch?v=4EI_WLQaWPc]
 
-= Egg Blocks — 20+ Editorial Gutenberg Blocks =
+= Egg Blocks — 25+ Editorial Gutenberg Blocks =
 
-Stop building product reviews from generic paragraphs and shortcodes. Egg Blocks are 20+ purpose-built Gutenberg blocks designed for affiliate content — each one semantically labelled, schema-ready, and wired directly to your Content Egg products.
+Stop building product reviews from generic paragraphs and shortcodes. Egg Blocks are 25+ purpose-built Gutenberg blocks designed for affiliate content — each one semantically labelled, schema-ready, and wired directly to your Content Egg products.
 
 **Article structure:** intro, conclusion, section header, table of contents, FAQ, callout, step list
 
@@ -96,9 +95,9 @@ Stop building product reviews from generic paragraphs and shortcodes. Egg Blocks
 
 **Product & commerce:** product card, quick picks, where to buy, comparison table, verdict, rating breakdown, specifications
 
-**Navigation:** related posts
+**Conversion & social proof:** contextual CTA, pricing, testimonial, trust signals
 
-Every block shares one design system. Product-bound blocks (product card, quick picks, comparison table, where to buy) pull live prices, stock status, merchant logo, and affiliate URL from Content Egg automatically — no stale prices, no manual updates.
+**Navigation:** related posts
 
 **Why it matters for SEO:** AI search engines (Google AI Overviews, Perplexity, ChatGPT) cite chunks of content, not whole pages. Egg Blocks break your article into self-contained, machine-readable sections — a labeled FAQ block, a methodology block, a pros/cons section — each one a candidate for AI citation and rich results. The FAQ block emits FAQPage structured data automatically.
 
@@ -106,7 +105,7 @@ Every block shares one design system. Product-bound blocks (product card, quick 
 
 [youtube https://www.youtube.com/watch?v=szeXafqiS3I]
 
-▶ [AI Generation & FAQ](https://ce-docs.keywordrush.com/egg-blocks/ai-generation-and-faq)
+Docs: [AI Generation & FAQ](https://ce-docs.keywordrush.com/egg-blocks/ai-generation-and-faq)
 
 = Bridge Pages =
 
@@ -139,13 +138,7 @@ Enhance your affiliate product content effortlessly with our advanced AI integra
 * Rewrites
 * And More...
 
-Customize prompts with dynamic variables for tailored content creation. Our supported AI models include GPT-5.
-
-= Real-World Usage of the Content Egg Plugin on Live Sites =
-
-* [frolicflock.com](https://frolicflock.com "frolicflock.com")
-* [ceramiclemon.com](https://ceramiclemon.com "ceramiclemon.com")
-* [dreamtravelhotels.com](https://dreamtravelhotels.com "dreamtravelhotels.com")
+Customize prompts with dynamic variables for tailored content creation.
 
 == Installation ==
 
@@ -185,7 +178,7 @@ Additionally, you can use merged feeds for multiple merchants, as many affiliate
 Amazon is supported in the Pro version with two available modules:
 
 * **Amazon via Official PA API**: Integrate directly with Amazon's Product Advertising API.
-* **NoAPI Module**: Designed for beginners, this module allows you to make your first 3 sales and gain API access.
+* **NoAPI Module**: Designed for beginners, this module allows you to make your first sales and gain API access.
 
 = Can I create custom output templates? =
 
@@ -204,15 +197,26 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 
 == Screenshots ==
 
-1. Modules
-2. Product Import Tools
-3. Products Search
-4. Output Demo 1
-5. Output Demo 2
-6. Price History
-7. AI features
+1. Modules dashboard
+2. Product import tools
+3. Product search in the Content Egg metabox
+4. Product block demo — product card
+5. Product block demo — price comparison
+6. Egg Blocks demo — product card, pros & cons, verdict
+7. Egg Blocks demo — where to buy, product card, rating breakdown
+8. Egg Blocks demo — comparison table
+9. Egg Blocks demo — quick picks, conclusion
+
 
 == Changelog ==
+
+= Version 11.1.0 =
+* New: WordPress 7.0 compatibility.
+* New: EggBlocks — 4 new conversion blocks: contextual-cta, pricing, testimonial, trust-signals.
+* New: EggBlocks — profile hydration: conversion blocks auto-fill from a linked TMN Offer/Business Profile at render time.
+* New: Feed modules — "Filter variations" option to skip duplicate product variants (colors, sizes, etc.) during import.
+* New: Added "Copy all product references" button to the metabox.
+* New: EggBlocks Writer skill now auto-assigns product_ref when product data is pasted from the metabox.
 
 = 11.0.0 =
 

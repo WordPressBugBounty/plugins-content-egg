@@ -14,10 +14,12 @@ class ProductNavSection
         {
             return;
         }
+
+        $has_any_image = !empty(array_filter($products, fn($p) => $p['img'] !== ''));
         ?>
         <div class="eggb-toc-products mt-3">
             <div class="eggb-toc-products-list<?php echo count($products) <= 3 ? ' eggb-toc-products-list--few' : ''; ?>">
-                <?php foreach ($products as $product) : ?>
+                <?php foreach ($products as $index => $product) : ?>
                     <a href="#<?php echo esc_attr($product['anchor']); ?>" class="eggb-toc-product-item">
                         <?php if ($product['img'] !== '') : ?>
                             <img
@@ -27,8 +29,10 @@ class ProductNavSection
                                 loading="lazy"
                                 decoding="async"
                             />
-                        <?php else : ?>
+                        <?php elseif ($has_any_image) : ?>
                             <span class="eggb-toc-product-img-placeholder"></span>
+                        <?php else : ?>
+                            <span class="eggb-toc-product-rank" aria-hidden="true"><?php echo esc_html(str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT)); ?></span>
                         <?php endif; ?>
                         <span class="eggb-toc-product-label"><?php echo esc_html($product['label']); ?></span>
                     </a>

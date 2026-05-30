@@ -15,7 +15,7 @@ class DefaultVariant
             $wrapper_classes .= ' ' . esc_attr($theme_class);
         }
         ?>
-        <div class="<?php echo $wrapper_classes; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+        <div class="<?php echo $wrapper_classes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
             <?php if ($section['step_badge'] !== ''): ?>
                 <span class="eggb-step-badge<?php echo $has_aux ? ' mt-1' : ''; ?>" aria-hidden="true"><?php echo esc_html($section['step_badge']); ?></span>
             <?php endif; ?>

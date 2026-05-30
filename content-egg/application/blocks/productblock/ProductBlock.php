@@ -142,9 +142,10 @@ class ProductBlock
     public static function registerBlock()
     {
         register_block_type('content-egg/products', array(
-            'editor_script' => 'content-egg-products-editor',
+            'editor_script'   => 'content-egg-products-editor',
+            'style'           => array('cegg-bootstrap5', 'cegg-products'),
             'render_callback' => array(__CLASS__, 'renderShortcode'),
-            'attributes' => self::getAttributes(),
+            'attributes'      => self::getAttributes(),
         ));
     }
 
@@ -153,7 +154,7 @@ class ProductBlock
         wp_register_script(
             'content-egg-products-editor',
             plugins_url('block.js', __FILE__),
-            array('wp-blocks', 'wp-i18n', 'wp-element', 'wp-editor', 'wp-components')
+            array('wp-blocks', 'wp-i18n', 'wp-element', 'wp-block-editor', 'wp-components')
         );
 
         $modules = ModuleManager::getInstance()->getAffiliateParsersList(true);
@@ -189,8 +190,6 @@ class ProductBlock
                 'templates' => $formatted_templates,
             )
         );
-
-        BlockTemplateManager::getInstance()->enqueueCeggStyle();
     }
 
     public static function renderShortcode($attributes)

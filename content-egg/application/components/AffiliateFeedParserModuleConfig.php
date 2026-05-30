@@ -63,7 +63,20 @@ abstract class AffiliateFeedParserModuleConfig extends AffiliateParserModuleConf
                 'callback' => array($this, 'render_checkbox'),
                 'default' => false,
                 'section' => 'default',
-            )
+            ),
+            'filter_variations' => array(
+                'title' => __('Filter variations', 'content-egg'),
+                'description' => __('Skip product variations during import', 'content-egg')
+                    . '<p class="description">' . __('Groups products with similar titles and imports only one representative per group. Useful for catalogs where the same product is listed multiple times for different colors, sizes, or other variants.', 'content-egg') . '</p>',
+                'callback' => array($this, 'render_checkbox'),
+                'default' => false,
+                'section' => 'default',
+                'validator' => array(
+                    array(
+                        'call' => array($this, 'resetFeedData'),
+                    ),
+                ),
+            ),
         ));
 
         $options['update_mode']['dropdown_options'] = array(

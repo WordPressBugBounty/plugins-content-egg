@@ -570,6 +570,26 @@ class ModuleManager
         }
     }
 
+    public function activateModule($module_id)
+    {
+        if (!isset(self::$modules[$module_id]))
+        {
+            return false;
+        }
+        if (isset(self::$active_modules[$module_id]))
+        {
+            return false;
+        }
+
+        $config = self::configFactory($module_id);
+        $values = $config->getOptionValues();
+        $values['is_active'] = 1;
+        \update_option($config->option_name(), $values);
+
+        self::$active_modules[$module_id] = self::$modules[$module_id];
+        return true;
+    }
+
     public function getOptionsList()
     {
         $options = array();
