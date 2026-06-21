@@ -59,7 +59,7 @@ class CalloutRenderer
         $resolved = [
             'type_class' => $config['class'],
             'icon' => $config['icon'],
-            'label' => $label !== '' ? $label : __($config['label'], 'content-egg-tpl'),
+            'label' => $label,
             'title' => $variant === 'default' ? $title : '',
             'body' => $body !== '' ? EggbSanitizer::basicRichText($body) : '',
         ];

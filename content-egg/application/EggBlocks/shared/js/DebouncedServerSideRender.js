@@ -12,13 +12,20 @@
  *       block="eggb/pros-cons"
  *       attributes={attributes}
  *       debounceMs={300}          // optional, default 300
+ *       httpMethod="POST"         // optional, default "POST"
  *   />
+ *
+ * Defaults to POST so block attributes travel in the request body instead of
+ * the query string. This avoids host firewalls / mod_security rules that flag
+ * ordinary article copy in GET URLs (e.g. a literal "~"), and sidesteps the
+ * ~8 KB URL-length ceiling for large blocks. The core block-renderer endpoint
+ * accepts both GET and POST.
  */
 
 import { useState, useEffect, useRef } from "@wordpress/element";
 import ServerSideRender from "@wordpress/server-side-render";
 
-export default function DebouncedServerSideRender({ attributes, debounceMs = 300, ...rest }) {
+export default function DebouncedServerSideRender({ attributes, debounceMs = 300, httpMethod = "POST", ...rest }) {
     const [debouncedAttrs, setDebouncedAttrs] = useState(attributes);
     const timer = useRef(null);
 
@@ -37,5 +44,5 @@ export default function DebouncedServerSideRender({ attributes, debounceMs = 300
         };
     }, [attributes, debounceMs]);
 
-    return <ServerSideRender attributes={debouncedAttrs} {...rest} />;
+    return <ServerSideRender attributes={debouncedAttrs} httpMethod={httpMethod} {...rest} />;
 }

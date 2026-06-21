@@ -36,6 +36,11 @@ class CriteriaRenderer
             'heading_tag'   => $heading_tag,
         ];
 
+        $labels = [
+            'look_for' => trim((string) ($attributes['label_look_for'] ?? '')) ?: __('Look for', 'content-egg-tpl'),
+            'avoid'    => trim((string) ($attributes['label_avoid'] ?? '')) ?: __('Avoid', 'content-egg-tpl'),
+        ];
+
         $theme_class = self::resolveThemeClass('auto');
         $color_scheme = self::resolveColorScheme($attributes['color_scheme'] ?? 'auto', $theme_class);
         $data_theme = ($color_scheme === 'light' || $color_scheme === 'dark')
@@ -46,11 +51,11 @@ class CriteriaRenderer
 
         if ($variant === 'list')
         {
-            ListVariant::render($header, $items, $theme_class, $data_theme);
+            ListVariant::render($header, $items, $labels, $theme_class, $data_theme);
         }
         else
         {
-            DefaultVariant::render($header, $items, $theme_class, $data_theme);
+            DefaultVariant::render($header, $items, $labels, $theme_class, $data_theme);
         }
 
         return (string) ob_get_clean();
@@ -91,7 +96,16 @@ class CriteriaRenderer
                 'title' => $title,
                 'description' => $description,
                 'importance' => $importance,
-                'importance_label' => ucfirst($importance),
+                'importance_label' => match($importance) {
+                    'high'  => __('High', 'content-egg-tpl'),
+                    'low'   => __('Low', 'content-egg-tpl'),
+                    default => __('Medium', 'content-egg-tpl'),
+                },
+                'importance_dots' => match($importance) {
+                    'high'  => [true, true, true],
+                    'low'   => [true, false, false],
+                    default => [true, true, false],
+                },
                 'look_for' => $look_for,
                 'avoid' => $avoid,
             ];

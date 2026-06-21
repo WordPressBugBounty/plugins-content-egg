@@ -33,6 +33,13 @@ class AffiliateDisclaimer
         if (!is_singular('post'))
             return $content;
 
+        // Only act on the genuine, visible main-content render. Other plugins
+        // (e.g. Spectra per-post CSS/JS generation, Rank Math schema) invoke
+        // the_content out-of-loop; without this guard the one-shot $added flag
+        // below is consumed there and the visible content never gets the disclaimer.
+        if (!\in_the_loop() || !\is_main_query())
+            return $content;
+
         if (!ContentManager::isProductDataExists($post->ID))
             return $content;
 

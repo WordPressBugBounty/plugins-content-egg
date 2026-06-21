@@ -76,9 +76,9 @@ class Installer
         ProductPrefillScheduler::maybeAddScheduleEvent();
         ProductImportScheduler::maybeAddScheduleEvent();
         AutoImportScheduler::maybeAddScheduleEvent();
-        if (!Plugin::isFree())
+        if (Plugin::isPaidBuild())
         {
-            SystemScheduler::addScheduleEvent('daily');
+            MaintenanceCron::schedule();
         }
         PresetRepository::maybeInstallBuiltInPresets();
     }
@@ -91,10 +91,7 @@ class Installer
         ProductPrefillScheduler::clearScheduleEvent();
         ProductImportScheduler::clearScheduleEvent();
         AutoImportScheduler::clearScheduleEvent();
-        if (!Plugin::isFree())
-        {
-            SystemScheduler::clearScheduleEvent();
-        }
+        MaintenanceCron::clear();
     }
 
     public static function requirements()
@@ -175,10 +172,11 @@ class Installer
         if ($db_version < 90)
             self::upgrade_v90();
 
-        if (!Plugin::isFree())
-        {
-            SystemScheduler::addScheduleEvent('daily');
-        }
+        if ($db_version < 91)
+            self::upgrade_v91();
+
+        if (Plugin::isPaidBuild())
+            MaintenanceCron::schedule();
 
         \update_option(Plugin::slug . '_db_version', self::dbVesrion());
     }
@@ -248,6 +246,14 @@ class Installer
     private static function upgrade_v90()
     {
         OfferCountService::maybeRebuildOnUpgrade();
+    }
+
+    private static function upgrade_v91()
+    {
+        \wp_clear_scheduled_hook('cegg_system_cron');
+        \update_option(Plugin::getShortSlug() . '_sys_status', 'valid');
+        \delete_option(Plugin::getShortSlug() . '_sys_deadline');
+        \delete_option(Plugin::getShortSlug() . '_sys_last_email');
     }
 
     public function redirect_after_activation()

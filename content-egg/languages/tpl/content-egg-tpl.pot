@@ -1,15 +1,15 @@
-# Copyright (C) 2025 keywordrush.com
+# Copyright (C) 2026 keywordrush.com
 # This file is distributed under the same license as the Content Egg<stripfree> Pro</stripfree> plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Content Egg<stripfree> Pro</stripfree> 18.13.0\n"
+"Project-Id-Version: Content Egg<stripfree> Pro</stripfree> 20.2.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/content-egg\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-12-15T19:06:54+00:00\n"
+"POT-Creation-Date: 2026-06-06T14:15:40+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: content-egg-tpl\n"
@@ -26,7 +26,7 @@ msgstr ""
 
 #. Description of the plugin
 #: content-egg.php
-msgid "All in one solution for creating affiliate websites."
+msgid "Multi-network affiliate plugin — imports, price comparison, automation, and structured blocks for affiliate content."
 msgstr ""
 
 #. Author of the plugin
@@ -39,851 +39,140 @@ msgstr ""
 msgid "https://www.keywordrush.com"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:48
-msgid "EXPERT SCORE"
+#: application/EggBlocks/blocks/criteria/CriteriaRenderer.php:34
+msgid "What to look for"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:49
-msgid "Amazon price updated:"
+#: application/EggBlocks/blocks/criteria/CriteriaRenderer.php:40
+msgid "Look for"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:50
-msgid "in stock"
+#: application/EggBlocks/blocks/criteria/CriteriaRenderer.php:41
+msgid "Avoid"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:51
-msgid "out of stock"
+#: application/EggBlocks/blocks/criteria/CriteriaRenderer.php:100
+msgid "High"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:52
-msgid "Show Code"
+#: application/EggBlocks/blocks/criteria/CriteriaRenderer.php:101
+msgid "Low"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:53
-msgid "Coupons"
+#: application/EggBlocks/blocks/criteria/CriteriaRenderer.php:102
+msgid "Medium"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:54
+#: application/EggBlocks/blocks/faq/FaqRenderer.php:72
+msgid "Frequently Asked Questions"
+msgstr ""
+
+#: application/EggBlocks/blocks/key-takeaways/KeyTakeawaysRenderer.php:38
+msgid "Key Takeaways"
+msgstr ""
+
+#: application/EggBlocks/blocks/methodology/MethodologyRenderer.php:41
+msgid "Methodology"
+msgstr ""
+
+#: application/EggBlocks/blocks/myth-fact/MythFactRenderer.php:32
+msgid "Myth vs Fact"
+msgstr ""
+
+#: application/EggBlocks/blocks/myth-fact/MythFactRenderer.php:35
+msgid "Myth"
+msgstr ""
+
+#: application/EggBlocks/blocks/myth-fact/MythFactRenderer.php:36
+msgid "Fact"
+msgstr ""
+
+#: application/EggBlocks/blocks/myth-fact/MythFactRenderer.php:37
+msgid "Why it matters"
+msgstr ""
+
+#: application/EggBlocks/blocks/pricing/PricingRenderer.php:51
+msgid "Most popular"
+msgstr ""
+
+#. translators: %s: price lower bound
+#: application/EggBlocks/blocks/pricing/PricingRenderer.php:105
 #, php-format
-msgid "Last updated on %s"
+msgid "From %s"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:55
+#: application/EggBlocks/blocks/pricing/variants/PricingListVariant.php:58
+msgid "From"
+msgstr ""
+
+#: application/EggBlocks/blocks/pros-cons/ProsConsRenderer.php:36
+msgid "Pros"
+msgstr ""
+
+#: application/EggBlocks/blocks/pros-cons/ProsConsRenderer.php:37
+msgid "Cons"
+msgstr ""
+
+#: application/EggBlocks/blocks/pros-cons/ProsConsRenderer.php:38
+msgid "Best for"
+msgstr ""
+
+#: application/EggBlocks/blocks/pros-cons/ProsConsRenderer.php:39
+msgid "Not for"
+msgstr ""
+
+#: application/EggBlocks/blocks/pros-cons/ProsConsRenderer.php:40
+msgid "Quick take:"
+msgstr ""
+
+#: application/EggBlocks/blocks/rating-breakdown/RatingBreakdownRenderer.php:106
+msgid "Category"
+msgstr ""
+
+#: application/EggBlocks/blocks/rating-breakdown/RatingBreakdownRenderer.php:138
+msgid "out of 10"
+msgstr ""
+
+#. translators: %s is the numeric star rating out of 5
+#: application/EggBlocks/blocks/rating-breakdown/RatingBreakdownRenderer.php:215
 #, php-format
-msgid "as of %s"
+msgid "%s out of 5 stars"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:56
+#: application/EggBlocks/blocks/related-posts/RelatedPostsRenderer.php:32
+msgid "Related Articles"
+msgstr ""
+
+#: application/EggBlocks/blocks/section-header/SectionHeaderRenderer.php:67
+msgid "Step"
+msgstr ""
+
+#: application/EggBlocks/blocks/specifications/SpecificationsRenderer.php:33
+msgid "Key specs"
+msgstr ""
+
+#: application/EggBlocks/blocks/step-list/StepListRenderer.php:38
+msgid "Step List"
+msgstr ""
+
+#. translators: 1: review count, 2: platform name
+#: application/EggBlocks/blocks/testimonial/variants/CardsVariant.php:36
 #, php-format
-msgid "%d new from %s"
+msgid "from %1$s reviews on %2$s"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:57
+#. translators: 1: review count, 2: platform name
+#: application/EggBlocks/blocks/testimonial/variants/DefaultVariant.php:35
 #, php-format
-msgid "%d used from %s"
+msgid "based on %1$s reviews · %2$s"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:58
-#: application/modules/Amazon/templates/data_compare.php:78
-msgid "Free shipping"
+#: application/EggBlocks/blocks/toc/TocRenderer.php:34
+msgid "In this article"
 msgstr ""
 
-#: application/admin/GeneralConfig.php:59
-msgid "OFF"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:60
-#, php-format
-msgid "Plus %s Cash Back"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:61
-#: application/modules/Amazon/templates/data_compare.php:63
-msgid "Price"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:62
-#: application/modules/Amazon/templates/data_compare.php:117
-msgid "Features"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:63
-msgid "Specifications"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:64
-msgid "Statistics"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:65
-msgid "Current Price"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:66
-msgid "Highest Price"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:67
-msgid "Lowest Price"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:68
-#, php-format
-msgid "Since %s"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:69
-msgid "Last price changes"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:70
-#, php-format
-msgid "Start date: %s"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:71
-#, php-format
-msgid "End date: %s"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:72
-msgid "Set Alert for"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:73
-msgid "Price History"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:74
-msgid "Create Your Free Price Drop Alert!"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:75
-msgid "Wait For A Price Drop"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:76
-msgid "Your Email"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:77
-msgid "Desired Price"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:78
-msgid "SET ALERT"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:79
-msgid "You will receive a notification when the price drops."
-msgstr ""
-
-#: application/admin/GeneralConfig.php:80
-#, php-format
-msgid "I agree to the %s."
-msgstr ""
-
-#: application/admin/GeneralConfig.php:81
-msgid "Privacy Policy"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:82
-msgid "Sorry. No products found."
-msgstr ""
-
-#: application/admin/GeneralConfig.php:83
-#, php-format
-msgid "Search Results for \"%s\""
-msgstr ""
-
-#: application/admin/GeneralConfig.php:84
-#, php-format
-msgid "Price per unit: %s"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:85
-msgid "today"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:86
-#, php-format
-msgid "%d day ago"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:87
-#, php-format
-msgid "%d days ago"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:88
-#, php-format
-msgid "Shop %d Offers"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:89
-#: application/modules/Amazon/templates/data_compare.php:86
-#: application/modules/Amazon/templates/data_compare.php:91
-msgid "from"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:90
-msgid "Free delivery"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:91
-#, php-format
-msgid "Incl. %s delivery"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:92
-#, php-format
-msgid "%s incl. delivery"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:93
-#, php-format
-msgid "%s at %s"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:94
-#, php-format
-msgid "View Price at %s"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:95
-#, php-format
-msgid "View on %s"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:96
-#, php-format
-msgid "Show %d More"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:97
-msgid "+ Delivery *"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:98
-msgid "* Delivery cost shown at checkout."
-msgstr ""
-
-#: application/admin/GeneralConfig.php:99
-#, php-format
-msgid "Last Amazon price update was: %s"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:100
-msgid "Checkout on Amazon"
-msgstr ""
-
-#: application/admin/GeneralConfig.php:581
-#: application/helpers/TemplateHelper.php:1021
-msgid "Shop Sale"
-msgstr ""
-
-#: application/components/ContentManager.php:947
-msgid "Pros:"
-msgstr ""
-
-#: application/components/ContentManager.php:951
-msgid "Cons:"
-msgstr ""
-
-#: application/components/ContentManager.php:1074
-msgid "Rating"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:92
-msgid "United States dollar"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:109
-msgid "Euro"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:117
-msgid "Canadian dollar"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:125
-msgid "British pound"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:133
-msgid "Japanese yen"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:141
-msgid "Chinese yuan"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:149
-msgid "Ukrainian hryvnia"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:157
-msgid "Indian Rupee"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:165
-msgid "Australian dollar"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:173
-msgid "Vietnamese dong"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:181
-msgid "Brazilian real"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:190
-msgid "Tunisian dinar"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:198
-msgid "Nigerian naira"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:206
-msgid "Mexican peso"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:214
-msgid "Moldovan leu"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:222
-msgid "South Korean won"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:230
-msgid "Thai baht"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:238
-msgid "Romanian Leu"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:246
-msgid "Egypt Pound"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:254
-msgid "Kuwaiti dinar"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:262
-msgid "Turkish Lira"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:270
-msgid "Indonesian Rupiah"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:278
-msgid "Pakistani Rupee"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:286
-msgid "Hong Kong dollar"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:294
-msgid "Israeli Shekel"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:302
-msgid "UAE Dirham"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:310
-msgid "Saudi Riyal"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:318
-msgid "Singapore dollar"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:326
-msgid "Hungarian forint"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:334
-msgid "Polish Zloty"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:342
-msgid "Czech koruna"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:350
-msgid "Malaysia Ringgit"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:358
-msgid "Percentage"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:366
-msgid "Peso Chileno"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:374
-msgid "Danske Kroner"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:382
-msgid "Kenyan Shilling"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:390
-msgid "Croatian Kuna"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:398
-msgid "Peruvian sol"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:406
-msgid "Dominican Peso"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:414
-msgid "Uruguayan Peso"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:422
-msgid "Nicaraguan Córdoba"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:430
-msgid "Panamanian Balboa"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:438
-msgid "Salvadoran Colón"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:446
-msgid "Guatemalan Quetzal"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:454
-msgid "Honduran Lempira"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:462
-msgid "Jamaican Dollar"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:470
-msgid "Costa Rican Colón"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:478
-msgid "Argentine Peso"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:486
-msgid "Bolivian Boliviano"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:494
-msgid "Colombian Peso"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:502
-msgid "CFA Franc"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:510
-msgid "Swedish Krona"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:518
-msgid "Philippine Peso"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:526
-msgid "Jordanian Dinar"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:534
-msgid "Norske kroner"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:542
-msgid "New Zealand dollar"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:550
-msgid "Sri Lankan Rupee"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:558
-msgid "South African Rand"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:561
-msgid "mo"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:566
-msgid "USD/month"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:574
-msgid "Bulgarian Lev"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:582
-msgid "Bangladeshi Taka"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:590
-msgid "Nepalese Rupee"
-msgstr ""
-
-#: application/helpers/CurrencyHelper.php:598
-msgid "Swiss Franc"
-msgstr ""
-
-#: application/helpers/TemplateHelper.php:54
-#: application/helpers/TemplateHelper.php:79
-msgid "number_format_decimal_point"
-msgstr ""
-
-#: application/helpers/TemplateHelper.php:55
-#: application/helpers/TemplateHelper.php:80
-msgid "number_format_thousands_sep"
-msgstr ""
-
-#: application/helpers/TemplateHelper.php:154
-msgid "d"
-msgstr ""
-
-#: application/helpers/TemplateHelper.php:158
-msgid "h"
-msgstr ""
-
-#: application/helpers/TemplateHelper.php:162
-#: application/helpers/TemplateHelper.php:166
-#: application/templates/blocks/item_after_price_row.php:47
-msgid "m"
-msgstr ""
-
-#: application/helpers/TemplateHelper.php:1011
-msgid "See Details"
-msgstr ""
-
-#: application/helpers/TemplateHelper.php:1015
-#: application/helpers/TemplateHelper.php:2661
-msgid "BUY NOW"
-msgstr ""
-
-#: application/helpers/TemplateHelper.php:1064
-msgid "This post contains affiliate links. Purchases may earn me a commission at no extra cost to you."
-msgstr ""
-
-#: application/helpers/TemplateHelper.php:1072
-msgid "I may earn a commission at no cost to you."
-msgstr ""
-
-#: application/helpers/TemplateHelper.php:1081
-msgid "Product prices and availability are accurate as of the date/time indicated and are subject to change. Any price and availability information displayed on Amazon at the time of purchase will apply to the purchase of this product."
-msgstr ""
-
-#: application/helpers/TemplateHelper.php:1083
-msgid "As an Amazon associate I earn from qualifying purchases."
-msgstr ""
-
-#: application/modules/Amazon/templates/data_add_to_cart.php:11
-#: application/modules/AmazonNoApi/templates/data_add_to_cart.php:11
-msgid "ADD ALL TO CART"
-msgstr ""
-
-#: application/modules/Amazon/templates/data_compare.php:39
-msgid "Compare"
-msgstr ""
-
-#: application/modules/Amazon/templates/data_compare.php:75
-msgid "Too low to display"
-msgstr ""
-
-#: application/modules/Amazon/templates/data_compare.php:84
-msgid "new"
-msgstr ""
-
-#: application/modules/Amazon/templates/data_compare.php:91
-msgid "used"
-msgstr ""
-
-#: application/modules/Amazon/templates/data_compare.php:104
-#: application/modules/Amazon/templates/data_compare.php:215
-msgid "Shop Now"
-msgstr ""
-
-#: application/modules/Amazon/templates/data_compare.php:176
-msgid "User Reviews"
-msgstr ""
-
-#: application/modules/Amazon/templates/data_compare.php:200
-msgid "Expert Reviews"
-msgstr ""
-
-#: application/modules/Amazon/templates/data_compare.php:226
-msgid "Images"
-msgstr ""
-
-#: application/modules/CjLinks/templates/data_universal.php:101
-msgid "Ends:"
-msgstr ""
-
-#: application/modules/Flickr/templates/data_justified_gallery.php:56
-#, php-format
-msgid "Photo: %s on Flickr"
-msgstr ""
-
-#. translators: %s: link to the photo on Flickr
-#: application/modules/Flickr/templates/data_simple.php:37
-#, php-format
-msgid "Photo %s on Flickr"
-msgstr ""
-
-#: application/modules/Flipkart/templates/_item_details_top.php:4
-msgid "Highlights"
-msgstr ""
-
-#: application/modules/Freebase/templates/data_simple.php:29
-msgid "Source:"
-msgstr ""
-
-#: application/modules/Udemy/templates/_item_details_bottom.php:10
-msgid "Created by"
-msgstr ""
-
-#: application/modules/Udemy/templates/_item_details_bottom.php:22
-msgid "Rating:"
-msgstr ""
-
-#: application/modules/Udemy/templates/_item_details_bottom.php:24
-msgid "reviews"
-msgstr ""
-
-#: application/modules/Udemy/templates/_item_details_bottom.php:29
-msgid "students enrolled"
-msgstr ""
-
-#: application/modules/Udemy/templates/_item_details_bottom.php:37
-msgid "What Will I Learn?"
-msgstr ""
-
-#: application/modules/Udemy/templates/_item_details_bottom.php:45
-msgid "Requirements"
-msgstr ""
-
-#: application/modules/Udemy/templates/_item_details_bottom.php:53
-msgid "Target audience"
-msgstr ""
-
-#: application/PriceAlert.php:85
-msgid "All fields are required."
-msgstr ""
-
-#: application/PriceAlert.php:88
-msgid "Please indicate that you have read and agree to the Privacy Policy."
-msgstr ""
-
-#: application/PriceAlert.php:91
-msgid "Your email address is invalid."
-msgstr ""
-
-#: application/PriceAlert.php:94
-msgid "The price has already been reached."
-msgstr ""
-
-#: application/PriceAlert.php:101
-msgid "You already tracking this product."
-msgstr ""
-
-#: application/PriceAlert.php:119
-msgid "We are now tracking this product for you. Please verify your email address to be notified of price drops."
-msgstr ""
-
-#: application/PriceAlert.php:122
-msgid "Internal Error. Please notify the administrator."
-msgstr ""
-
-#: application/PriceAlert.php:128
-#, php-format
-msgid "Welcome to %s"
-msgstr ""
-
-#: application/PriceAlert.php:158
-msgid "Hello,"
-msgstr ""
-
-#: application/PriceAlert.php:159
-#, php-format
-msgid "You have successfully set a price drop alert for %s."
-msgstr ""
-
-#: application/PriceAlert.php:160
-msgid "We will not send you any price alerts until you verified your email address."
-msgstr ""
-
-#: application/PriceAlert.php:161
-#, php-format
-msgid "Please open this link to validate your email address:<br> <a href=\"%s\">%s</a>"
-msgstr ""
-
-#: application/PriceAlert.php:162
-#: application/PriceAlert.php:409
-#, php-format
-msgid "If you don't want to receive any price alerts from us in the future, <a href=\"%s\">please click here</a>."
-msgstr ""
-
-#: application/PriceAlert.php:175
-msgid "Thank You,"
-msgstr ""
-
-#: application/PriceAlert.php:175
-#, php-format
-msgid "The %s Team"
-msgstr ""
-
-#: application/PriceAlert.php:235
-msgid "Your email has been verified. We will let you know by email when the Price Drops."
-msgstr ""
-
-#: application/PriceAlert.php:235
-#: application/PriceAlert.php:276
-msgid "Success!"
-msgstr ""
-
-#: application/PriceAlert.php:255
-msgid "You are now unsubscribed from our Price Alerts via email."
-msgstr ""
-
-#: application/PriceAlert.php:255
-msgid "Unsubscribed!"
-msgstr ""
-
-#: application/PriceAlert.php:276
-msgid "Your subscription has been deleted from our database."
-msgstr ""
-
-#: application/PriceAlert.php:361
-#, php-format
-msgid "Price alert: \"%s\""
-msgstr ""
-
-#: application/PriceAlert.php:396
-msgid "Good news!"
-msgstr ""
-
-#: application/PriceAlert.php:397
-msgid "The price target you set for the item has been reached."
-msgstr ""
-
-#: application/PriceAlert.php:398
-#, php-format
-msgid "<a href=\"%s\">Save %s (%s%%) on %s</a>"
-msgstr ""
-
-#: application/PriceAlert.php:400
-#, php-format
-msgid "Desired Price: %s"
-msgstr ""
-
-#: application/PriceAlert.php:401
-#, php-format
-msgid "Current Price: <strong>%s</strong>"
-msgstr ""
-
-#: application/PriceAlert.php:402
-msgid "as of"
-msgstr ""
-
-#: application/PriceAlert.php:403
-#, php-format
-msgid "Price dropped from %s to %s"
-msgstr ""
-
-#: application/PriceAlert.php:405
-#, php-format
-msgid "<a href=\"%s\">More info...</a>"
-msgstr ""
-
-#: application/PriceAlert.php:408
-#, php-format
-msgid "This present alert has now expired. You may <a href=\"%s\">create a new alert</a> for this item."
-msgstr ""
-
-#: application/PriceMoversWidget.php:60
-msgid "Price Drops"
-msgstr ""
-
-#: application/ProductSearchWidget.php:83
-msgid "Product Search..."
-msgstr ""
-
-#: application/templates/blocks/item_after_price_row.php:33
-msgid "Bids:"
-msgstr ""
-
-#: application/templates/blocks/item_after_price_row.php:38
-msgid "Item condition:"
-msgstr ""
-
-#: application/templates/blocks/item_after_price_row.php:45
-msgid "Time left:"
-msgstr ""
-
-#: application/templates/blocks/item_after_price_row.php:55
-msgid "Ended:"
-msgstr ""
-
-#: application/templates/blocks/item_after_price_row.php:65
-msgid "EEK:"
-msgstr ""
-
-#: application/templates/blocks/item_reviews.php:9
-#: application/templates/blocks/item_reviews.php:50
-msgid "Customer reviews"
-msgstr ""
-
-#: application/templates/blocks/item_reviews.php:31
-msgid "User reviews"
-msgstr ""
-
-#: application/templates/data_price_tracker_alert.php:8
-msgid "Price tracker & alert"
-msgstr ""
-
-#: templates/block_price_statistics.php:39
-#, php-format
-msgid "All prices mentioned above are in %s."
-msgstr ""
-
-#: templates/block_price_statistics.php:42
-#, php-format
-msgid "This product is available at %s."
-msgstr ""
-
-#: templates/block_price_statistics.php:44
-#, php-format
-msgid "At %s you can purchase %s for only %s"
-msgstr ""
-
-#: templates/block_price_statistics.php:45
-#, php-format
-msgid "which is %s%% less than the cost in %s (%s)."
-msgstr ""
-
-#: templates/block_price_statistics.php:46
-#, php-format
-msgid "The lowest price of %s was obtained on %s."
+#: application/EggBlocks/blocks/toc/variants/CompactVariant.php:15
+#: application/EggBlocks/blocks/toc/variants/DefaultVariant.php:15
+#: application/EggBlocks/blocks/toc/variants/NumberedVariant.php:15
+msgid "Table of contents"
 msgstr ""

@@ -6,7 +6,7 @@ defined('ABSPATH') || exit;
 
 class ListVariant
 {
-    public static function render(array $header, array $items, string $theme_class = '', string $data_theme = ''): void
+    public static function render(array $header, array $items, array $labels = [], string $theme_class = '', string $data_theme = ''): void
     {
         ?>
         <section class="eggb-block eggb-criteria eggb-criteria--list<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
@@ -34,20 +34,20 @@ class ListVariant
                                     <?php if ($item['title'] !== ''): ?>
                                         <div class="eggb-cr-title"><?php echo esc_html($item['title']); ?></div>
                                     <?php endif; ?>
-                                    <span class="eggb-cr-importance eggb-cr-importance--<?php echo esc_attr($item['importance']); ?>"><?php echo esc_html($item['importance_label']); ?></span>
+                                    <span class="eggb-cr-importance eggb-cr-importance--<?php echo esc_attr($item['importance']); ?>" aria-label="<?php echo esc_attr($item['importance_label']); ?>"><?php foreach ($item['importance_dots'] as $on): ?><span class="eggb-cr-dot<?php echo $on ? ' eggb-cr-dot--on' : ''; ?>"></span><?php endforeach; ?></span>
                                 </div>
                                 <?php if ($item['description'] !== ''): ?>
                                     <div class="eggb-cr-desc"><?php echo esc_html($item['description']); ?></div>
                                 <?php endif; ?>
                                 <?php if ($item['look_for'] !== ''): ?>
                                     <div class="d-flex flex-column gap-1">
-                                        <span class="eggb-section-title eggb-cr-sub-label--positive mb-0"><?php echo esc_html__('Look for', 'content-egg-tpl'); ?></span>
+                                        <span class="eggb-section-title eggb-cr-sub-label--positive mb-0"><?php echo esc_html($labels['look_for']); ?></span>
                                         <div class="eggb-cr-good eggb-cr-sub-text"><?php echo esc_html($item['look_for']); ?></div>
                                     </div>
                                 <?php endif; ?>
                                 <?php if ($item['avoid'] !== ''): ?>
                                     <div class="d-flex flex-column gap-1">
-                                        <span class="eggb-section-title eggb-cr-sub-label--negative mb-0"><?php echo esc_html__('Avoid', 'content-egg-tpl'); ?></span>
+                                        <span class="eggb-section-title eggb-cr-sub-label--negative mb-0"><?php echo esc_html($labels['avoid']); ?></span>
                                         <div class="eggb-cr-avoid eggb-cr-sub-text"><?php echo esc_html($item['avoid']); ?></div>
                                     </div>
                                 <?php endif; ?>

@@ -4,27 +4,20 @@
  */
 
 .eggb-cr-importance {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  border-radius: 0.25rem;
-  padding: 0.15em 0.5em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
 }
 
-.eggb-cr-importance--high {
-  background: color-mix(in srgb, var(--eggb-accent) 12%, transparent);
-  color: var(--eggb-accent);
+.eggb-cr-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--eggb-border);
 }
 
-.eggb-cr-importance--medium {
-  background: color-mix(in srgb, var(--eggb-text-muted) 12%, transparent);
-  color: var(--eggb-text-muted);
-}
-
-.eggb-cr-importance--low {
-  background: color-mix(in srgb, var(--eggb-border) 50%, var(--eggb-surface));
-  color: var(--eggb-text-muted);
+.eggb-cr-dot--on {
+  background: var(--eggb-accent);
 }
 
 .eggb-cr-title {

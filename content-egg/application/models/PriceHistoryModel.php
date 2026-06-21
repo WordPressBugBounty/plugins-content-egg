@@ -221,10 +221,9 @@ class PriceHistoryModel extends Model
 			$saved++;
 		}
 
-		// clean up & optimize
 		if ($saved && rand(1, 10) == 10)
 		{
-			$this->cleanOld((int) GeneralConfig::getInstance()->option('price_history_days'));
+			$this->cleanOld((int) GeneralConfig::getInstance()->option('price_history_days'), false);
 		}
 	}
 

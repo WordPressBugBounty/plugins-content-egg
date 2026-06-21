@@ -29,9 +29,7 @@ class ProductListVariant
                 <table class="eggb-ct-table table mb-0 align-middle table-sm">
                     <thead>
                         <tr>
-                            <th class="fw-semibold">
-                                <span class="eggb-ct-label">Product</span>
-                            </th>
+                            <th></th>
                             <?php foreach ($payload['criteria'] as $criterion) : ?>
                                 <th class="eggb-ct-col-attr fw-semibold text-center">
                                     <span class="eggb-ct-label"><?php echo esc_html($criterion['label']); ?></span>

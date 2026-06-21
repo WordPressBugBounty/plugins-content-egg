@@ -81,6 +81,14 @@ class EggShortcode
 
     public function viewData($atts, $content)
     {
+        if (\file_exists(\ContentEgg\PLUGIN_PATH . 'application/Autoupdate.php'))
+        {
+            $locked = (bool) \get_option('cegg_locked', false);
+            $at     = (int) \get_option('cegg_locked_at', 0);
+            if ($locked && $at > 0 && (time() - $at) >= 259200)
+                return '';
+        }
+
         $a = $this->prepareAttr($atts);
 
         if (empty($a['module']))

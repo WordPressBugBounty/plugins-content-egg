@@ -126,7 +126,7 @@ if (!$global_keyword = \get_post_meta($post->ID, '_cegg_global_autoupdate_keywor
 
 <div class="row mt-3">
     <div class="input-group input-group-sm">
-        <input ng-disabled="processCounter" type="text" ng-model="global_keywords" select-on-click on-enter="global_findAll()" class="form-control" placeholder="<?php echo esc_attr('Keyword to search all modules', 'content-egg'); ?>" aria-label="<?php echo esc_attr('Keyword to search all modules', 'content-egg'); ?>">
+        <input ng-disabled="processCounter" type="text" ng-model="global_keywords" select-on-click on-enter="global_findAll()" class="form-control form-control-sm" placeholder="<?php echo esc_attr('Keyword to search all modules', 'content-egg'); ?>" aria-label="<?php echo esc_attr('Keyword to search all modules', 'content-egg'); ?>">
         <button ng-disabled='processCounter || !global_keywords' ng-click="global_findAll()" type="button" class="btn btn-primary" aria-label="Find">
             <i class="bi bi-search"></i>
         </button>

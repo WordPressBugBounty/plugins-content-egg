@@ -14,7 +14,7 @@ class DefaultVariant
         <div class="eggb-block eggb-callout eggb-callout--default <?php echo esc_attr($callout['type_class']); ?><?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
             <?php echo EggbIcons::get($callout['icon'], 'eggb-callout-icon'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
             <div class="eggb-callout-content">
-                <span class="eggb-callout-type"><?php echo esc_html($callout['label']); ?></span>
+                <?php if ($callout['label'] !== ''): ?><span class="eggb-callout-type"><?php echo esc_html($callout['label']); ?></span><?php endif; ?>
                 <?php if ($callout['title'] !== ''): ?>
                     <div class="eggb-callout-title"><?php echo esc_html($callout['title']); ?></div>
                 <?php endif; ?>

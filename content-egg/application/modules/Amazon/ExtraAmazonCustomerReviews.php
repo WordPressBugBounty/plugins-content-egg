@@ -11,7 +11,7 @@ defined('\ABSPATH') || exit;
  * @link https://www.keywordrush.com
  * @copyright Copyright &copy; 2026 keywordrush.com
  */
-//параметры из AmazonProduct->parseCustomerReviews
+
 class ExtraAmazonCustomerReviews
 {
 

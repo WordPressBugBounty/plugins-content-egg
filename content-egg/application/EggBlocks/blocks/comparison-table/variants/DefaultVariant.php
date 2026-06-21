@@ -143,7 +143,7 @@ class DefaultVariant
             <div class="eggb-ct-placeholder-body">
                 <div class="eggb-ct-placeholder-meta">
                     <span class="eggb-award"><?php echo esc_html($label); ?> Placeholder</span>
-                    <span class="eggb-ct-placeholder-count"><?php echo esc_html(count($payload['items'])); ?> products</span>
+                    <span class="eggb-ct-placeholder-count"><?php echo esc_html(count($payload['items'])); ?> <?php echo esc_html__('products', 'content-egg'); ?></span>
                     <?php if (!empty($payload['criteria'])) : ?>
                         <span class="eggb-ct-placeholder-count"><?php echo esc_html(count($payload['criteria'])); ?> rows</span>
                     <?php endif; ?>

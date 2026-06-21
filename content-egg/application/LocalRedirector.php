@@ -151,8 +151,23 @@ class LocalRedirector
             return;
         }
 
+        $slug  = (string) $slug;
         $model = LinkIndexModel::model();
-        $row   = $model->findBySlug((string) $slug);
+        $row   = $model->findBySlug($slug);
+
+        // A slug can legitimately contain percent-encoded UTF-8 octets, e.g.
+        // "%e2%8c%80" for "⌀", because sanitize_title() encodes non-ASCII bytes
+        // via utf8_uri_encode(). localUrlForItem() then rawurlencode()s the slug
+        // into the URL, so each "%" becomes "%25". WordPress' rewrite round-trip
+        // (WP_MatchesMapRegex::callback urlencode() + parse_str() urldecode())
+        // hands the slug back exactly as it appears in the URL path — i.e. still
+        // rawurlencoded ("%25e2%258c%2580"), which never matches the stored slug.
+        // Decode once so the lookup matches.
+        if (!$row && strpos($slug, '%') !== false)
+        {
+            $row = $model->findBySlug(rawurldecode($slug));
+        }
+
         if (!$row)
         {
             status_header(404);

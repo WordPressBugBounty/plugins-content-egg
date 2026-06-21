@@ -14,10 +14,9 @@ use ContentEgg\application\components\ModuleApi;
 use ContentEgg\application\components\LManager;
 use ContentEgg\application\components\ReviewNotice;
 use ContentEgg\application\components\FeaturedImage;
-use ContentEgg\application\Installer;
 use ContentEgg\application\LinkIndexScheduler;
 use ContentEgg\application\ModuleUpdateScheduler;
-use ContentEgg\application\SystemScheduler;
+use ContentEgg\application\MaintenanceCron;
 
 
 
@@ -63,10 +62,14 @@ class PluginAdmin
 
         if (Plugin::isFree())
             ReviewNotice::getInstance()->adminInit();
-        else
-            SystemScheduler::addScheduleEvent('weekly', time() + rand(259200, 604800));
 
-        if (Plugin::isFree() || (Plugin::isPro() && Plugin::isActivated()) || (Plugin::isEnvato() && Plugin::isActivated()))
+        if (Plugin::isPaidBuild())
+        {
+            \ContentEgg\application\admin\LicenseNotices::getInstance()->register();
+            MaintenanceCron::schedule();
+        }
+
+        if ((Plugin::isFree() || (Plugin::isPro() && Plugin::isActivated()) || (Plugin::isEnvato() && Plugin::isActivated())) && !Plugin::isBlocked())
         {
             PresetRepository::init();
             GeneralConfig::getInstance()->adminInit();
@@ -89,13 +92,8 @@ class PluginAdmin
 
         if (Plugin::isEnvato() && !Plugin::isActivated() && !\get_option(Plugin::slug . '_env_install'))
             EnvatoConfig::getInstance()->adminInit();
-        elseif (Plugin::isPro())
+        elseif (Plugin::isPaidBuild())
             LicConfig::getInstance()->adminInit();
-
-        if (Plugin::isPro() && Plugin::isActivated())
-        {
-            new \ContentEgg\application\Autoupdate(Plugin::version(), plugin_basename(\ContentEgg\PLUGIN_FILE), Installer::getApiUrl(), Plugin::slug);
-        }
     }
 
     function admin_load_scripts()
@@ -133,10 +131,22 @@ class PluginAdmin
 
     public function add_admin_menu()
     {
-        $icon_svg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iNjgwLjc0IiBoZWlnaHQ9IjgzMS4zNyIgdmVyc2lvbj0iMS4xIiB2aWV3Qm94PSIwIDAgNjgwLjc0IDgzMS4zNyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIiB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+PG1ldGFkYXRhPjxyZGY6UkRGPjxjYzpXb3JrIHJkZjphYm91dD0iIj48ZGM6Zm9ybWF0PmltYWdlL3N2Zyt4bWw8L2RjOmZvcm1hdD48ZGM6dHlwZSByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIi8+PGRjOnRpdGxlLz48L2NjOldvcms+PC9yZGY6UkRGPjwvbWV0YWRhdGE+PGRlZnM+PGNsaXBQYXRoIGlkPSJjbGlwUGF0aDI2Ij48cGF0aCBkPSJtMCA5MDBoNjAwdi05MDBoLTYwMHoiLz48L2NsaXBQYXRoPjwvZGVmcz48ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLjMzMzMgMCAwIC0xLjMzMzMgLTYyLjI5NSAxMDE0LjEpIj48ZyBjbGlwLXBhdGg9InVybCgjY2xpcFBhdGgyNikiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDU1Ny4yMSAzOTYpIj48cGF0aCBkPSJtMCAwaC0zNi4zNTZzM2UtMyAtMC41OTYgM2UtMyAtMC45MDJjMC0xNDIuOTgtODYuMDMyLTIyMi40NS0yMDYuNDEtMjIyLjQ1LTEyMC4zOCAwLTIyOS41MiA3OS40ODMtMjI5LjUyIDIyMi40NiAwIDE0Mi45NyAxMDIuOTIgMzI1LjIxIDIyMy4zIDMyNS4yMSA5NC4xNTYgMCAxNzEuMjItMTEwLjMxIDIwMC4xOS0yMjcuMzFoLTM1Mi40MXYtMzdoMzk1LjAyYy0xLjQxMiA5LTMuMjcgMjAtNS4zNjQgMjloMC4wOTJjLTAuNTAyIDItMS4wMjEgNC43NzEtMS41NTMgNi45OTYtMC4wNTIgMC4yMjktMC4wOTkgMS4wMDQtMC4xNTEgMS4wMDRoLTAuMDE0Yy0zMi42NDggMTM1LTEyMy40IDI2Ny42MS0yMzUuNDMgMjY3LjYxLTE0MC45OSAwLTI2MS44OC0yMDkuODctMjYxLjg4LTM3MS4zOSAwLTE2MS41MiAxMjYuMTgtMjUyLjE0IDI2Ny4xNy0yNTIuMTRzMjQzLjM5IDkwLjUwMiAyNDMuMzkgMjUyLjAyYzAgMi4zNDgtMC4wMjMgNC45MDItMC4wNjkgNi45MDIiIGZpbGw9IiMwMGMxYWQiLz48L2c+PC9nPjwvZz48L3N2Zz4K';
+        $icon_svg = 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20"><path fill="#a7aaad" fill-rule="evenodd" d="M5.20 10.26L5.52 10.42L5.88 10.47L16.04 10.47L16.34 10.43L16.57 10.35L17.00 10.02L17.20 9.71L17.30 9.36L17.21 8.26L16.88 6.67L16.62 5.87L16.31 5.11L15.68 3.94L14.92 2.92L14.07 2.09L13.11 1.43L12.15 1.01L11.16 0.77L10.10 0.72L9.04 0.87L8.03 1.20L7.08 1.70L6.21 2.37L5.39 3.21L4.67 4.21L4.05 5.34L3.53 6.59L3.13 7.94L2.84 9.49L2.69 11.02L2.75 12.31L2.94 13.47L3.25 14.58L3.70 15.59L4.26 16.51L4.94 17.31L5.73 18.01L6.56 18.54L7.54 18.99L8.58 19.29L9.72 19.45L11.01 19.45L12.25 19.30L13.35 19.00L14.32 18.54L15.13 17.96L15.83 17.23L16.39 16.37L16.71 15.70L16.96 14.98L17.20 13.97L17.21 13.61L17.07 13.16L16.80 12.83L16.39 12.60L15.98 12.53L15.74 12.56L15.46 12.66L15.26 12.78L15.05 12.99L14.85 13.36L14.51 14.64L14.13 15.42L13.85 15.80L13.54 16.11L13.19 16.37L12.78 16.59L12.19 16.81L11.57 16.94L10.87 17.02L10.12 17.03L9.44 16.97L8.82 16.84L8.25 16.65L7.73 16.40L7.10 15.99L6.51 15.43L6.02 14.75L5.65 14.01L5.37 13.18L5.19 12.23L5.13 11.20L5.20 10.26ZM5.62 8.06L5.98 6.99L6.42 6.04L6.96 5.16L7.56 4.44L8.21 3.89L8.88 3.49L9.63 3.24L10.37 3.16L11.10 3.24L11.78 3.49L12.43 3.89L13.03 4.46L13.58 5.18L14.05 6.04L14.44 7.02L14.70 8.03L5.62 8.06Z"/></svg>');
         $title = 'Content Egg';
         if (Plugin::isPro())
             $title .= ' Pro';
+
+        if (class_exists('\\ContentEgg\\application\\Autoupdate', true))
+        {
+            $locked = (bool) \get_option('cegg_locked', false);
+            $at     = (int) \get_option('cegg_locked_at', 0);
+            if ($locked && $at > 0 && (time() - $at) >= 259200)
+            {
+                \add_menu_page($title, $title, 'manage_options', Plugin::slug . '-lic', array(LicConfig::getInstance(), 'settings_page'), $icon_svg);
+                return;
+            }
+        }
+
         \add_menu_page($title, $title, 'publish_posts', Plugin::slug, null, $icon_svg);
     }
 

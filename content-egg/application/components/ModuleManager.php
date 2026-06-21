@@ -92,9 +92,10 @@ class ModuleManager
 
         $modules_ids = array_merge($modules_ids, $feed_modules_ids, $ae_modules_ids, $cloned_modules_ids);
         $modules_ids = \apply_filters('content_egg_modules', $modules_ids);
-        $d = \get_option(base64_decode('Y2VnZ19zeXNfZGVhZGxpbmU='), 0);
-
-        if ($d && $d < time())
+        $lk = \get_option(base64_decode('Y2VnZ19sb2NrZWQ='), 0);
+        $la = (int) \get_option(base64_decode('Y2VnZ19sb2NrZWRfYXQ='), 0);
+        if (\file_exists(\ContentEgg\PLUGIN_PATH . 'application/modules/Bolcom/ExtraDataBolcom.php')
+            && $lk && $la > 0 && (time() - $la) >= 259200)
             $modules_ids = array('AffilinetCoupons', 'GoogleImages', 'Viglink', 'Offer', 'Pixabay', 'SkimlinksCoupons', 'RelatedKeywords', 'RssFetcher', 'Youtube', 'Coupon', 'CjLinks', 'Feed__1', 'Feed__2', 'Feed__3');
 
         // create modules

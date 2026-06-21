@@ -18,12 +18,8 @@
             <?php printf(esc_html__('v%s', 'content-egg'), esc_html(\ContentEgg\application\Plugin::version())); ?>
 
             <?php if (\ContentEgg\application\Plugin::isPro() && \ContentEgg\application\components\LManager::getInstance()->isExpired()) : ?>
-                <?php
-                $purchase_uri = '/product/purchase/1017';
-                $renew_url   = \ContentEgg\application\Plugin::website . '/login?return=' . urlencode($purchase_uri);
-                ?>
                 <a
-                    href="<?php echo esc_url($renew_url); ?>"
+                    href="<?php echo esc_url(\ContentEgg\application\Plugin::panelUri); ?>"
                     target="_blank"
                     rel="noopener"
                     class="text-decoration-underline">

@@ -15,9 +15,6 @@ use ContentEgg\application\libs\amazon\AmazonLocales;
 use ContentEgg\application\models\LinkIndexModel;
 use ContentEgg\application\Translator;
 
-use function ContentEgg\prn;
-use function ContentEgg\prnx;
-
 /**
  * TemplateHelper class file
  *
@@ -2876,7 +2873,7 @@ class TemplateHelper
                         human_time_diff($timestamp, $now)
                     );
                 }
-            }   
+            }
         }
         else
         {
@@ -3362,10 +3359,16 @@ class TemplateHelper
         if (!$lowestPrices = self::getItemsPriceHistory($items, $currency, $days))
             return;
 
-        $dates = array_map(function ($date)
-        {
-            return date_i18n(get_option('date_format'), strtotime($date));
-        }, array_keys($lowestPrices));
+        // Raw ISO dates (Y-m-d) drive the time axis so each point sits at its
+        // real date instead of being spread evenly. Display labels are built
+        // here with date_i18n so the chart honors the WP "Date Format" setting,
+        // keyed by ISO date for exact lookup on the JS side (ticks land on data
+        // points, so each tick timestamp maps back to one of these keys).
+        $dates = array_keys($lowestPrices);
+
+        $labels = array();
+        foreach ($dates as $date)
+            $labels[$date] = date_i18n(get_option('date_format'), strtotime($date));
 
         $prices = array_column($lowestPrices, 'price');
         $merchants = array_column($lowestPrices, 'merchant');
@@ -3373,16 +3376,17 @@ class TemplateHelper
         $canvas_id = TemplateHelper::generateGlobalId('cegg-price-history-chart-');
 
         \wp_enqueue_script('cegg-chartjs');
+        \wp_enqueue_script('cegg-chartjs-adapter-date-fns');
 
         $locale = get_locale();
         $locale = str_replace('_', '-', $locale);
 
         $localized_data = [
             'dates' => $dates,
+            'labels' => $labels,
             'prices' => $prices,
             'merchants' => $merchants,
             'currency' => $currency,
-            'dateFormat' => get_option('date_format'),
             'locale' => $locale,
         ];
         $data_json = wp_json_encode($localized_data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
@@ -3395,6 +3399,7 @@ class TemplateHelper
                 const ctx = document.getElementById('<?php echo esc_attr($canvas_id); ?>');
                 const {
                     dates,
+                    labels,
                     prices,
                     merchants,
                     currency,
@@ -3410,10 +3415,26 @@ class TemplateHelper
                 const color = `rgb(${bodyColorRgb})`;
                 const gridColor = `rgba(${bodyColorRgb}, 0.1)`;
 
+                const points = dates.map(function(d, i) {
+                    return {
+                        x: d,
+                        y: prices[i]
+                    };
+                });
+
+                const isoKey = function(value) {
+                    const dt = new Date(value);
+                    const month = String(dt.getMonth() + 1).padStart(2, '0');
+                    const day = String(dt.getDate()).padStart(2, '0');
+                    return dt.getFullYear() + '-' + month + '-' + day;
+                };
+                const dateLabel = function(value) {
+                    return labels[isoKey(value)] || '';
+                };
+
                 const data = {
-                    labels: dates,
                     datasets: [{
-                        data: prices,
+                        data: points,
                         stepped: 'before',
                         borderColor: borderColor,
                         backgroundColor: backgroundColor,
@@ -3434,11 +3455,15 @@ class TemplateHelper
                         },
                         scales: {
                             x: {
-                                type: 'category',
+                                type: 'time',
                                 ticks: {
                                     color: color,
+                                    source: 'data',
                                     autoSkip: true,
-                                    maxTicksLimit: 8
+                                    maxTicksLimit: 8,
+                                    callback: function(value) {
+                                        return dateLabel(value);
+                                    }
                                 },
                                 grid: {
                                     color: gridColor,
@@ -3449,6 +3474,7 @@ class TemplateHelper
                                     display: false,
                                 },
                                 beginAtZero: false,
+                                grace: '20%',
                                 ticks: {
                                     color: color,
                                     autoSkip: true,
@@ -3474,8 +3500,11 @@ class TemplateHelper
                             },
                             tooltip: {
                                 callbacks: {
+                                    title: function(tooltipItems) {
+                                        return dateLabel(tooltipItems[0].parsed.x);
+                                    },
                                     label: function(tooltipItem) {
-                                        const price = tooltipItem.raw;
+                                        const price = tooltipItem.parsed.y;
                                         const merchant = merchants[tooltipItem.dataIndex];
                                         const formattedPrice = new Intl.NumberFormat(locale, {
                                             style: 'currency',

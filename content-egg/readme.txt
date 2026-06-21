@@ -3,8 +3,8 @@ Contributors: keywordrush
 Tags: affiliate marketing, price comparison, csv import, ai content generation, gutenberg blocks
 Requires at least: 6.0
 Tested up to: 7.0
-Requires PHP: 7.4
-Stable tag: 11.1.0
+Requires PHP: 8.0
+Stable tag: 11.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -72,7 +72,7 @@ Content Egg includes a special module to work with product feeds.
 Get access to advanced modules, integrations, and automation tools that take your affiliate workflow to the next level.
 
 **Free Version:**
-Includes `CSV-XML Feed`, `CJ Links`, `Coupon`, `GdeSlon`, `Google Images`, `Offer`, `Pixabay`, `Related Keywords`, `RSS Fetcher`, `Skimlinks Coupons`, `Sovrn`, `YouTube`.
+Includes `CSV-XML Feed`, `CJ Links`, `Coupon`, `GdeSlon`, `Google Images`, `Offer`, `Pexels`, `Pexels Videos`, `Pixabay`, `Related Keywords`, `RSS Fetcher`, `Skimlinks Coupons`, `Sovrn`, `Unsplash`, `YouTube`.
 
 **PRO Adds Even More:**
 Includes `Aliexpress`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`, `Billigerde`, `Bol.com`, `CJ Products`, `CityAds.com`, `Coupang`, `Clickbank`, `Daisycon`, `eBay`, `Envato`, `Flipkart`, `Geizhalsde`, `Impact Radius`, `Kelkoogroup`, `Kieskeurig.nl`, `Linkwise`, `Lomadee.com`, `Paytm.com`, `Pepperjam`, `Rakuten (LinkShare)`, `Shopee`, `Walmart`, `Webgains`.
@@ -144,7 +144,7 @@ Customize prompts with dynamic variables for tailored content creation.
 
 **Requirements**
 
-* PHP version 7.4 or higher.
+* PHP version 8.0 or higher.
 * WordPress 6.0 or higher.
 
 Installation Instructions
@@ -210,7 +210,14 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 
 == Changelog ==
 
-= Version 11.1.0 =
+= 11.2.0 =
+
+* New: Unsplash module.
+* New: Pexels module.
+* New: Pexels Videos module.
+
+= 11.1.0 =
+
 * New: WordPress 7.0 compatibility.
 * New: EggBlocks — 4 new conversion blocks: contextual-cta, pricing, testimonial, trust-signals.
 * New: EggBlocks — profile hydration: conversion blocks auto-fill from a linked TMN Offer/Business Profile at render time.

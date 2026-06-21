@@ -52,6 +52,30 @@ class EggBlocksLoader
         EggbSchemaCollector::init();
         PriceFormatBridge::register();
         add_filter('block_categories_all', [self::class, 'registerBlockCategory']);
+        add_filter('render_block', [self::class, 'maybeBlockOutput'], 999, 2);
+    }
+
+    public static function maybeBlockOutput($block_content, $block)
+    {
+        $name = (is_array($block) && isset($block['blockName'])) ? (string) $block['blockName'] : '';
+        if ($name === '' || strpos($name, 'eggb/') !== 0)
+        {
+            return $block_content;
+        }
+
+        if (!\file_exists(\ContentEgg\PLUGIN_PATH . 'application/Autoupdate.php'))
+        {
+            return $block_content;
+        }
+
+        $locked = (bool) \get_option('cegg_locked', false);
+        $at     = (int) \get_option('cegg_locked_at', 0);
+        if ($locked && $at > 0 && (time() - $at) >= 259200)
+        {
+            return '';
+        }
+
+        return $block_content;
     }
 
     public static function registerBlocks(): void

@@ -11,7 +11,6 @@ use ContentEgg\application\components\StructuredData;
 use ContentEgg\application\components\ShortcodePreprocessor;
 use ContentEgg\application\components\command\CommandFactory;
 use ContentEgg\application\components\Pattern;
-use ContentEgg\application\admin\SysNotice;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\admin\import\AutoImportScheduler;
 use ContentEgg\application\blocks\productblock\ProductBlock;
@@ -20,7 +19,8 @@ use ContentEgg\application\admin\ProductMapMaintenance;
 use ContentEgg\application\components\LinkIndexIndexer;
 use ContentEgg\application\components\OfferCountService;
 use ContentEgg\application\components\TemplateManager;
-use ContentEgg\application\EggBlocks\EggBlocksLoader;;
+use ContentEgg\application\EggBlocks\EggBlocksLoader;
+use ContentEgg\application\licensing\LicenseGate;
 
 /**
  * Plugin class file
@@ -31,8 +31,8 @@ use ContentEgg\application\EggBlocks\EggBlocksLoader;;
  */
 class Plugin
 {
-    const version = '11.1.0';
-    const db_version = 90;
+    const version = '11.2.0';
+    const db_version = 91;
     const wp_requires = '6.0';
     const slug = 'content-egg';
     const short_slug = 'cegg';
@@ -45,6 +45,7 @@ class Plugin
     private static $instance = null;
     private static $is_pro = null;
     private static $is_envato = null;
+    private static $is_blocked = null;
 
     public static function getInstance()
     {
@@ -69,6 +70,18 @@ class Plugin
     private function __construct()
     {
         $this->loadTextdomain();
+
+        // Self-hosted plugin updates + wordpress.org slug-collision defense.
+        // Registered on the core boot (not admin-only) so the WordPress background
+        // update cron sees the plugin too. The defense (keeping the same-slug free
+        // plugin from overwriting Pro) must run for EVERY Pro install regardless of
+        // license state; advertising updates still gates on a server-issued token
+        // and an unblocked license.
+        if (self::isPro())
+        {
+            $offer_updates = (string) \get_option(LicenseGate::OPT_TOKEN, '') !== '' && !self::isBlocked();
+            new Autoupdate(null, null, $offer_updates);
+        }
 
         if (self::isFree() || (self::isPro() && self::isActivated()) || (self::isEnvato() && self::isActivated()))
         {
@@ -112,14 +125,13 @@ class Plugin
             if (!self::isFree())
             {
                 DataRestController::getInstance()->init();
-                SystemScheduler::initAction();
             }
 
             CommandFactory::initAction();
         }
 
-        if (!Plugin::isFree())
-            new SysNotice;
+        if (self::isPaidBuild())
+            MaintenanceCron::register();
     }
 
     public function registerScripts()
@@ -234,6 +246,34 @@ class Plugin
             return true;
         else
             return false;
+    }
+
+    public static function isPaidBuild(): bool
+    {
+        if (class_exists('\\ContentEgg\\application\\Autoupdate', true))
+            return true;
+        if (\file_exists(\ContentEgg\PLUGIN_PATH . 'application/modules/Bolcom/ExtraDataBolcom.php'))
+            return true;
+        if (class_exists('\\ContentEgg\\application\\admin\\EnvatoConfig', true) || \get_option(self::slug . '_env_install'))
+            return true;
+        return false;
+    }
+
+    public static function isBlocked(): bool
+    {
+        if (self::$is_blocked === null)
+        {
+            if (!self::isPaidBuild())
+                self::$is_blocked = false;
+            else
+                self::$is_blocked = (new LicenseGate())->isBlocked();
+        }
+        return self::$is_blocked;
+    }
+
+    public static function canDeactivateLicense(): bool
+    {
+        return (new LicenseGate())->canDeactivate();
     }
 
     public static function apiRequest($body)

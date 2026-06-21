@@ -329,7 +329,10 @@ class FeedModule extends AffiliateFeedParserModule
                 $items[$key]['availability'] = $r['availability'];
 
             if (isset($r['image ​​link']))
-                $items[$key]['img'] = $r['image ​​link'];
+            {
+                $imgUrls = TextHelper::getArrayFromCommaList($r['image ​​link']);
+                $items[$key]['img'] = self::normalizeImageUrl($imgUrls[0] ?? $r['image ​​link']);
+            }
 
             if (isset($r['shipping cost']))
                 $items[$key]['shipping_cost'] = self::extractShippingCost($r['shipping cost']);
@@ -493,11 +496,15 @@ class FeedModule extends AffiliateFeedParserModule
             }
             if (isset($r['image ​​link']))
             {
-                $img = $r['image ​​link'];
-                $img = self::normalizeImageUrl($img);
+                $imgUrls = TextHelper::getArrayFromCommaList($r['image ​​link']);
+                $img = self::normalizeImageUrl($imgUrls[0] ?? $r['image ​​link']);
                 if (filter_var($img, FILTER_VALIDATE_URL))
                 {
                     $content->img = $img;
+                    if (count($imgUrls) > 1)
+                    {
+                        $content->images = array_merge($content->images, array_slice($imgUrls, 1));
+                    }
                 }
             }
 

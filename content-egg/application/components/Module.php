@@ -294,9 +294,15 @@ abstract class Module
 		return '';
 	}
 
+	public function releaseVersionFree()
+	{
+		return '';
+	}
+
 	public function isNew()
 	{
-		if (!$module_version = $this->releaseVersion())
+		$module_version = Plugin::isFree() ? $this->releaseVersionFree() : $this->releaseVersion();
+		if (!$module_version)
 		{
 			return false;
 		}
