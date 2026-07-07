@@ -184,18 +184,31 @@ class ModuleManager
             return array();
         }
 
-        $module_ids = AeIntegrationConfig::getInstance()->option('modules');
-        if (!$module_ids)
-        {
-            return array();
-        }
+        $config = AeIntegrationConfig::getInstance();
         $result = array();
-        foreach ($module_ids as $module_id)
+
+        // Legacy: registered-shop selections (key===value===shop_id), read unchanged.
+        $module_ids = $config->option('modules');
+        if ($module_ids && is_array($module_ids))
         {
-            $result[] = self::AE_MODULES_PREFIX . '__' . $module_id;
+            foreach ($module_ids as $module_id)
+            {
+                $result[] = self::AE_MODULES_PREFIX . '__' . $module_id;
+            }
         }
 
-        return $result;
+        // New: arbitrary-domain modules. Registered only when AE supports the
+        // generic parser, so on an older AE they go inert (data preserved),
+        // matching the graceful drop-out of the whole integration when AE is gone.
+        if (AeIntegrationConfig::isCustomDomainSupported())
+        {
+            foreach ($config->getCustomDomains() as $domain)
+            {
+                $result[] = self::AE_MODULES_PREFIX . '__' . $domain;
+            }
+        }
+
+        return array_values(array_unique($result));
     }
 
     public function getFeedModules()

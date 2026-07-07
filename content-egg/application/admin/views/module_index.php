@@ -120,6 +120,10 @@ function _cegg_print_module_item(array $modules)
 
         <div class="cegg5-container">
 
+            <style>
+                .cegg-section-btn { min-width: 10rem; }
+            </style>
+
             <div class="row mt-4">
                 <div class="col-md-4 col-xs-12">
 
@@ -142,12 +146,17 @@ function _cegg_print_module_item(array $modules)
                             <i class="bi bi-question-circle me-2"></i>
                         </a>
                     </h3>
-                    <div class="list-group">
-                        <?php _cegg_print_module_item(\ContentEgg\application\helpers\AdminHelper::getFeedProductModules()); ?>
-                    </div>
+                    <?php if ($feed_modules = \ContentEgg\application\helpers\AdminHelper::getFeedProductModules()) : ?>
+                        <div class="list-group">
+                            <?php _cegg_print_module_item($feed_modules); ?>
+                        </div>
+                    <?php endif; ?>
+                    <p class="description small py-1 mb-1">
+                        <?php esc_html_e('Import products from any CSV, XML, or JSON product feed.', 'content-egg'); ?>
+                    </p>
 
                     <?php if (\ContentEgg\application\Plugin::isFree()) : ?>
-                        <p class="description cegg-pro-notice small py-1 pt-2">
+                        <p class="description cegg-pro-notice small py-1 mb-1">
                             <?php
                             printf(
                                 esc_html__('Free version supports up to 3 Feed modules. Upgrade to Pro for 50 modules and more features. %s', 'content-egg'),
@@ -157,25 +166,43 @@ function _cegg_print_module_item(array $modules)
                         </p>
                     <?php endif; ?>
 
-                    <h3 class="h5 mt-4"><?php esc_html_e('Affiliate Egg modules', 'content-egg'); ?></h3>
-                    <?php if ($modules = \ContentEgg\application\helpers\AdminHelper::getAeProductModules()) : ?>
+                    <p class="py-2">
+                        <?php if ($add_feed = \ContentEgg\application\helpers\AdminHelper::getAddNewFeedModule()) : ?>
+                            <a class="btn btn-outline-primary btn-sm cegg-section-btn d-inline-flex align-items-center justify-content-center" href="?page=<?php echo esc_attr($add_feed->getConfigInstance()->page_slug()); ?>">
+                                <i class="bi bi-database-add me-1" aria-hidden="true"></i><?php esc_html_e('Add a feed', 'content-egg'); ?>
+                            </a>
+                        <?php else : ?>
+                            <button type="button" class="btn btn-outline-secondary btn-sm cegg-section-btn d-inline-flex align-items-center justify-content-center" disabled title="<?php esc_attr_e('You\'ve reached the maximum number of feed modules.', 'content-egg'); ?>">
+                                <i class="bi bi-database-add me-1" aria-hidden="true"></i><?php esc_html_e('Add a feed', 'content-egg'); ?>
+                            </button>
+                        <?php endif; ?>
+                    </p>
+
+                    <h3 class="h5 mt-4 d-flex align-items-center justify-content-between">
+                        <?php esc_html_e('Affiliate Egg modules', 'content-egg'); ?>
+                        <a href="<?php echo esc_url('https://ce-docs.keywordrush.com/modules/affiliate-egg-integration'); ?>"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-muted small d-inline-flex align-items-center"
+                            style="font-size: 13px;"
+                            title="<?php esc_attr_e('View documentation', 'content-egg'); ?>">
+                            <i class="bi bi-question-circle me-2"></i>
+                        </a>
+                    </h3>
+                    <?php if (\ContentEgg\application\admin\AeIntegrationConfig::isAEIntegrationPosible() && $modules = \ContentEgg\application\helpers\AdminHelper::getAeProductModules()) : ?>
                         <div class="list-group">
                             <?php _cegg_print_module_item($modules); ?>
                         </div>
-                    <?php else: ?>
-                        <p class="description cegg-pro-notice small py-1">
-                            <?php
-                            $activate_url = admin_url('admin.php?page=content-egg-ae-integration');
-                            printf(
-                                wp_kses(
-                                    __('Affiliate Egg integration is not activated. <a href="%s">Activate&nbsp;&rarr;</a>', 'content-egg'),
-                                    array('a' => array('href' => array()))
-                                ),
-                                esc_url($activate_url)
-                            );
-                            ?>
-                        </p>
                     <?php endif; ?>
+                    <p class="description small py-1 mb-1">
+                        <?php esc_html_e('Add almost any online store by its domain and pull live product data — price, image, stock — with no API or feed.', 'content-egg'); ?>
+                    </p>
+                    <p class="py-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm cegg-section-btn d-inline-flex align-items-center justify-content-center" onclick="ceggAeModalOpen()">
+                            <i class="bi bi-shop me-1" aria-hidden="true"></i><?php esc_html_e('Connect a store', 'content-egg'); ?>
+                        </button>
+                    </p>
+                    <?php include __DIR__ . '/_ae_connect_modal.php'; ?>
 
                     <h3 class="h5 mt-4"><?php esc_html_e('Coupon modules', 'content-egg'); ?></h3>
                     <div class="list-group">

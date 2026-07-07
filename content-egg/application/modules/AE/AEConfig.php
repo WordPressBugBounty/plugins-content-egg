@@ -97,6 +97,51 @@ class AEConfig extends AffiliateParserModuleConfig
 			),
 		);
 
+		// A keyword Search URL. Custom domains use it as their own search source.
+		// Registered shops can optionally override their built-in search URL when
+		// the installed Affiliate Egg supports it.
+		$parts = explode('__', (string) $this->module_id);
+		$short = end($parts);
+		$shop  = \Keywordrush\AffiliateEgg\ShopManager::getInstance()->getItem($short);
+
+		if (!$shop || \ContentEgg\application\admin\AeIntegrationConfig::isSearchUriOverrideSupported())
+		{
+			if ($shop)
+			{
+				// Registered shop: optional override of the built-in search URL.
+				$description = sprintf(
+					/* translators: %s is the %KEYWORD% placeholder shown in a <code> tag. */
+					__('Override this store\'s built-in search URL. Use %s as the query placeholder. Leave empty to use the default.', 'content-egg'),
+					'<code>%KEYWORD%</code>'
+				);
+				$placeholder = method_exists($shop, 'getSearchUri') ? (string) $shop->getSearchUri() : '';
+			}
+			else
+			{
+				// Custom domain: the module's own search URL.
+				$description = sprintf(
+					/* translators: %s is the %KEYWORD% placeholder shown in a <code> tag. */
+					__('Enter the store\'s search URL. Use %s as the query placeholder to enable keyword-based product search. Otherwise, only direct product and category URLs are supported.', 'content-egg'),
+					'<code>%KEYWORD%</code>'
+				);
+				$placeholder = 'https://example.com/search?q=%KEYWORD%';
+			}
+
+			$options['search_uri'] = array(
+				'title'       => __('Search URL', 'content-egg'),
+				'description' => $description,
+				'placeholder' => $placeholder,
+				'callback'    => array($this, 'render_input'),
+				'default'     => '',
+				'validator'   => array(
+					'trim',
+					array('call' => array('\ContentEgg\application\modules\AE\AeSearchUrl', 'normalize'), 'type' => 'filter'),
+					array('call' => array('\ContentEgg\application\modules\AE\AeSearchUrl', 'isValidSearchUri'), 'message' => __('The Search URL must include %KEYWORD% where the search term goes (or a recognizable parameter like ?q=). Keyword search will not work without it.', 'content-egg')),
+				),
+				'section'     => 'default',
+			);
+		}
+
 		$parent                         = parent::options();
 		$parent['ttl']['default']       = 4320000;
 		$parent['ttl_items']['default'] = 2592000;

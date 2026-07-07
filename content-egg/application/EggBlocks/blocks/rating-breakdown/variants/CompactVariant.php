@@ -15,7 +15,7 @@ class CompactVariant
                     <div class="d-flex flex-column align-items-center justify-content-center text-center flex-shrink-0">
                         <div class="eggb-rb-overall-score"><?php echo esc_html($overall['score']); ?></div>
                         <?php if ($overall['stars_markup'] !== '') : ?>
-                            <div class="eggb-rb-stars mt-1" aria-label="<?php echo esc_attr($overall['stars_aria']); ?>">
+                            <div class="eggb-rb-stars mt-1" role="img" aria-label="<?php echo esc_attr($overall['stars_aria']); ?>">
                                 <?php echo $overall['stars_markup']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                             </div>
                         <?php endif; ?>

@@ -209,16 +209,37 @@ class ProductCardRenderer
         }
 
         $data = [
-            'name'        => $card['title'],
-            'description' => wp_strip_all_tags((string) ($card['description'] ?? '')),
-            'image'       => (string) ($item['img'] ?? ''),
-            'score'       => $card['score'],
-            'url'         => (string) ($item['url'] ?? ''),
-            'merchant'    => $card['merchant'],
-            'price'       => (string) ($item['price'] ?? ''),
-            'currency'    => (string) ($item['currencyCode'] ?? ''),
+            'name'         => $card['title'],
+            'image'        => (string) ($item['img'] ?? ''),
+            'score'        => $card['score'],
+            'url'          => (string) ($item['url'] ?? ''),
+            'merchant'     => $card['merchant'],
+            'price'        => (string) ($item['price'] ?? ''),
+            'currency'     => (string) ($item['currencyCode'] ?? ''),
+            'brand'        => (string) ($item['manufacturer'] ?? ''),
+            'gtin'         => self::resolveGtin($item),
+            'stock_status' => $item['stock_status'] ?? null,
         ];
 
         EggbSchemaCollector::addProduct($productRef, $data);
+    }
+
+    /**
+     * Pick a usable global identifier from the product item.
+     * Only returns plausibly-valid GTINs (8/12/13/14 numeric digits) to avoid
+     * emitting malformed gtin values that would turn a warning into an error.
+     */
+    private static function resolveGtin(array $item): string
+    {
+        foreach (['ean', 'upc', 'isbn'] as $field)
+        {
+            $value = preg_replace('/\D+/', '', (string) ($item[$field] ?? ''));
+            if (in_array(strlen($value), [8, 12, 13, 14], true))
+            {
+                return $value;
+            }
+        }
+
+        return '';
     }
 }

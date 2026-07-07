@@ -77,7 +77,7 @@ class CardsVariant
     private static function renderStars(array $stars, float $rating, float $max): string
     {
         $label = esc_attr(sprintf('%s out of %s stars', $rating, $max));
-        $html  = '<div class="eggb-testimonial-stars" aria-label="' . $label . '">';
+        $html  = '<div class="eggb-testimonial-stars" role="img" aria-label="' . $label . '">';
         foreach ($stars as $icon)
         {
             $html .= EggbIcons::get($icon);

@@ -29,14 +29,14 @@ class DefaultVariant
                     <div class="d-flex align-items-center justify-content-between gap-2">
                         <div class="d-flex align-items-center gap-2 flex-wrap min-w-0">
                             <?php if ($card['has_rank']) : ?>
-                                <span class="eggb-pc-rank" aria-label="<?php echo esc_attr('Rank ' . $card['rank']); ?>"><?php echo esc_html($card['rank_display']); ?></span>
+                                <span class="eggb-pc-rank" role="img" aria-label="<?php echo esc_attr('Rank ' . $card['rank']); ?>"><?php echo esc_html($card['rank_display']); ?></span>
                             <?php endif; ?>
                             <?php if ($card['badge'] !== '') : ?>
                                 <span class="eggb-award"><?php echo esc_html($card['badge']); ?></span>
                             <?php endif; ?>
                         </div>
                         <?php if ($card['score'] !== '') : ?>
-                            <div class="eggb-pc-score" aria-label="<?php echo esc_attr(trim($card['score'] . ' ' . $card['score_denom'])); ?>">
+                            <div class="eggb-pc-score" role="img" aria-label="<?php echo esc_attr(trim($card['score'] . ' ' . $card['score_denom'])); ?>">
                                 <span class="eggb-score-num"><?php echo esc_html($card['score']); ?></span>
                                 <span class="eggb-score-denom"><?php echo esc_html($card['score_denom']); ?></span>
                             </div>

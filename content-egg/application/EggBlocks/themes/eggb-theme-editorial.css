@@ -129,7 +129,6 @@
   --eggb-chip-border: rgba(28, 20, 10, .25);
   --eggb-chip-color:  rgba(28, 20, 10, .75);
   border-radius: 2px;
-  opacity:     .55;
   font-size:   .75rem;
   font-weight: 500;
 }

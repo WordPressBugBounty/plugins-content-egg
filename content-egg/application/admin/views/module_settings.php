@@ -263,6 +263,19 @@ defined('\ABSPATH') || exit; ?>
                                     <?php esc_html_e('Delete This Module', 'content-egg'); ?>
                                 </a>
                             <?php endif; ?>
+
+                            <?php if ($module->isAeParser()): ?>
+                                <a class="button-link-delete"
+                                    href="<?php echo esc_url_raw(
+                                                wp_nonce_url(
+                                                    admin_url('admin-post.php?action=cegg_ae_remove&module=' . rawurlencode($module->getId())),
+                                                    'cegg_ae_remove'
+                                                )
+                                            ); ?>"
+                                    onclick="return confirm('<?php echo esc_js(__('Disconnect this module? Saved product data on your posts is kept and will reappear if you reconnect.', 'content-egg')); ?>');">
+                                    <?php esc_html_e('Disconnect from Content Egg', 'content-egg'); ?>
+                                </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

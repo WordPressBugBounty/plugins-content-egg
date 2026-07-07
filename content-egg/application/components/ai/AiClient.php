@@ -44,15 +44,35 @@ abstract class AiClient
 				'class' => OpenAiClient::class,
 			),
 
-			// OpenAI — GPT-5 series
+			// OpenAI — GPT-5.5 series
 			'gpt-5.5' => array(
 				'name'  => 'OpenAI: gpt-5.5',
 				'class' => OpenAiClient::class,
 			),
+			'gpt-5.5-pro' => array(
+				'name'  => 'OpenAI: gpt-5.5-pro',
+				'class' => OpenAiClient::class,
+			),
+
+			// OpenAI — GPT-5.4 series
 			'gpt-5.4' => array(
 				'name'  => 'OpenAI: gpt-5.4',
 				'class' => OpenAiClient::class,
 			),
+			'gpt-5.4-pro' => array(
+				'name'  => 'OpenAI: gpt-5.4-pro',
+				'class' => OpenAiClient::class,
+			),
+			'gpt-5.4-mini' => array(
+				'name'  => 'OpenAI: gpt-5.4-mini',
+				'class' => OpenAiClient::class,
+			),
+			'gpt-5.4-nano' => array(
+				'name'  => 'OpenAI: gpt-5.4-nano',
+				'class' => OpenAiClient::class,
+			),
+
+			// OpenAI — GPT-5.2 / 5.1 series
 			'gpt-5.2-pro' => array(
 				'name'  => 'OpenAI: gpt-5.2-pro',
 				'class' => OpenAiClient::class,
@@ -63,6 +83,12 @@ abstract class AiClient
 			),
 			'gpt-5.1' => array(
 				'name'  => 'OpenAI: gpt-5.1',
+				'class' => OpenAiClient::class,
+			),
+
+			// OpenAI — GPT-5 series
+			'gpt-5-pro' => array(
+				'name'  => 'OpenAI: gpt-5-pro',
 				'class' => OpenAiClient::class,
 			),
 			'gpt-5' => array(
@@ -125,16 +151,38 @@ abstract class AiClient
 			),
 
 			// Anthropic — Latest / Recommended (current generation)
-			'claude-sonnet-4-6' => array(
-				'name'  => 'Anthropic: claude-sonnet-4-6 ' . __('(recommended)', 'content-egg'),
+			'claude-sonnet-5' => array(
+				'name'  => 'Anthropic: claude-sonnet-5 ' . __('(recommended)', 'content-egg'),
 				'class' => ClaudeClient::class,
 			),
 
-			// Anthropic — Current generation
+			// Anthropic — Most capable
+			'claude-fable-5' => array(
+				'name'  => 'Anthropic: claude-fable-5',
+				'class' => ClaudeClient::class,
+			),
+
+			// Anthropic — Opus (current generation)
+			'claude-opus-4-8' => array(
+				'name'  => 'Anthropic: claude-opus-4-8',
+				'class' => ClaudeClient::class,
+			),
+			'claude-opus-4-7' => array(
+				'name'  => 'Anthropic: claude-opus-4-7',
+				'class' => ClaudeClient::class,
+			),
 			'claude-opus-4-6' => array(
 				'name'  => 'Anthropic: claude-opus-4-6',
 				'class' => ClaudeClient::class,
 			),
+
+			// Anthropic — Sonnet (previous generation)
+			'claude-sonnet-4-6' => array(
+				'name'  => 'Anthropic: claude-sonnet-4-6',
+				'class' => ClaudeClient::class,
+			),
+
+			// Anthropic — Haiku (current generation)
 			'claude-haiku-4-5' => array(
 				'name'  => 'Anthropic: claude-haiku-4-5',
 				'class' => ClaudeClient::class,

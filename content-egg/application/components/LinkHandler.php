@@ -320,6 +320,51 @@ class LinkHandler
     }
 
     /**
+     * Resolve a SubID value for an affiliate network.
+     *
+     * Expands {{...}} placeholders (post id, item sku, etc. - see getUrlTemplate())
+     * against the given item / current post context, then optionally sanitizes the
+     * result to a network-safe ASCII token capped at $maxLen.
+     *
+     * @param string $subid    Raw SubID: a fixed value and/or {{placeholders}}.
+     * @param array  $item     Item context used to resolve placeholders.
+     * @param int    $maxLen   Max length allowed by the network (0 = no cap).
+     * @param bool   $sanitize Enforce ASCII-safe charset [A-Za-z0-9_.-] (default true).
+     * @return string Empty string if nothing to apply.
+     */
+    public static function resolveSubId($subid, array $item = array(), $maxLen = 0, $sanitize = true)
+    {
+        $subid = (string) $subid;
+        if ($subid === '')
+        {
+            return '';
+        }
+
+        // Expand dynamic placeholders only when present (cheap fast-path for fixed values).
+        if (strpos($subid, '{{') !== false && strpos($subid, '}}') !== false)
+        {
+            $subid = self::getUrlTemplate('', $subid, $item);
+        }
+
+        if ($sanitize)
+        {
+            $max = $maxLen > 0 ? (int) $maxLen : (int) \apply_filters('cegg_subid_default_max_len', 100);
+            $subid = self::makeSubIdSafe($subid, $max);
+            // makeSubIdSafe() returns the 'na' sentinel for an empty result; treat as no SubID.
+            if ($subid === 'na')
+            {
+                return '';
+            }
+        }
+        elseif ($maxLen > 0 && strlen($subid) > $maxLen)
+        {
+            $subid = substr($subid, 0, $maxLen);
+        }
+
+        return $subid;
+    }
+
+    /**
      * Produce a SubID-safe ASCII token (alnum + _ . -), collapse separators,
      * trim, and cap to $maxLen. If truncated, append a short hash for stability.
      * Defaults: 100 chars (common denominator across networks).

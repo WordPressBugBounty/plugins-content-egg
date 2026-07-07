@@ -6,6 +6,7 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\components\ModuleName;
 use ContentEgg\application\Plugin;;
 
 /**
@@ -134,11 +135,57 @@ class AdminHelper
 
 			if ($module->isAffiliateParser() && $module->isProductParser() && $module->isFeedParser())
 			{
+				// The "+ Add new [Feed]" placeholder (next free slot) is surfaced
+				// as a dedicated "Add a feed" button, not as a list row.
+				if (self::isAddNewFeedModule($module))
+				{
+					continue;
+				}
+
 				$results[] = $module;
 			}
 		}
 
 		return $results;
+	}
+
+	/**
+	 * The generic Feed placeholder module for the next free slot (Feed__N),
+	 * or null when the feed limit is reached. Used for the "Add a feed" button.
+	 */
+	public static function getAddNewFeedModule()
+	{
+		$modules = ModuleManager::getInstance()->getConfigurableModules();
+
+		foreach ($modules as $module)
+		{
+			if ($module->isDeprecated())
+			{
+				continue;
+			}
+
+			if ($module->isAffiliateParser() && $module->isProductParser() && $module->isFeedParser()
+				&& self::isAddNewFeedModule($module))
+			{
+				return $module;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * True for the generic Feed placeholder ("+ Add new [Feed]"): a Feed__N
+	 * module with no assigned name. Configured feeds always have a name.
+	 */
+	private static function isAddNewFeedModule($module)
+	{
+		if (strpos($module->getId(), ModuleManager::FEED_MODULES_PREFIX . '__') !== 0)
+		{
+			return false;
+		}
+
+		return !ModuleName::getInstance()->getName($module->getId());
 	}
 
 	public static function getCouponModules()

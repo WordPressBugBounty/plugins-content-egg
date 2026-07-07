@@ -26,7 +26,7 @@ class DefaultVariant
                     <div class="d-flex flex-column gap-2">
                         <div class="d-flex align-items-center justify-content-between gap-2">
                             <span class="eggb-cr-num"><?php echo esc_html(str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT)); ?></span>
-                            <span class="eggb-cr-importance eggb-cr-importance--<?php echo esc_attr($item['importance']); ?>" aria-label="<?php echo esc_attr($item['importance_label']); ?>"><?php foreach ($item['importance_dots'] as $on): ?><span class="eggb-cr-dot<?php echo $on ? ' eggb-cr-dot--on' : ''; ?>"></span><?php endforeach; ?></span>
+                            <span class="eggb-cr-importance eggb-cr-importance--<?php echo esc_attr($item['importance']); ?>" role="img" aria-label="<?php echo esc_attr($item['importance_label']); ?>"><?php foreach ($item['importance_dots'] as $on): ?><span class="eggb-cr-dot<?php echo $on ? ' eggb-cr-dot--on' : ''; ?>"></span><?php endforeach; ?></span>
                         </div>
                         <?php if ($item['title'] !== ''): ?>
                             <div class="eggb-cr-title"><?php echo esc_html($item['title']); ?></div>

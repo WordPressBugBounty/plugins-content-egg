@@ -34,7 +34,7 @@ class ListVariant
                                     <?php if ($item['title'] !== ''): ?>
                                         <div class="eggb-cr-title"><?php echo esc_html($item['title']); ?></div>
                                     <?php endif; ?>
-                                    <span class="eggb-cr-importance eggb-cr-importance--<?php echo esc_attr($item['importance']); ?>" aria-label="<?php echo esc_attr($item['importance_label']); ?>"><?php foreach ($item['importance_dots'] as $on): ?><span class="eggb-cr-dot<?php echo $on ? ' eggb-cr-dot--on' : ''; ?>"></span><?php endforeach; ?></span>
+                                    <span class="eggb-cr-importance eggb-cr-importance--<?php echo esc_attr($item['importance']); ?>" role="img" aria-label="<?php echo esc_attr($item['importance_label']); ?>"><?php foreach ($item['importance_dots'] as $on): ?><span class="eggb-cr-dot<?php echo $on ? ' eggb-cr-dot--on' : ''; ?>"></span><?php endforeach; ?></span>
                                 </div>
                                 <?php if ($item['description'] !== ''): ?>
                                     <div class="eggb-cr-desc"><?php echo esc_html($item['description']); ?></div>

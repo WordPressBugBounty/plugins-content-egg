@@ -14,7 +14,7 @@ class FeaturedVariant
         $has_bottom_row = DefaultVariant::hasPriceData($card) || $card['cta_label'] !== '';
         ?>
         <?php DefaultVariant::renderBlockHeader($card, $theme_class, $data_theme); ?>
-        <div class="d-flex flex-column gap-2">
+        <div class="d-flex flex-column gap-2<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>">
             <div class="eggb-block eggb-card eggb-block--accented eggb-product-card eggb-product-card--featured d-flex<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
                 <?php if (DefaultVariant::hasImage($card)) : ?>
                     <div class="eggb-pc-featured-img-zone">
@@ -22,7 +22,7 @@ class FeaturedVariant
                             <?php DefaultVariant::renderImage($card, 'eggb-pc-featured-img', 450, 450); ?>
                         <?php DefaultVariant::renderImageLinkEnd($card); ?>
                         <?php if ($card['has_rank']) : ?>
-                            <span class="eggb-pc-featured-rank" aria-label="<?php echo esc_attr('Rank ' . $card['rank']); ?>">
+                            <span class="eggb-pc-featured-rank" role="img" aria-label="<?php echo esc_attr('Rank ' . $card['rank']); ?>">
                                 <span class="eggb-pc-featured-rank-num"><?php echo esc_html($card['rank_display']); ?></span>
                             </span>
                         <?php endif; ?>
@@ -34,7 +34,7 @@ class FeaturedVariant
                         <div class="d-flex align-items-center justify-content-between gap-2">
                             <div class="d-flex align-items-center gap-2 flex-wrap min-w-0">
                                 <?php if (!DefaultVariant::hasImage($card) && $card['has_rank']) : ?>
-                                    <span class="eggb-pc-rank" aria-label="<?php echo esc_attr('Rank ' . $card['rank']); ?>"><?php echo esc_html($card['rank_display']); ?></span>
+                                    <span class="eggb-pc-rank" role="img" aria-label="<?php echo esc_attr('Rank ' . $card['rank']); ?>"><?php echo esc_html($card['rank_display']); ?></span>
                                 <?php endif; ?>
                                 <?php if ($card['badge'] !== '') : ?>
                                     <span class="eggb-award">
@@ -44,7 +44,7 @@ class FeaturedVariant
                                 <?php endif; ?>
                             </div>
                             <?php if ($card['score'] !== '') : ?>
-                                <div class="d-flex align-items-baseline gap-1" aria-label="<?php echo esc_attr(trim($card['score'] . ' ' . $card['score_denom'])); ?>">
+                                <div class="d-flex align-items-baseline gap-1" role="img" aria-label="<?php echo esc_attr(trim($card['score'] . ' ' . $card['score_denom'])); ?>">
                                     <span class="eggb-pc-featured-score-num"><?php echo esc_html($card['score']); ?></span>
                                     <span class="eggb-score-denom"><?php echo esc_html($card['score_denom']); ?></span>
                                 </div>

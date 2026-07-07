@@ -99,8 +99,20 @@ abstract class ParserModule extends Module
             // save img
             if ($this->config('save_img') && !wp_is_post_revision($post_id))
             {
+                // The metabox round-trips img_file, so a non-empty img_file here means this item
+                // already has a locally saved image. If its img no longer matches the saved one,
+                // the user edited or removed the image URL in the metabox and we must honor that
+                // instead of restoring the previously saved value.
+                $old_img = isset($old_data[$key]['img']) ? $old_data[$key]['img'] : '';
+                $user_changed_img = (!empty($item['img_file']) && $item['img'] !== $old_img);
+                if ($user_changed_img)
+                {
+                    // drop the stale local reference so a new URL is downloaded and a removed image stays removed
+                    $item['img_file'] = '';
+                }
+
                 // check old_data also. need for fix behavior with "preview changes" button and by keyword update
-                if (isset($old_data[$key]) && !empty($old_data[$key]['img_file']) && file_exists(ImageHelper::getFullImgPath($old_data[$key]['img_file'])))
+                if (!$user_changed_img && isset($old_data[$key]) && !empty($old_data[$key]['img_file']) && file_exists(ImageHelper::getFullImgPath($old_data[$key]['img_file'])))
                 {
                     // image exists
                     $item['img'] = $old_data[$key]['img'];
@@ -176,6 +188,7 @@ abstract class ParserModule extends Module
     {
         list($keywords, $groups) = ContentManager::prepareMultipleKeywords($keyword);
 
+        $this->search_notice = null;
         $results = array();
         foreach ($keywords as $i => $keyword)
         {
@@ -200,7 +213,7 @@ abstract class ParserModule extends Module
 
                 // Otherwise, rethrow (single keyword, or non-retryable error)
                 throw new \RuntimeException(
-                    esc_html(wp_strip_all_tags($e->getMessage())),
+                    $this->formatErrorMessage($e->getMessage()),
                     (int) ($code ?: 0)
                 );
             }
@@ -224,6 +237,29 @@ abstract class ParserModule extends Module
         $results = self::filterDuplicateItems($results);
 
         return $results;
+    }
+
+    /**
+     * Sanitize an exception message before it is shown in the metabox search
+     * results (rendered via ng-bind-html). Default: plain text, all tags
+     * stripped. Modules may override to allow safe inline HTML — e.g. an
+     * actionable link in an error hint.
+     */
+    protected function formatErrorMessage($message)
+    {
+        return esc_html(wp_strip_all_tags($message));
+    }
+
+    protected $search_notice = null;
+
+    /**
+     * A soft, user-facing notice about the last interactive search — guidance
+     * rather than a failure (e.g. "no results, try a direct URL"). Shown as an
+     * info notice in the metabox, separate from thrown errors; null when none.
+     */
+    public function getSearchNotice()
+    {
+        return $this->search_notice;
     }
 
     private static function filterDuplicateItems(array $items)

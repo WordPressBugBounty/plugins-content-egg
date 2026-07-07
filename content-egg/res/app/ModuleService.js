@@ -12,6 +12,8 @@ contentEgg.factory("ModuleService", [
       this.processing = false;
       this.loaded = false;
       this.error = "";
+      this.notice = "";
+      this.sessionExpired = false;
       this.aiError = "";
       this.aiProcessing = false;
     };
@@ -45,10 +47,14 @@ contentEgg.factory("ModuleService", [
           if (!data.error) {
             self.results = data.results;
             self.error = "";
+            self.notice = data.notice || "";
+            self.sessionExpired = false;
             self.loaded = true;
           } else {
             self.results = [];
             self.error = data.error;
+            self.notice = "";
+            self.sessionExpired = data.session_expired || false;
           }
           $timeout(function () {
             self.processing = false;
@@ -58,6 +64,8 @@ contentEgg.factory("ModuleService", [
         },
         function (error) {
           self.processing = false;
+          self.notice = "";
+          self.sessionExpired = false;
           self.error = JSON.stringify(error);
         }
       );

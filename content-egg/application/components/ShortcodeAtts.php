@@ -26,6 +26,7 @@ class ShortcodeAtts
             'exclude_modules' => '',
             'template' => '',
             'post_id' => 0,
+            'sources' => '',
             'limit' => 0,
             'offset' => 0,
             'next' => 0,
@@ -221,6 +222,7 @@ class ShortcodeAtts
             $a['template'] = BlockTemplateManager::getInstance()->prepareShortcodeTempate($a['template']);
 
         $a['post_id'] = (int) $a['post_id'];
+        $a['sources'] = BlockSourcesParser::parse($a['sources']);
 
         return $a;
     }

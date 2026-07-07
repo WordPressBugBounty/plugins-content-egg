@@ -41,7 +41,7 @@ class ModuleApi
         if (!\current_user_can('edit_posts'))
             throw new \Exception("Access denied.");
 
-        \check_ajax_referer('contentegg-metabox', '_contentegg_nonce');
+        $this->verifyNonce();
 
         if (empty($_POST['module']))
         {
@@ -90,7 +90,7 @@ class ModuleApi
         if (!\current_user_can('edit_posts'))
             throw new \Exception("Access denied.");
 
-        \check_ajax_referer('contentegg-metabox', '_contentegg_nonce');
+        $this->verifyNonce();
 
         @set_time_limit(240);
         if (isset($_POST['params']))
@@ -128,7 +128,7 @@ class ModuleApi
             throw new \Exception("Access denied.");
         }
 
-        \check_ajax_referer('contentegg-metabox', '_contentegg_nonce');
+        $this->verifyNonce();
 
         if (empty($_POST['module']))
         {
@@ -164,7 +164,8 @@ class ModuleApi
         if ($query['keyword'][0] == '[' || filter_var($query['keyword'], FILTER_VALIDATE_URL))
         {
             $keyword = filter_var($query['keyword'], FILTER_SANITIZE_URL);
-            $keyword = str_replace('[cataloglimit', '[catalog limit', $keyword);
+            // FILTER_SANITIZE_URL strips the space; restore it for both listing prefixes.
+            $keyword = str_replace(array('[importlimit', '[cataloglimit'), array('[import limit', '[catalog limit'), $keyword);
         }
         else
         {
@@ -239,12 +240,31 @@ class ModuleApi
                 }
             }
 
-            $this->formatJson(array('results' => $data, 'error' => ''));
+            $notice = method_exists($parser, 'getSearchNotice') ? (string) $parser->getSearchNotice() : '';
+            $this->formatJson(array('results' => $data, 'error' => '', 'notice' => $notice));
         }
         catch (\Exception $e)
         {
             $this->formatJson(array('error' => $e->getMessage()));
         }
+    }
+
+    /**
+     * Verify the metabox nonce. When the post editor is left open past the nonce
+     * lifetime the token goes stale; instead of the raw die(-1) that surfaces a
+     * cryptic blob in the metabox, return a clear "session expired" error the UI
+     * can act on (reload prompt).
+     */
+    private function verifyNonce()
+    {
+        if (\check_ajax_referer('contentegg-metabox', '_contentegg_nonce', false))
+            return;
+
+        $this->formatJson(array(
+            'error' => \esc_html__('Your session has expired. Please reload the page and try again.', 'content-egg'),
+            'session_expired' => true,
+        ));
+        exit;
     }
 
     public function formatJson($data)

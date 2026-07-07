@@ -23,6 +23,8 @@ class UnsplashSearch extends RestClient
 
 	const API_URI_BASE = 'https://api.unsplash.com';
 
+	protected static $timeout = 30; //sec
+
 	private $accessKey = null;
 
 	/**

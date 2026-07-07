@@ -64,7 +64,7 @@ class HighlightVariant
                     </div>
 
                     <?php if ($item['score'] !== '') : ?>
-                        <div class="eggb-qp-highlight-score d-flex align-items-baseline gap-1" aria-label="<?php echo esc_attr(trim($item['score'] . ' / 10')); ?>">
+                        <div class="eggb-qp-highlight-score d-flex align-items-baseline gap-1" role="img" aria-label="<?php echo esc_attr(trim($item['score'] . ' / 10')); ?>">
                             <span class="eggb-score-num"><?php echo esc_html($item['score']); ?></span>
                             <span class="eggb-score-denom">/ 10</span>
                         </div>
@@ -103,8 +103,12 @@ class HighlightVariant
 
     private static function renderSecondary(array $item, array $payload): void
     {
+        $alt_class = 'eggb-qp-highlight-alt';
+        if (!$payload['has_any_image']) {
+            $alt_class .= ' eggb-qp-highlight-alt--no-media';
+        }
         ?>
-        <article class="eggb-qp-highlight-alt">
+        <article class="<?php echo esc_attr($alt_class); ?>">
             <?php if ($payload['has_any_image']) : ?>
                 <?php self::renderMedia($item, 'eggb-qp-highlight-alt-media'); ?>
             <?php endif; ?>
@@ -134,7 +138,7 @@ class HighlightVariant
 
             <div class="eggb-qp-highlight-alt-rail">
                 <?php if ($item['score'] !== '') : ?>
-                    <div class="eggb-qp-highlight-alt-score" aria-label="<?php echo esc_attr(trim($item['score'] . ' / 10')); ?>">
+                    <div class="eggb-qp-highlight-alt-score" role="img" aria-label="<?php echo esc_attr(trim($item['score'] . ' / 10')); ?>">
                         <span class="eggb-score-num"><?php echo esc_html($item['score']); ?></span>
                         <span class="eggb-score-denom">/ 10</span>
                     </div>

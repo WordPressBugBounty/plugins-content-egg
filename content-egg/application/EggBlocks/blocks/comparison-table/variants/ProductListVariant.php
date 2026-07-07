@@ -53,7 +53,7 @@ class ProductListVariant
                                 </td>
 
                                 <?php foreach ($payload['criteria'] as $criterion) : ?>
-                                    <td class="text-center">
+                                    <td class="eggb-ct-pl-value text-center">
                                         <?php self::renderCriterionValue($criterion, $item, $index, self::getLowestPrice($payload['items'], $criterion)); ?>
                                     </td>
                                 <?php endforeach; ?>

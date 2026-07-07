@@ -1248,7 +1248,8 @@ class ContentManager
         if ($keyword[0] == '[' || filter_var($keyword, FILTER_VALIDATE_URL))
         {
             $keyword = filter_var($keyword, FILTER_SANITIZE_URL);
-            $keyword = str_replace('[cataloglimit', '[catalog limit', $keyword);
+            // FILTER_SANITIZE_URL strips the space; restore it for both listing prefixes.
+            $keyword = str_replace(array('[importlimit', '[cataloglimit'), array('[import limit', '[catalog limit'), $keyword);
         }
         else
             $keyword = sanitize_text_field($keyword);

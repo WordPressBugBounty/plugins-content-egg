@@ -249,6 +249,9 @@ class ModuleViewer
 
     public function viewBlockData(array $module_ids, $post_id = null, $params = array(), $content = '', $only_return_data = false)
     {
+        $use_sources = !empty($params['sources']) && is_array($params['sources']);
+        $user_specified_sort = !empty($params['sort']);
+
         if (!$post_id)
         {
             global $post;
@@ -256,52 +259,69 @@ class ModuleViewer
         }
 
         // Get modules data
-        $data = array();
-        foreach ($module_ids as $module_id)
+        if ($use_sources)
         {
-            $module_data = $this->getData($module_id, $post_id, $params);
+            $data = $this->getSourcedBlockData($module_ids, $params['sources'], $params);
 
-            //groups filter
-            if (!empty($params['groups']))
+            // shortcoded!
+            if (!isset($params['shortcoded']) || (bool) $params['shortcoded'])
             {
-                foreach ($module_data as $key => $d)
-                {
-                    if (empty($d['group']) || !in_array($d['group'], $params['groups']))
-                        unset($module_data[$key]);
-                }
+                foreach ($module_ids as $module_id)
+                    Shortcoded::getInstance($post_id)->setShortcodedModule($module_id);
             }
-
-            // product IDs filter
-            if (!empty($params['products']))
+        }
+        else
+        {
+            $data = array();
+            foreach ($module_ids as $module_id)
             {
-                foreach ($module_data as $key => $d)
-                {
-                    if (!in_array($d['unique_id'], $params['products']))
-                        unset($module_data[$key]);
-                }
-            }
+                $module_data = $this->getData($module_id, $post_id, $params);
 
-            // hide fields
-            if (!empty($params['hide']))
+                //groups filter
+                if (!empty($params['groups']))
+                {
+                    foreach ($module_data as $key => $d)
+                    {
+                        if (empty($d['group']) || !in_array($d['group'], $params['groups']))
+                            unset($module_data[$key]);
+                    }
+                }
+
+                // product IDs filter
+                if (!empty($params['products']))
+                {
+                    foreach ($module_data as $key => $d)
+                    {
+                        if (!in_array($d['unique_id'], $params['products']))
+                            unset($module_data[$key]);
+                    }
+                }
+
+                if ($module_data)
+                    $data[$module_id] = $module_data;
+
+                // shortcoded!
+                if (!isset($params['shortcoded']) || (bool) $params['shortcoded'])
+                    Shortcoded::getInstance($post_id)->setShortcodedModule($module_id);
+            }
+        }
+
+        // hide fields
+        if (!empty($params['hide']))
+        {
+            foreach ($data as $module_id => $module_data)
             {
                 foreach ($module_data as $key => $d)
                 {
                     foreach ($params['hide'] as $hide)
                     {
                         if ($hide == 'title')
-                            $module_data[$key]['_alt'] = $module_data[$key]['title'];
+                            $data[$module_id][$key]['_alt'] = $data[$module_id][$key]['title'];
                         if (isset($d[$hide]))
-                            $module_data[$key][$hide] = '';
+                            $data[$module_id][$key][$hide] = '';
                     }
                 }
             }
-
-            if ($module_data)
-                $data[$module_id] = $module_data;
-
-            // shortcoded!
-            if (!isset($params['shortcoded']) || (bool) $params['shortcoded'])
-                Shortcoded::getInstance($post_id)->setShortcodedModule($module_id);
         }
 
         // group pick
@@ -392,12 +412,84 @@ class ModuleViewer
         if ($only_return_data)
             return $data;
 
-        $items = TemplateHelper::mergeAndSort($data, $params['order'], $params['sort']);
+        if ($use_sources && !$user_specified_sort)
+            $items = $this->sortBySourceOrder($data);
+        else
+            $items = TemplateHelper::mergeAndSort($data, $params['order'], $params['sort']);
 
         $tpl_manager->setParams($params);
         $tpl_manager->setItems($items);
 
         return $tpl_manager->render($params['template'], array('data' => $data, 'items' => $items, 'post_id' => $post_id, 'params' => $params, 'title' => $title, 'cols' => $cols, 'sort' => $params['sort'], 'order' => $params['order'], 'groups' => $params['groups'], 'btn_text' => $params['btn_text'], 'atts' => $params, 'content' => $content));
+    }
+
+    private function getSourcedBlockData(array $module_ids, array $sources, array $params)
+    {
+        $data = array();
+        $counter = 0;
+
+        foreach ($sources as $source)
+        {
+            $source_post_id = isset($source['post_id']) ? (int) $source['post_id'] : 0;
+            if ($source_post_id <= 0)
+                continue;
+
+            $candidates = array();
+            foreach ($module_ids as $module_id)
+            {
+                foreach ($this->getData($module_id, $source_post_id, $params) as $item)
+                {
+                    $candidates[] = $item;
+                }
+            }
+
+            if (!empty($source['group']))
+            {
+                $candidates = array_values(array_filter($candidates, function ($item) use ($source)
+                {
+                    return !empty($item['group']) && $item['group'] == $source['group'];
+                }));
+            }
+
+            $candidates = array_values(array_filter($candidates, function ($item)
+            {
+                return !isset($item['stock_status']) || $item['stock_status'] != ContentProduct::STOCK_STATUS_OUT_OF_STOCK;
+            }));
+
+            $candidates = TemplateHelper::sortByPrice($candidates, 'asc');
+
+            $limit = isset($source['limit']) ? (int) $source['limit'] : 1;
+            $candidates = array_slice($candidates, 0, $limit);
+
+            if (!empty($source['badge']) && isset($candidates[0]))
+                $candidates[0]['badge'] = $source['badge'];
+
+            if (!empty($source['rating']) && isset($candidates[0]))
+            {
+                $candidates[0]['ratingDecimal'] = (float) $source['rating'];
+                $candidates[0]['rating_locked'] = true;
+            }
+
+            foreach ($candidates as $item)
+            {
+                $item['_source_order'] = $counter++;
+                $data[$item['module_id']][$item['unique_id']] = $item;
+            }
+        }
+
+        return $data;
+    }
+
+    private function sortBySourceOrder(array $data)
+    {
+        $items = TemplateHelper::mergeAll($data);
+
+        usort($items, function ($a, $b)
+        {
+            return ($a['_source_order'] ?? 0) <=> ($b['_source_order'] ?? 0);
+        });
+
+        return $items;
     }
 
     private function spliceBlockData($data, $offset, $length, $order = null, $sort = null)

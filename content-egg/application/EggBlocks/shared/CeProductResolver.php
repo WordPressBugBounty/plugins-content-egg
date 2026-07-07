@@ -3,6 +3,7 @@
 namespace ContentEgg\application\EggBlocks\shared;
 
 use ContentEgg\application\components\ContentManager;
+use ContentEgg\application\components\ModuleManager;
 
 defined('ABSPATH') || exit;
 
@@ -19,6 +20,14 @@ class CeProductResolver
         if (empty($productRef['module_id'])
             || empty($productRef['unique_id'])
         ) {
+            return null;
+        }
+
+        // Module may no longer be installed (e.g. downgrade from Pro to free
+        // while product data for the removed module still exists in the DB).
+        // Resolving it would throw "Unable to load module class" from the
+        // ModuleManager factory, so skip silently.
+        if (!ModuleManager::getInstance()->moduleExists($productRef['module_id'])) {
             return null;
         }
 

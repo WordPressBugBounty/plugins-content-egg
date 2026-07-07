@@ -2,6 +2,8 @@
 
 namespace ContentEgg\application\EggBlocks\shared;
 
+use ContentEgg\application\components\ContentProduct;
+
 defined('ABSPATH') || exit;
 
 /**
@@ -49,7 +51,7 @@ final class EggbSchemaCollector
      * Register a base Product schema from a product-card block.
      *
      * @param array $productRef ['module_id' => string, 'unique_id' => string]
-     * @param array $data       ['name', 'description', 'image', 'score', 'url', 'merchant', 'price', 'currency']
+     * @param array $data       ['name', 'image', 'score', 'url', 'merchant', 'price', 'currency', 'brand', 'gtin', 'stock_status']
      */
     public static function addProduct(array $productRef, array $data): void
     {
@@ -71,16 +73,25 @@ final class EggbSchemaCollector
             'name'  => (string) ($data['name'] ?? ''),
         ];
 
-        $description = trim((string) ($data['description'] ?? ''));
-        if ($description !== '')
-        {
-            $schema['description'] = $description;
-        }
-
         $image = trim((string) ($data['image'] ?? ''));
         if ($image !== '')
         {
             $schema['image'] = $image;
+        }
+
+        $brand = trim((string) ($data['brand'] ?? ''));
+        if ($brand !== '')
+        {
+            $schema['brand'] = [
+                '@type' => 'Brand',
+                'name'  => $brand,
+            ];
+        }
+
+        $gtin = trim((string) ($data['gtin'] ?? ''));
+        if ($gtin !== '')
+        {
+            $schema['gtin'] = $gtin;
         }
 
         $score = $data['score'] ?? '';
@@ -111,6 +122,7 @@ final class EggbSchemaCollector
                 '@type'         => 'Offer',
                 'price'         => $price,
                 'priceCurrency' => $currency !== '' ? $currency : 'USD',
+                'availability'  => self::resolveAvailability($data['stock_status'] ?? null),
             ];
             if ($url !== '')
             {
@@ -310,6 +322,21 @@ final class EggbSchemaCollector
             }
         }
         return ['@type' => 'Organization', 'name' => get_bloginfo('name')];
+    }
+
+    /**
+     * Map a CE stock_status to a schema.org availability URL.
+     * Affiliate products commonly have an unknown status; we default to InStock
+     * so the offer carries a valid availability rather than omitting the field.
+     */
+    private static function resolveAvailability($stockStatus): string
+    {
+        if ((int) $stockStatus === ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+        {
+            return 'https://schema.org/OutOfStock';
+        }
+
+        return 'https://schema.org/InStock';
     }
 
     private static function productKey(?array $productRef): ?string

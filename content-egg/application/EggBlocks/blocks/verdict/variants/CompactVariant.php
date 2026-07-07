@@ -13,7 +13,7 @@ class CompactVariant
         <div class="eggb-block eggb-verdict eggb-verdict--compact <?php echo esc_attr($theme_class); ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
             <div class="d-flex align-items-start gap-3">
                 <?php if ($has_score) : ?>
-                    <div class="eggb-vd-score-col d-flex flex-column align-items-center gap-1" aria-label="<?php echo esc_attr(trim($data['score'] . ' ' . $data['score_denom'])); ?>">
+                    <div class="eggb-vd-score-col d-flex flex-column align-items-center gap-1" role="img" aria-label="<?php echo esc_attr(trim($data['score'] . ' ' . $data['score_denom'])); ?>">
                         <span class="eggb-score-num"><?php echo esc_html($data['score']); ?></span>
                         <?php if ($data['score_denom'] !== '') : ?>
                             <span class="eggb-score-denom eggb-label"><?php echo esc_html($data['score_denom']); ?></span>

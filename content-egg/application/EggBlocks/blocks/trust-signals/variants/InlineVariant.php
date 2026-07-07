@@ -14,7 +14,7 @@ class InlineVariant
         $metrics   = $data['metrics'];
         $badges    = $data['badges'];
         ?>
-        <div class="eggb-block eggb-trust eggb-trust--inline<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> aria-label="<?php esc_attr_e('Trust signals', 'content-egg'); ?>">
+        <div class="eggb-block eggb-trust eggb-trust--inline<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> role="group" aria-label="<?php esc_attr_e('Trust signals', 'content-egg'); ?>">
 
             <?php if ($aggregate !== null): ?>
                 <div class="eggb-trust-item eggb-trust-item--rating">

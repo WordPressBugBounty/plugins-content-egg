@@ -288,6 +288,10 @@
   background: color-mix(in srgb, var(--eggb-border) 30%, var(--eggb-surface));
 }
 
+.eggb-ct--product-list .eggb-ct-table th {
+  line-height: 1.2;
+}
+
 .eggb-ct--product-list .eggb-ct-table td,
 .eggb-ct--product-list .eggb-ct-table th {
   padding: 0.5rem 0.75rem;
@@ -373,6 +377,11 @@
   line-height: 1.45;
   color: var(--eggb-text-muted);
   text-align: right;
+}
+
+.eggb-ct--product-list .eggb-ct-pl-value {
+  font-size: var(--eggb-text-sm);
+  line-height: 1.3;
 }
 
 .eggb-ct--product-list .eggb-ct-pl-text {

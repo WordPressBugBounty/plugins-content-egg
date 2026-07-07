@@ -54,7 +54,7 @@ class CompactVariant
 
                         <div class="eggb-qp-rail d-flex align-items-center gap-3">
                             <?php if ($item['score'] !== '') : ?>
-                                <div class="eggb-qp-score eggb-qp-compact-meta" aria-label="<?php echo esc_attr(self::buildCompactMetaLabel($item)); ?>">
+                                <div class="eggb-qp-score eggb-qp-compact-meta" role="img" aria-label="<?php echo esc_attr(self::buildCompactMetaLabel($item)); ?>">
                                     <span class="eggb-score-num"><?php echo esc_html($item['score']); ?></span>
                                     <span class="eggb-score-denom">/ 10</span>
                                 </div>

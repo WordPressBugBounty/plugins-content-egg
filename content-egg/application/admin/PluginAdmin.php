@@ -85,6 +85,7 @@ class PluginAdmin
             new ToolsController;
             ImportQueueApi::init();
             AeIntegrationConfig::getInstance()->adminInit();
+            AeConnectController::register();
             new AutoblogController;
             ProUpsellLinks::init();
             ModuleUpdateScheduler::addScheduleEvent('ten_min');

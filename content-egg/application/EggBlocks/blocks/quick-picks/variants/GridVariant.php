@@ -58,7 +58,7 @@ class GridVariant
                                         <?php DefaultVariant::renderMerchant($item, 'eggb-qp-store'); ?>
                                     </div>
                                     <?php if ($item['score'] !== '') : ?>
-                                        <div class="eggb-qp-grid-score" aria-label="<?php echo esc_attr(trim($item['score'] . ' / 10')); ?>">
+                                        <div class="eggb-qp-grid-score" role="img" aria-label="<?php echo esc_attr(trim($item['score'] . ' / 10')); ?>">
                                             <span class="eggb-score-num"><?php echo esc_html($item['score']); ?></span>
                                             <span class="eggb-score-denom">/ 10</span>
                                         </div>

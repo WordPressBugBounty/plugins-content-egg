@@ -2,6 +2,8 @@
 
 namespace ContentEgg\application\EggBlocks\blocks\relatedposts\variants;
 
+use ContentEgg\application\EggBlocks\shared\EggbThumbnail;
+
 defined('ABSPATH') || exit;
 
 class MediaListVariant
@@ -20,11 +22,11 @@ class MediaListVariant
                         <?php if ($item['thumbnail'] !== ''): ?>
                             <?php if ($item['linked']): ?>
                                 <a href="<?php echo esc_url($item['url']); ?>" class="eggb-rp-thumb">
-                                    <img src="<?php echo esc_url($item['thumbnail']); ?>" alt="" loading="lazy">
+                                    <?php echo EggbThumbnail::render($item['post_id'], 'medium', '96px'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                                 </a>
                             <?php else: ?>
                                 <span class="eggb-rp-thumb">
-                                    <img src="<?php echo esc_url($item['thumbnail']); ?>" alt="" loading="lazy">
+                                    <?php echo EggbThumbnail::render($item['post_id'], 'medium', '96px'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                                 </span>
                             <?php endif; ?>
                         <?php endif; ?>

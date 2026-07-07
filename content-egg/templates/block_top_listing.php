@@ -18,13 +18,16 @@ foreach ($items as $i => $item)
     if (!isset($item['group']))
         $item['group'] = '';
 
-    if (empty($item['ratingDecimal']) && isset($item['extra']['data']['ratingDecimal']))
-        $items[$i]['ratingDecimal'] = $item['ratingDecimal'] = TemplateHelper::convertRatingScale10($item['extra']['data']['ratingDecimal']);
+    if (empty($item['rating_locked']))
+    {
+        if (empty($item['ratingDecimal']) && isset($item['extra']['data']['ratingDecimal']))
+            $items[$i]['ratingDecimal'] = $item['ratingDecimal'] = TemplateHelper::convertRatingScale10($item['extra']['data']['ratingDecimal']);
 
-    if (empty($item['ratingDecimal']))
-        $items[$i]['ratingDecimal'] = $ratings[$i];
-    elseif ($item['ratingDecimal'] && ($item['group'] !== 'Roundup' || $item['ratingDecimal'] < 5))
-        $items[$i]['ratingDecimal'] = TemplateHelper::convertRatingScale10($item['ratingDecimal']);
+        if (empty($item['ratingDecimal']))
+            $items[$i]['ratingDecimal'] = $ratings[$i];
+        elseif ($item['ratingDecimal'] && ($item['group'] !== 'Roundup' || $item['ratingDecimal'] < 5))
+            $items[$i]['ratingDecimal'] = TemplateHelper::convertRatingScale10($item['ratingDecimal']);
+    }
 
     $items[$i]['rating'] = $items[$i]['ratingDecimal'];
 }

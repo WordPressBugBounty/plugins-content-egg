@@ -16,7 +16,7 @@ class GridVariant
                         <div class="eggb-rb-overall-score"><?php echo esc_html($overall['score']); ?></div>
                         <div class="eggb-label mt-1 mb-2"><?php echo esc_html($overall['denom']); ?></div>
                         <?php if ($overall['stars_markup'] !== '') : ?>
-                            <div class="eggb-rb-stars" aria-label="<?php echo esc_attr($overall['stars_aria']); ?>">
+                            <div class="eggb-rb-stars" role="img" aria-label="<?php echo esc_attr($overall['stars_aria']); ?>">
                                 <?php echo $overall['stars_markup']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                             </div>
                         <?php endif; ?>

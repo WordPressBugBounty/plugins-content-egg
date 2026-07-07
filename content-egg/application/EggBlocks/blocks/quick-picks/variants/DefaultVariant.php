@@ -52,7 +52,7 @@ class DefaultVariant
 
                             <div class="eggb-qp-rail d-flex flex-column gap-2">
                                 <?php if ($item['score'] !== '') : ?>
-                                    <div class="eggb-qp-score" aria-label="<?php echo esc_attr(trim($item['score'] . ' / 10')); ?>">
+                                    <div class="eggb-qp-score" role="img" aria-label="<?php echo esc_attr(trim($item['score'] . ' / 10')); ?>">
                                         <span class="eggb-score-num"><?php echo esc_html($item['score']); ?></span>
                                         <span class="eggb-score-denom">/ 10</span>
                                     </div>

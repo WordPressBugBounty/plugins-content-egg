@@ -118,9 +118,13 @@ $templates = $tpl_manager->getTemplatesList(true);
                 <div class="col small">
                     <?php $module->renderSearchResults(); ?>
 
-                    <div ng-show="!models.<?php echo esc_attr($module_id); ?>.processing && models.<?php echo esc_attr($module_id); ?>.loaded && models.<?php echo esc_attr($module_id); ?>.results.length == 0 && !models.<?php echo esc_attr($module_id); ?>.error" class="alert alert-secondary small"><?php esc_html_e('No results found...', 'content-egg'); ?></div>
+                    <div ng-show="!models.<?php echo esc_attr($module_id); ?>.processing && models.<?php echo esc_attr($module_id); ?>.loaded && models.<?php echo esc_attr($module_id); ?>.results.length == 0 && !models.<?php echo esc_attr($module_id); ?>.error && !models.<?php echo esc_attr($module_id); ?>.notice" class="alert alert-secondary small"><?php esc_html_e('No results found...', 'content-egg'); ?></div>
                     <div ng-show="models.<?php echo esc_attr($module_id); ?>.error && !models.<?php echo esc_attr($module_id); ?>.processing" class="alert alert-warning small"><?php esc_html_e('Error:', 'content-egg'); ?>
                         <span ng-bind-html="models.<?php echo esc_attr($module_id); ?>.error"></span>
+                        <button ng-show="models.<?php echo esc_attr($module_id); ?>.sessionExpired" type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="window.location.reload()"><?php esc_html_e('Reload page', 'content-egg'); ?></button>
+                    </div>
+                    <div ng-show="models.<?php echo esc_attr($module_id); ?>.notice && !models.<?php echo esc_attr($module_id); ?>.processing" class="alert alert-info small">
+                        <span ng-bind-html="models.<?php echo esc_attr($module_id); ?>.notice"></span>
                     </div>
                 </div>
             </div>

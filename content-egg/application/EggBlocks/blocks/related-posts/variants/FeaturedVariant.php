@@ -2,6 +2,8 @@
 
 namespace ContentEgg\application\EggBlocks\blocks\relatedposts\variants;
 
+use ContentEgg\application\EggBlocks\shared\EggbThumbnail;
+
 defined('ABSPATH') || exit;
 
 class FeaturedVariant
@@ -24,11 +26,11 @@ class FeaturedVariant
                     <?php if ($hero['thumbnail'] !== ''): ?>
                         <?php if ($hero['linked']): ?>
                             <a href="<?php echo esc_url($hero['url']); ?>" class="eggb-rp-thumb">
-                                <img src="<?php echo esc_url($hero['thumbnail']); ?>" alt="" loading="lazy">
+                                <?php echo EggbThumbnail::render($hero['post_id'], 'large', '(max-width: 767.98px) 100vw, 50vw'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                             </a>
                         <?php else: ?>
                             <span class="eggb-rp-thumb">
-                                <img src="<?php echo esc_url($hero['thumbnail']); ?>" alt="" loading="lazy">
+                                <?php echo EggbThumbnail::render($hero['post_id'], 'large', '(max-width: 767.98px) 100vw, 50vw'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                             </span>
                         <?php endif; ?>
                     <?php endif; ?>
@@ -51,29 +53,31 @@ class FeaturedVariant
                     <div class="d-flex flex-column">
                         <?php foreach ($list_items as $item): ?>
                             <article class="eggb-rp-featured-list-item">
-                                <?php if ($item['thumbnail'] !== ''): ?>
-                                    <?php if ($item['linked']): ?>
-                                        <a href="<?php echo esc_url($item['url']); ?>" class="eggb-rp-thumb">
-                                            <img src="<?php echo esc_url($item['thumbnail']); ?>" alt="" loading="lazy">
-                                        </a>
-                                    <?php else: ?>
-                                        <span class="eggb-rp-thumb">
-                                            <img src="<?php echo esc_url($item['thumbnail']); ?>" alt="" loading="lazy">
-                                        </span>
-                                    <?php endif; ?>
+                                <?php if ($item['badge'] !== ''): ?>
+                                    <span class="eggb-rp-badge"><?php echo esc_html($item['badge']); ?></span>
                                 <?php endif; ?>
-                                <div class="d-flex flex-column gap-1 min-w-0">
-                                    <?php if ($item['badge'] !== ''): ?>
-                                        <span class="eggb-rp-badge"><?php echo esc_html($item['badge']); ?></span>
+                                <div class="eggb-rp-featured-list-main">
+                                    <?php if ($item['thumbnail'] !== ''): ?>
+                                        <?php if ($item['linked']): ?>
+                                            <a href="<?php echo esc_url($item['url']); ?>" class="eggb-rp-thumb">
+                                                <?php echo EggbThumbnail::render($item['post_id'], 'medium', '72px'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="eggb-rp-thumb">
+                                                <?php echo EggbThumbnail::render($item['post_id'], 'medium', '72px'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                            </span>
+                                        <?php endif; ?>
                                     <?php endif; ?>
-                                    <?php if ($item['linked']): ?>
-                                        <a href="<?php echo esc_url($item['url']); ?>" class="eggb-rp-title"><?php echo esc_html($item['title']); ?></a>
-                                    <?php else: ?>
-                                        <span class="eggb-rp-title"><?php echo esc_html($item['title']); ?></span>
-                                    <?php endif; ?>
-                                    <?php if ($item['snippet'] !== ''): ?>
-                                        <span class="eggb-rp-snippet"><?php echo esc_html($item['snippet']); ?></span>
-                                    <?php endif; ?>
+                                    <div class="d-flex flex-column gap-1 min-w-0">
+                                        <?php if ($item['linked']): ?>
+                                            <a href="<?php echo esc_url($item['url']); ?>" class="eggb-rp-title"><?php echo esc_html($item['title']); ?></a>
+                                        <?php else: ?>
+                                            <span class="eggb-rp-title"><?php echo esc_html($item['title']); ?></span>
+                                        <?php endif; ?>
+                                        <?php if ($item['snippet'] !== ''): ?>
+                                            <span class="eggb-rp-snippet"><?php echo esc_html($item['snippet']); ?></span>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </article>
                         <?php endforeach; ?>

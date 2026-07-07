@@ -4,7 +4,7 @@ Tags: affiliate marketing, price comparison, csv import, ai content generation, 
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 11.2.0
+Stable tag: 11.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -209,6 +209,16 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 
 
 == Changelog ==
+
+= 11.3.0 =
+
+* New: Affiliate Egg integration — connect almost any online store as a module by its domain and pull live product data. Requires the Affiliate Egg plugin.
+* New: Added latest OpenAI (GPT-5.5/5.4/5-pro) and Anthropic (Claude Sonnet 5, Fable 5, Opus 4.8/4.7) AI models.
+* New: `[content-egg-block]` `sources` attribute — aggregate curated picks (per-post, group-filtered, price-sorted, badge-tagged) from multiple posts into one block.
+
+= 11.2.1 =
+
+* Polishing Egg Blocks.
 
 = 11.2.0 =
 

@@ -25,7 +25,10 @@ class RelatedPostsRenderer
         $items = self::normalizeItems($attributes['items'] ?? []);
         if (empty($items))
         {
-            return '';
+            // Nothing to render on the front end, but show a small hint in the
+            // editor so the block isn't an invisible blank (e.g. linked posts
+            // are still drafts and therefore not displayable yet).
+            return self::isEditorPreview() ? self::renderEditorPlaceholder($attributes) : '';
         }
 
         $data = [
@@ -57,6 +60,47 @@ class RelatedPostsRenderer
                 break;
         }
 
+        return (string) ob_get_clean();
+    }
+
+    private static function isEditorPreview(): bool
+    {
+        if (!defined('REST_REQUEST') || !REST_REQUEST)
+        {
+            return false;
+        }
+
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        return isset($_GET['context']) && $_GET['context'] === 'edit';
+    }
+
+    private static function renderEditorPlaceholder(array $attributes): string
+    {
+        $raw_items = is_array($attributes['items'] ?? null) ? $attributes['items'] : [];
+
+        $configured = 0;
+        foreach ($raw_items as $raw_item)
+        {
+            if (is_array($raw_item) && trim((string) ($raw_item['post_id'] ?? '')) !== '')
+            {
+                $configured++;
+            }
+        }
+
+        $label = trim((string) ($attributes['section_label'] ?? ''));
+        $message = $configured > 0
+            ? __('Linked posts aren’t published yet — they’ll appear here once published.', 'content-egg')
+            : __('Add related posts in the block settings to preview them here.', 'content-egg');
+
+        ob_start();
+        ?>
+        <div class="eggb-block eggb-rp-placeholder">
+            <?php if ($label !== '') : ?>
+                <span class="eggb-rp-placeholder-label"><?php echo esc_html($label); ?></span>
+            <?php endif; ?>
+            <span class="eggb-rp-placeholder-note"><?php echo esc_html($message); ?></span>
+        </div>
+        <?php
         return (string) ob_get_clean();
     }
 
@@ -142,12 +186,13 @@ class RelatedPostsRenderer
                 }
             }
 
-            $thumbnail = get_the_post_thumbnail_url($post_id, 'medium');
+            $thumbnail = has_post_thumbnail($post_id) ? '1' : '';
 
             $normalized[] = [
                 'url'       => $url,
                 'title'     => $title,
-                'thumbnail' => $thumbnail ?: '',
+                'post_id'   => $post_id,
+                'thumbnail' => $thumbnail,
                 'badge'     => $badge,
                 'snippet'   => $snippet,
                 'linked'    => $show_link,
