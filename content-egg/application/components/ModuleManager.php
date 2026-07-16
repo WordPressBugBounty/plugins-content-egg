@@ -717,10 +717,20 @@ class ModuleManager
 
         if ($module->isFeedModule())
         {
+            \wp_clear_scheduled_hook(
+                'cegg_' . $module_id . '_init_products',
+                array('module_id' => $module_id)
+            );
+
             $module->setLastImportDate(0);
             $module->setLastImportError('');
+            $module->setLastImportNotice('');
+            $module->importStatus()->reset();
+            $module->feedFileCache()->delete();
+            $module->clearPrefetchedArchive();
 
             $model = $module->getProductModel();
+            $model->dropStagingTables();
             if ($model->isTableExists())
             {
                 $model->dropTable();

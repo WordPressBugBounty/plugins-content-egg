@@ -75,6 +75,7 @@ class PluginAdmin
             GeneralConfig::getInstance()->adminInit();
             ModuleManager::getInstance()->adminInit();
             new ModuleSettingsContoller;
+            new FeedWizardController;
             new ProductImportController;
             new ProductPrefillController;
             new ProductController;

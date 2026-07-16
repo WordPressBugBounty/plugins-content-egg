@@ -21,6 +21,7 @@ abstract class Model
     public static $db;
     private static $models = array();
     protected $charset_collate = '';
+    protected $write_table;
 
     abstract public function tableName();
 
@@ -300,6 +301,80 @@ abstract class Model
         $this->getDb()->query('TRUNCATE TABLE ' . $this->tableName());
     }
 
+    /**
+     * Redirect batch inserts to another table (used for staging imports).
+     * Pass null to restore the default table.
+     */
+    public function setWriteTable(?string $table)
+    {
+        $this->write_table = $table;
+    }
+
+    public function writeTableName()
+    {
+        return $this->write_table ? $this->write_table : $this->tableName();
+    }
+
+    public function stagingTableName()
+    {
+        return $this->tableName() . '_staging';
+    }
+
+    public function retiredTableName()
+    {
+        return $this->tableName() . '_old';
+    }
+
+    /**
+     * Create a fresh, empty staging copy of the live table.
+     */
+    public function createStagingTable()
+    {
+        $db = $this->getDb();
+
+        $db->query('DROP TABLE IF EXISTS `' . $this->stagingTableName() . '`');
+        $db->query('CREATE TABLE `' . $this->stagingTableName() . '` LIKE `' . $this->tableName() . '`');
+
+        $query = $db->prepare('SHOW TABLES LIKE %s', $db->esc_like($this->stagingTableName()));
+        if ($db->get_var($query) != $this->stagingTableName())
+        {
+            throw new \Exception('Failed to create staging table for feed import.');
+        }
+    }
+
+    /**
+     * Atomically replace the live table with the staging table.
+     * RENAME TABLE is atomic in MySQL, so readers never see a partial catalog.
+     */
+    public function swapStagingTable()
+    {
+        $db = $this->getDb();
+
+        $db->query('DROP TABLE IF EXISTS `' . $this->retiredTableName() . '`');
+
+        $result = $db->query(
+            'RENAME TABLE `' . $this->tableName() . '` TO `' . $this->retiredTableName() . '`, `'
+                . $this->stagingTableName() . '` TO `' . $this->tableName() . '`'
+        );
+
+        if ($result === false)
+        {
+            throw new \Exception('Failed to activate imported products (table swap).');
+        }
+
+        $db->query('DROP TABLE IF EXISTS `' . $this->retiredTableName() . '`');
+    }
+
+    /**
+     * Remove staging leftovers from a crashed or failed import.
+     */
+    public function dropStagingTables()
+    {
+        $db = $this->getDb();
+        $db->query('DROP TABLE IF EXISTS `' . $this->stagingTableName() . '`');
+        $db->query('DROP TABLE IF EXISTS `' . $this->retiredTableName() . '`');
+    }
+
     public function isTableExists()
     {
         $query = $this->getDb()->prepare('SHOW TABLES LIKE %s', $this->getDb()->esc_like($this->tableName()));
@@ -349,7 +424,7 @@ abstract class Model
             }
 
             $prefix  = $wpdb->prefix;
-            $rawName = $this->tableName();
+            $rawName = $this->writeTableName();
             if (substr($rawName, 0, strlen($prefix)) === $prefix)
             {
                 $table = $rawName;

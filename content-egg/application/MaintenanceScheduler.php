@@ -3,6 +3,7 @@
 namespace ContentEgg\application;
 
 use ContentEgg\application\admin\ClicksMaintenance;
+use ContentEgg\application\admin\FeedPrefetchMaintenance;
 use ContentEgg\application\admin\ProductMapMaintenance;
 
 defined('\ABSPATH') || exit;
@@ -146,6 +147,7 @@ class MaintenanceScheduler
         {
             ProductMapMaintenance::garbageCollect();
             ClicksMaintenance::runRetention();
+            FeedPrefetchMaintenance::garbageCollect();
         }
         catch (\Throwable $e)
         {

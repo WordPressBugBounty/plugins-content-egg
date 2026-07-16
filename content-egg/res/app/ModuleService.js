@@ -16,7 +16,13 @@ contentEgg.factory("ModuleService", [
       this.sessionExpired = false;
       this.aiError = "";
       this.aiProcessing = false;
+      this.findRetries = 0;
     };
+
+    // Poll every 5s while a background feed import fills the catalog
+    // (5s * 60 = 5 minutes before giving up).
+    var FEED_IMPORT_RETRY_DELAY = 5000;
+    var FEED_IMPORT_MAX_RETRIES = 60;
 
     service.prototype.find = function (query) {
       var self = this;
@@ -44,6 +50,21 @@ contentEgg.factory("ModuleService", [
       }).then(
         function (response) {
           var data = response.data;
+
+          // The feed catalog is still being imported in the background:
+          // keep the loading state visible and retry the same search until
+          // products arrive.
+          if (data.feed_importing) {
+            self.findRetries++;
+            if (self.findRetries <= FEED_IMPORT_MAX_RETRIES) {
+              return $timeout(function () {
+                return self.find(query);
+              }, FEED_IMPORT_RETRY_DELAY);
+            }
+            data.error = data.notice;
+          }
+          self.findRetries = 0;
+
           if (!data.error) {
             self.results = data.results;
             self.error = "";

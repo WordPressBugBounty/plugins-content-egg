@@ -4,7 +4,7 @@ Tags: affiliate marketing, price comparison, csv import, ai content generation, 
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 11.3.0
+Stable tag: 11.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -209,6 +209,15 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 
 
 == Changelog ==
+
+= 11.4.0 =
+
+* New: Feed — "Add a Feed" setup wizard: paste a feed URL and the plugin auto-detects the format, encoding, currency and CSV settings, lets you map fields against real sample data, then imports in the background with live progress.
+* New: Feed — option to clear the cached feed file from the module's settings page.
+* New: Merchant Names — map a shop domain to a display name from the Shops settings, used for the %MERCHANT% tag and the merchant label in templates.
+* Improved: Feed — feeds are now cached and reused between syncs instead of being re-downloaded and reprocessed when nothing changed, and imports always run in the background so pages never wait on a slow feed download.
+* Fixed: Feed — the "Loading data feed…" message in product search no longer shows misleadingly when the catalog is empty and an import is pending or has failed.
+* Fixed: Security hardening and fixes. Updating is recommended for all users.
 
 = 11.3.0 =
 

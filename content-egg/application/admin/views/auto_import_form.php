@@ -116,9 +116,9 @@ defined('ABSPATH') || exit; ?>
 
             <!-- Sort by newest first -->
             <div class="col-12 col-md-6">
-                <div class="form-check mt-4">
-                    <input class="form-check-input" type="checkbox" id="sort_newest" name="sort_newest" value="1" <?php checked($rule['sort_newest'], 1); ?>>
-                    <label class="form-check-label" for="sort_newest">
+                <div class="mt-4">
+                    <label for="sort_newest">
+                        <input type="checkbox" id="sort_newest" name="sort_newest" value="1" <?php checked($rule['sort_newest'], 1); ?>>
                         <?php esc_html_e('Sort by newest first', 'content-egg'); ?>
                     </label>
                 </div>

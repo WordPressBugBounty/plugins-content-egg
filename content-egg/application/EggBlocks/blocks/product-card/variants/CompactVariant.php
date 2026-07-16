@@ -10,7 +10,7 @@ class CompactVariant
     {
         ?>
         <?php DefaultVariant::renderBlockHeader($card, $theme_class, $data_theme); ?>
-        <div class="d-flex flex-column gap-2<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>">
+        <div class="d-flex flex-column gap-2<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
             <div class="eggb-block eggb-product-card eggb-product-card--compact d-flex align-items-center gap-3<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
                 <?php if ($card['has_rank']) : ?>
                     <span class="eggb-pc-rank" role="img" aria-label="<?php echo esc_attr('Rank ' . $card['rank']); ?>"><?php echo esc_html($card['rank_display']); ?></span>

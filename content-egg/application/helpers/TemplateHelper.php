@@ -649,6 +649,11 @@ class TemplateHelper
         if ($name == 'eBay' && $item['merchant'] != 'eBay')
             $name = $item['merchant'];
 
+        // Domain → merchant name mapping (Shops settings). Overrides the derived name;
+        // the cegg_merchant_name filter still runs last as a programmatic override.
+        if (!empty($item['domain']) && ($mapped = GeneralConfig::getMappedMerchantName($item['domain'])))
+            $name = $mapped;
+
         if ($print)
         {
             if ($small)

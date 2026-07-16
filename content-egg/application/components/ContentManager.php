@@ -241,6 +241,12 @@ class ContentManager
         {
             $data = TextHelper::fixEan(sanitize_text_field((string)$data));
         }
+        elseif ($key === 'img_file')
+        {
+            // Strip markup and any path-traversal so a stored img_file can never
+            // escape the uploads dir when unlinked/copied.
+            $data = ImageHelper::sanitizeImgFile((string)$data);
+        }
         elseif ($key === 'ratingDecimal')
         {
             $data = (float) $data;

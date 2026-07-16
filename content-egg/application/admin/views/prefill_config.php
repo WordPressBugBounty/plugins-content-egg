@@ -131,15 +131,14 @@ $ai_warning = AdminHelper::getSysAiWarning();
                         <div class="row">
                             <?php foreach ($modules as $module_id => $module_name) : ?>
                                 <div class="col-md-4 mb-1">
-                                    <div class="form-check">
-                                        <input
-                                            class="form-check-input"
-                                            type="checkbox"
-                                            name="modules[]"
-                                            value="<?php echo esc_attr($module_id); ?>"
-                                            id="module_<?php echo esc_attr($module_id); ?>"
-                                            <?php checked(in_array($module_id, $selected_modules, true)); ?>>
-                                        <label class="form-check-label" for="module_<?php echo esc_attr($module_id); ?>">
+                                    <div>
+                                        <label for="module_<?php echo esc_attr($module_id); ?>">
+                                            <input
+                                                type="checkbox"
+                                                name="modules[]"
+                                                value="<?php echo esc_attr($module_id); ?>"
+                                                id="module_<?php echo esc_attr($module_id); ?>"
+                                                <?php checked(in_array($module_id, $selected_modules, true)); ?>>
                                             <?php echo esc_html($module_name); ?>
                                         </label>
                                     </div>
@@ -260,9 +259,11 @@ $ai_warning = AdminHelper::getSysAiWarning();
             <tr>
                 <th scope="row"><label for="ai_relevance_check"><?php esc_html_e('AI Relevance Check', 'content-egg'); ?></label></th>
                 <td>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="ai_relevance_check" name="ai_relevance_check" value="1" <?php checked($ai_relevance_check); ?>>
-                        <label class="form-check-label" for="ai_relevance_check"><?php esc_html_e('Enable AI-powered relevance checking for products based on the post title and content.', 'content-egg'); ?></label>
+                    <div>
+                        <label for="ai_relevance_check">
+                            <input type="checkbox" id="ai_relevance_check" name="ai_relevance_check" value="1" <?php checked($ai_relevance_check); ?>>
+                            <?php esc_html_e('Enable AI-powered relevance checking for products based on the post title and content.', 'content-egg'); ?>
+                        </label>
                         <div class="small text-muted mt-1"><?php esc_html_e('If enabled, products will be filtered by AI to improve relevance.', 'content-egg'); ?></div>
                         <?php echo wp_kses_post($ai_warning); ?>
                     </div>

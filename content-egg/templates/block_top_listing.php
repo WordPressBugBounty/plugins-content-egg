@@ -32,10 +32,13 @@ foreach ($items as $i => $item)
     $items[$i]['rating'] = $items[$i]['ratingDecimal'];
 }
 
-if (TemplateHelper::isNumbered($items))
-    $items = TemplateHelper::sortByNumber($items, $order);
-elseif ($item['group'] !== 'Roundup')
-    $items = ArrayHelper::sortByField($items, 'ratingDecimal', 'desc');
+if (!isset($items[0]['_source_order']))
+{
+    if (TemplateHelper::isNumbered($items))
+        $items = TemplateHelper::sortByNumber($items, $order);
+    elseif ($item['group'] !== 'Roundup')
+        $items = ArrayHelper::sortByField($items, 'ratingDecimal', 'desc');
+}
 
 ?>
 

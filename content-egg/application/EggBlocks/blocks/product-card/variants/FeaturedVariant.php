@@ -14,7 +14,7 @@ class FeaturedVariant
         $has_bottom_row = DefaultVariant::hasPriceData($card) || $card['cta_label'] !== '';
         ?>
         <?php DefaultVariant::renderBlockHeader($card, $theme_class, $data_theme); ?>
-        <div class="d-flex flex-column gap-2<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>">
+        <div class="d-flex flex-column gap-2<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
             <div class="eggb-block eggb-card eggb-block--accented eggb-product-card eggb-product-card--featured d-flex<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
                 <?php if (DefaultVariant::hasImage($card)) : ?>
                     <div class="eggb-pc-featured-img-zone">

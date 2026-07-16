@@ -5,6 +5,7 @@ namespace ContentEgg\application\components;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\ai\AiProcessor;
+use ContentEgg\application\components\feed\FeedImportPendingException;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TemplateHelper;
@@ -242,6 +243,17 @@ class ModuleApi
 
             $notice = method_exists($parser, 'getSearchNotice') ? (string) $parser->getSearchNotice() : '';
             $this->formatJson(array('results' => $data, 'error' => '', 'notice' => $notice));
+        }
+        catch (FeedImportPendingException $e)
+        {
+            // Not an error: the feed catalog is still being imported in the
+            // background. The metabox keeps its loading state and retries.
+            $this->formatJson(array(
+                'results' => array(),
+                'error' => '',
+                'notice' => $e->getMessage(),
+                'feed_importing' => true,
+            ));
         }
         catch (\Exception $e)
         {

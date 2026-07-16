@@ -64,6 +64,7 @@ class ToolsController
             'offer-urls-export'       => 'actionOfferUrlsExport',
             'feed-export'             => 'actionFeedDataExport',
             'feed-reset'             => 'actionFeedDataReset',
+            'feed-cache-clear'        => 'actionFeedCacheClear',
             'export-module-settings'  => 'actionExportModuleSettings',
             'import-module-settings'  => 'actionImportModuleSettings',
             'export-plugin-settings'  => 'actionExportPluginSettings',
@@ -227,10 +228,37 @@ class ToolsController
 
         $config = $module->getConfigInstance();
         $is_active = $config->option('is_active');
+        $module->requestForceRefresh();
         $module->refreshFeedData($is_active);
 
         $redirect_url = admin_url(sprintf('admin.php?page=content-egg-modules--%s', $module_id));
         $redirect_url = AdminNotice::add2Url($redirect_url, 'feed_reseted', 'success');
+
+        AdminHelper::redirect($redirect_url);
+    }
+
+    private function actionFeedCacheClear()
+    {
+        if (!\current_user_can('administrator'))
+            die('You do not have permission to view this page.');
+
+        if (isset($_GET['module']))
+            $module_id = TextHelper::clear(\sanitize_text_field(wp_unslash($_GET['module'])));
+        else
+            die('Module param can not be empty.');
+
+        if (!ModuleManager::getInstance()->moduleExists($module_id))
+            die('The module does not exist.');
+
+        $module = ModuleManager::getInstance()->factory($module_id);
+
+        if (!$module->isFeedModule())
+            die('This module does not support feed cache.');
+
+        $module->feedFileCache()->delete();
+
+        $redirect_url = admin_url(sprintf('admin.php?page=content-egg-modules--%s', $module_id));
+        $redirect_url = AdminNotice::add2Url($redirect_url, 'feed_cache_cleared', 'success');
 
         AdminHelper::redirect($redirect_url);
     }

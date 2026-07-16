@@ -1256,6 +1256,19 @@ class GeneralConfig extends Config
     {
         return array(
 
+            'merchant_names' => array(
+                'title' => __('Merchant Names', 'content-egg'),
+                'callback' => array($this, 'render_merchant_names_block'),
+                'description' => __('Map a shop domain to a display name (e.g. amazon.com → Amazon). Used for the %MERCHANT% tag and the merchant label in templates.', 'content-egg'),
+                'validator' => array(
+                    array(
+                        'call' => array($this, 'formatMerchantNames'),
+                        'type' => 'filter',
+                    ),
+                ),
+                'default' => array(),
+                'section' => __('Shops', 'content-egg'),
+            ),
             'merchants' => array(
                 'title' => __('Shops', 'content-egg'),
                 'callback' => array($this, 'render_merchants_block'),
@@ -1562,9 +1575,11 @@ class GeneralConfig extends Config
         $value = isset($args['value'][$i]['shop_info']) ? $args['value'][$i]['shop_info'] : '';
         $value2 = isset($args['value'][$i]['shop_coupons']) ? $args['value'][$i]['shop_coupons'] : '';
 
+        // Disable browser autocorrect on this technical domain field: it otherwise rewrites
+        // values like "simracinghub_nl" to "simracinghub.nl" before submit, corrupting the save.
         echo '<input style="margin-bottom: 5px;" name="' . \esc_attr($args['option_name']) . '['
             . \esc_attr($args['name']) . '][' . esc_attr($i) . '][name]" value="'
-            . \esc_attr($name) . '" class="regular-text ltr" placeholder="' . \esc_attr(__('Domain name', 'content-egg')) . '"  type="text"/>';
+            . \esc_attr($name) . '" class="regular-text ltr" placeholder="' . \esc_attr(__('Domain name', 'content-egg')) . '"  type="text" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off"/>';
 
         $settings = array(
             'textarea_name' => \esc_attr($args['option_name']) . '[' . \esc_attr($args['name']) . '][' . esc_attr($i) . '][shop_info]',
@@ -1633,6 +1648,131 @@ class GeneralConfig extends Config
         }
 
         return $results;
+    }
+
+    public function render_merchant_names_block($args)
+    {
+        if (is_array($args['value']))
+            $total = count($args['value']) + 1;
+        else
+            $total = 1;
+
+        $prefix = \esc_attr($args['option_name']) . '[' . \esc_attr($args['name']) . ']';
+
+        echo '<div id="cegg-merchant-names">';
+        echo '<div class="cegg-mn-rows">';
+        for ($i = 0; $i < $total; $i++)
+        {
+            $domain = isset($args['value'][$i]['domain']) ? $args['value'][$i]['domain'] : '';
+            $name = isset($args['value'][$i]['name']) ? $args['value'][$i]['name'] : '';
+
+            echo '<div class="cegg-mn-row" style="margin-bottom: 5px;">';
+            echo '<input name="' . $prefix . '[' . \esc_attr($i) . '][domain]" value="' . \esc_attr($domain)
+                . '" class="regular-text ltr" placeholder="' . \esc_attr(__('Domain name, e.g. amazon.com', 'content-egg')) . '" type="text" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" />';
+            echo ' &rarr; ';
+            echo '<input name="' . $prefix . '[' . \esc_attr($i) . '][name]" value="' . \esc_attr($name)
+                . '" class="regular-text ltr" placeholder="' . \esc_attr(__('Merchant name, e.g. Amazon', 'content-egg')) . '" type="text" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" />';
+            echo '</div>';
+        }
+        echo '</div>'; // .cegg-mn-rows
+
+        echo '<p><button type="button" class="button cegg-mn-add">' . \esc_html(__('+ Add merchant', 'content-egg')) . '</button></p>';
+
+        if ($args['description'])
+            echo '<p class="description">' . \esc_html($args['description']) . '</p>';
+
+        echo '</div>'; // #cegg-merchant-names
+?>
+        <script type="text/javascript">
+            (function () {
+                var wrap = document.getElementById('cegg-merchant-names');
+                if (!wrap || wrap.dataset.ceggInit) return;
+                wrap.dataset.ceggInit = '1';
+
+                var rows = wrap.querySelector('.cegg-mn-rows');
+                var addBtn = wrap.querySelector('.cegg-mn-add');
+                var next = rows.querySelectorAll('.cegg-mn-row').length;
+
+                addBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var all = rows.querySelectorAll('.cegg-mn-row');
+                    var clone = all[all.length - 1].cloneNode(true);
+                    clone.querySelectorAll('input').forEach(function (input) {
+                        input.value = '';
+                        // Re-index so each row posts as a distinct array entry
+                        input.name = input.name.replace(/\[\d+\]\[(domain|name)\]$/, '[' + next + '][$1]');
+                    });
+                    rows.appendChild(clone);
+                    next++;
+                    var first = clone.querySelector('input');
+                    if (first) first.focus();
+                });
+            })();
+        </script>
+<?php
+    }
+
+    public function formatMerchantNames($values)
+    {
+        $results = array();
+
+        if (!is_array($values))
+            return $results;
+
+        foreach ($values as $value)
+        {
+            if (!is_array($value))
+                continue;
+
+            $domain = isset($value['domain']) ? $value['domain'] : '';
+            $name = isset($value['name']) ? $value['name'] : '';
+
+            if ($host = TextHelper::getHostName($domain))
+                $domain = $host;
+            else
+                $domain = strtolower(trim(\sanitize_text_field($domain)));
+
+            $name = trim(\wp_strip_all_tags((string) $name));
+
+            if (!$domain || !$name)
+                continue;
+
+            if (in_array($domain, array_column($results, 'domain')))
+                continue;
+
+            $results[] = array('domain' => $domain, 'name' => $name);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Mapped display name for a shop domain, from the "Merchant Names" block,
+     * or '' when there is no mapping. Cached per request (mirrors TemplateHelper::getShopInfo()).
+     */
+    public static function getMappedMerchantName($domain)
+    {
+        static $map = null;
+
+        if ($map === null)
+        {
+            $map = array();
+            $rows = self::getInstance()->option('merchant_names');
+            if (is_array($rows))
+            {
+                foreach ($rows as $row)
+                {
+                    if (empty($row['domain']) || !isset($row['name']) || $row['name'] === '')
+                        continue;
+                    $map[$row['domain']] = $row['name'];
+                }
+            }
+        }
+
+        if (!$domain)
+            return '';
+
+        return isset($map[$domain]) ? $map[$domain] : '';
     }
 
     public static function isShopInfoAvailable()

@@ -1,0 +1,262 @@
+/**
+ * Content Egg — Feed setup wizard styles.
+ *
+ * Deliberately NOT using Bootstrap's .card/.card-header/.card-body: WP core's
+ * wp-admin/css/forms.css defines a global .card with min-width/max-width that
+ * Bootstrap's scoped .card never overrides, clipping two-column layouts to
+ * 520px. .cfw-panel is a self-contained replacement, scoped under
+ * .cegg5-container like everything else in this view.
+ */
+
+.cegg5-container .cfw-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background-color: #fff;
+    background-clip: border-box;
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.cegg5-container .cfw-panel.h-100 {
+    height: 100%;
+}
+
+.cegg5-container .cfw-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
+    background-color: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.cegg5-container .cfw-panel-body {
+    flex: 1 1 auto;
+    padding: 1.25rem;
+}
+
+.cegg5-container .cfw-panel-body.cfw-panel-body-flush {
+    padding: 0;
+}
+
+/* ---------- buttons ---------- */
+
+.cegg5-container .btn {
+    border-radius: 0.5rem;
+    font-weight: 500;
+}
+
+.cegg5-container .form-control,
+.cegg5-container .form-select {
+    border-radius: 0.5rem;
+}
+
+/* ---------- page header ---------- */
+
+.cegg5-container .cfw-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.cegg5-container .cfw-subtitle {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: #6b7280;
+    max-width: 46rem;
+}
+
+.cegg5-container .cfw-manual-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+    padding: 0.4rem 0.75rem;
+    margin-top: 0.125rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #6b7280;
+    text-decoration: none;
+    border-radius: 0.5rem;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.cegg5-container .cfw-manual-link:hover {
+    color: #111827;
+    background-color: #f3f4f6;
+}
+
+.cegg5-container .cfw-manual-link .bi {
+    font-size: 0.75rem;
+}
+
+/* ---------- step indicator ---------- */
+
+.cegg5-container .cfw-stepper {
+    display: flex;
+    align-items: center;
+}
+
+.cegg5-container .cfw-step {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+}
+
+.cegg5-container .cfw-step-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #9ca3af;
+    background-color: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 50%;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cegg5-container .cfw-step-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #9ca3af;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+}
+
+.cegg5-container .cfw-step-line {
+    flex: 1 1 auto;
+    min-width: 1.5rem;
+    height: 1px;
+    margin: 0 0.75rem;
+    background-color: #e5e7eb;
+}
+
+.cegg5-container .cfw-step.is-active .cfw-step-circle {
+    color: #fff;
+    background-color: var(--cegg-primary, #0d6efd);
+    border-color: var(--cegg-primary, #0d6efd);
+}
+
+.cegg5-container .cfw-step.is-active .cfw-step-label {
+    color: #111827;
+    font-weight: 600;
+}
+
+.cegg5-container .cfw-step.is-done .cfw-step-circle {
+    color: var(--cegg-primary, #0d6efd);
+    background-color: rgba(13, 110, 253, 0.1);
+    border-color: transparent;
+}
+
+.cegg5-container .cfw-step.is-done .cfw-step-label {
+    color: #4b5563;
+}
+
+/* ---------- AI mapping availability hint ---------- */
+
+.cegg5-container #cfw-ai-map-info {
+    font-size: 1rem;
+    cursor: help;
+}
+
+/* ---------- detected-settings chips ---------- */
+
+.cegg5-container .cfw-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    margin: 0 0.5rem 0.5rem 0;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: #4b5563;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+}
+
+.cegg5-container .cfw-chip strong {
+    margin-left: 0.3rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* ---------- sample data table ---------- */
+
+.cegg5-container #cfw-sample {
+    --cegg-table-bg: transparent;
+}
+
+.cegg5-container #cfw-sample thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #f9fafb;
+    white-space: nowrap;
+}
+
+.cegg5-container #cfw-sample td,
+.cegg5-container #cfw-sample th {
+    vertical-align: top;
+    word-break: break-word;
+}
+
+/* ---------- field mapping rows ---------- */
+
+.cegg5-container .cfw-map-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+}
+
+.cegg5-container .cfw-map-row + .cfw-map-row {
+    border-top: 1px solid #f3f4f6;
+}
+
+.cegg5-container .cfw-map-label {
+    flex: 0 0 38%;
+    font-size: 0.8125rem;
+    color: #374151;
+}
+
+.cegg5-container .cfw-map-control {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cegg5-container .cfw-map-hint {
+    color: #9ca3af;
+    font-size: 0.8125rem;
+    cursor: help;
+}
+
+/* ---------- progress panel ---------- */
+
+.cegg5-container #cfw-progress .cfw-panel-body {
+    padding: 2.5rem 1.25rem;
+}
+
+.cegg5-container .cfw-progress-track {
+    height: 0.5rem;
+    background-color: #f3f4f6;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.cegg5-container .cfw-progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: var(--cegg-primary, #0d6efd);
+    transition: width 0.3s ease;
+}

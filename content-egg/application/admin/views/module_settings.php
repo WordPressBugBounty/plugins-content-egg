@@ -138,6 +138,34 @@ defined('\ABSPATH') || exit; ?>
                                             <span class="cegg-badge <?php echo esc_attr($status_class); ?>"><?php echo esc_html($status_label); ?></span>
                                         </li>
                                     <?php endif; ?>
+                                    <?php if ($is_import_in_progress) :
+                                        $import_progress = $module->importStatus()->get();
+                                        if (!empty($import_progress['rows_read'])) : ?>
+                                            <li>
+                                                <span><?php esc_html_e('Rows processed', 'content-egg'); ?></span>
+                                                <span class="cegg-stats__value"><?php echo esc_html(number_format_i18n((int) $import_progress['rows_read'])); ?></span>
+                                            </li>
+                                    <?php endif;
+                                    endif; ?>
+                                    <?php
+                                    $feed_cache = $module->feedFileCache();
+                                    if ($feed_cache->exists()) :
+                                        $cache_clear_url = wp_nonce_url(
+                                            add_query_arg([
+                                                'action' => 'feed-cache-clear',
+                                                'module' => rawurlencode($module->getId()),
+                                            ], $tools_page_url),
+                                            'cegg_feed-cache-clear'
+                                        );
+                                    ?>
+                                        <li>
+                                            <span><?php esc_html_e('Cached feed file', 'content-egg'); ?></span>
+                                            <span class="cegg-stats__value">
+                                                <?php echo esc_html(size_format($feed_cache->size())); ?>
+                                                &middot; <a href="<?php echo esc_url($cache_clear_url); ?>"><?php esc_html_e('Clear', 'content-egg'); ?></a>
+                                            </span>
+                                        </li>
+                                    <?php endif; ?>
                                 </ul>
 
                                 <?php if ($is_import_in_progress) : ?>

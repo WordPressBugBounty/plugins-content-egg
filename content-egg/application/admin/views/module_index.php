@@ -168,7 +168,7 @@ function _cegg_print_module_item(array $modules)
 
                     <p class="py-2">
                         <?php if ($add_feed = \ContentEgg\application\helpers\AdminHelper::getAddNewFeedModule()) : ?>
-                            <a class="btn btn-outline-primary btn-sm cegg-section-btn d-inline-flex align-items-center justify-content-center" href="?page=<?php echo esc_attr($add_feed->getConfigInstance()->page_slug()); ?>">
+                            <a class="btn btn-outline-primary btn-sm cegg-section-btn d-inline-flex align-items-center justify-content-center" href="?page=<?php echo esc_attr($add_feed->getConfigInstance()->page_slug()); ?>&wizard=1">
                                 <i class="bi bi-database-add me-1" aria-hidden="true"></i><?php esc_html_e('Add a feed', 'content-egg'); ?>
                             </a>
                         <?php else : ?>

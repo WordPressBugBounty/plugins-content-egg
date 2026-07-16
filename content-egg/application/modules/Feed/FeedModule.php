@@ -262,7 +262,7 @@ class FeedModule extends AffiliateFeedParserModule
 
     public function doRequest($keyword, $query_params = array(), $is_autoupdate = false)
     {
-        $this->maybeImportProducts();
+        $this->maybeScheduleImport();
 
         if ($is_autoupdate)
             $limit = $this->config('entries_per_page_update');
@@ -297,7 +297,7 @@ class FeedModule extends AffiliateFeedParserModule
 
     public function doRequestItems(array $items)
     {
-        $this->maybeImportProducts();
+        $this->maybeScheduleImport();
         $deeplink = $this->config('deeplink');
         foreach ($items as $key => $item)
         {
@@ -330,7 +330,7 @@ class FeedModule extends AffiliateFeedParserModule
 
             if (isset($r['image ​​link']))
             {
-                $imgUrls = TextHelper::getArrayFromCommaList($r['image ​​link']);
+                $imgUrls = self::splitImageUrlList($r['image ​​link']);
                 $items[$key]['img'] = self::normalizeImageUrl($imgUrls[0] ?? $r['image ​​link']);
             }
 
@@ -496,7 +496,7 @@ class FeedModule extends AffiliateFeedParserModule
             }
             if (isset($r['image ​​link']))
             {
-                $imgUrls = TextHelper::getArrayFromCommaList($r['image ​​link']);
+                $imgUrls = self::splitImageUrlList($r['image ​​link']);
                 $img = self::normalizeImageUrl($imgUrls[0] ?? $r['image ​​link']);
                 if (filter_var($img, FILTER_VALIDATE_URL))
                 {
@@ -963,6 +963,39 @@ class FeedModule extends AffiliateFeedParserModule
             'min' => 'price_min',
             'max' => 'price_max',
         ];
+    }
+
+    /**
+     * Split an image field that may contain several comma-separated image URLs.
+     *
+     * A plain explode(',') breaks when a single URL legally contains commas
+     * (e.g. query params like ?io=transform:fit,height:800,width:800). To keep
+     * multi-image support without shredding such URLs, we only split on a comma
+     * that begins a new URL, i.e. one immediately followed by http://, https://
+     * or a protocol-relative //. Feed image URLs are always absolute, so this is
+     * a reliable boundary.
+     *
+     * @param string|array $str
+     * @return array
+     */
+    public static function splitImageUrlList($str)
+    {
+        if (is_array($str))
+        {
+            return $str;
+        }
+
+        $str = trim((string) $str);
+        if ($str === '')
+        {
+            return array();
+        }
+
+        $parts = preg_split('#\s*,\s*(?=(?:https?:)?//)#i', $str);
+        $parts = array_map('trim', $parts);
+        $parts = array_filter($parts, 'strlen');
+
+        return array_values($parts);
     }
 
     public static function normalizeImageUrl($url, $defaultScheme = 'https', $baseUrl = null)

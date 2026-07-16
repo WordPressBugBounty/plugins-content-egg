@@ -137,9 +137,8 @@ abstract class ParserModule extends Module
 
     public static function getFullImgPath($img_path)
     {
-        $uploads = \wp_upload_dir();
-
-        return trailingslashit($uploads['basedir']) . $img_path;
+        // Delegate to the hardened, traversal-safe resolver.
+        return ImageHelper::getFullImgPath($img_path);
     }
 
     public function defaultTemplateName()

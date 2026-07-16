@@ -94,7 +94,7 @@ $templates = $tpl_manager->getTemplatesList(true);
 
                     </div>
 
-                    <?php if ($module->isFeedModule() && $module->isImportTime()) : ?>
+                    <?php if ($module->isFeedModule() && !$module->getProductCount()) : ?>
                         <img ng-show="models.<?php echo esc_attr($module_id); ?>.processing" src="<?php echo esc_url(\ContentEgg\PLUGIN_RES) . '/img/importing.gif' ?>" />
                         <span class="small" ng-show="models.<?php echo esc_attr($module_id); ?>.processing">
                             <?php esc_html_e('Loading data feed... Please wait...', 'content-egg'); ?>

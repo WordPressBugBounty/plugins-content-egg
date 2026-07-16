@@ -71,7 +71,13 @@ class ImageHelper
 		{
 			$img_path = parse_url($img_uri, PHP_URL_PATH);
 			$file_ext = pathinfo(basename($img_path), PATHINFO_EXTENSION);
-			if (!$file_ext || $file_ext == 'aspx' || $file_ext == 'image')
+			// Trust the path-derived extension only when it is a real image
+			// extension. Otherwise fall back to the response content-type: some
+			// CDNs put a non-image token where the extension would be — e.g.
+			// img.logo.dev/nike.com yields "com", and legacy .aspx/.image
+			// handlers — which must not be used as the saved file type.
+			$image_exts = array('jpg', 'jpeg', 'jpe', 'png', 'gif', 'webp', 'bmp', 'svg', 'ico', 'avif', 'tif', 'tiff');
+			if (!$file_ext || !in_array(strtolower($file_ext), $image_exts, true))
 			{
 				$headers = \wp_remote_retrieve_headers($response);
 				if (empty($headers['content-type']))
@@ -145,7 +151,56 @@ class ImageHelper
 	public static function getFullImgPath($img_path)
 	{
 		$uploads = \wp_upload_dir();
+		$basedir = trailingslashit($uploads['basedir']);
 
-		return trailingslashit($uploads['basedir']) . $img_path;
+		$img_path = self::normalizeRelativeImgPath($img_path);
+		if ($img_path === '')
+			return $basedir;
+
+		return $basedir . $img_path;
+	}
+
+	/**
+	 * Sanitize an img_file value coming from user input (post meta).
+	 *
+	 * Strips markup and reduces the value to a safe, uploads-relative path.
+	 */
+	public static function sanitizeImgFile($img_path): string
+	{
+		return self::normalizeRelativeImgPath(\wp_strip_all_tags((string) $img_path));
+	}
+
+	/**
+	 * Normalize a stored img_file value to a safe, uploads-relative path.
+	 *
+	 * img_file is persisted in post meta and later concatenated onto the
+	 * uploads basedir before file operations (unlink/copy) by getFullImgPath().
+	 * Because the value is only wp_strip_all_tags()-sanitized on input, a
+	 * hostile Author could store a traversal sequence (e.g.
+	 * "../../../wp-config.php") and have it resolve outside the uploads
+	 * directory. Dropping "." / ".." and empty (absolute/leading-slash)
+	 * segments guarantees the result stays inside uploads by construction,
+	 * for every getFullImgPath() caller (unlink/copy/existence checks).
+	 */
+	private static function normalizeRelativeImgPath($img_path): string
+	{
+		if (!is_string($img_path))
+			return '';
+
+		// Kill null bytes and unify separators (Windows backslashes included).
+		$img_path = str_replace(array("\0", '\\'), array('', '/'), $img_path);
+
+		$segments = array();
+		foreach (explode('/', $img_path) as $segment)
+		{
+			// Drop empty segments (leading/absolute paths, doubled slashes),
+			// current-dir "." and any parent-dir ".." traversal.
+			if ($segment === '' || $segment === '.' || $segment === '..')
+				continue;
+
+			$segments[] = $segment;
+		}
+
+		return implode('/', $segments);
 	}
 }

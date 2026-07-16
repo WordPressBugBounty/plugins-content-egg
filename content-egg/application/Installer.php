@@ -6,6 +6,8 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\Plugin;
 use ContentEgg\application\admin\import\AutoImportScheduler;
+use ContentEgg\application\components\AffiliateFeedParserModule;
+use ContentEgg\application\components\feed\FeedImportPendingException;
 use ContentEgg\application\admin\import\PresetRepository;
 use ContentEgg\application\admin\import\ProductImportScheduler;
 use ContentEgg\application\admin\LicConfig;
@@ -81,6 +83,7 @@ class Installer
             MaintenanceCron::schedule();
         }
         PresetRepository::maybeInstallBuiltInPresets();
+        self::scheduleDueFeedSyncs();
     }
 
     public static function deactivate()
@@ -92,6 +95,61 @@ class Installer
         ProductImportScheduler::clearScheduleEvent();
         AutoImportScheduler::clearScheduleEvent();
         MaintenanceCron::clear();
+        self::clearFeedSyncEvents();
+    }
+
+    /**
+     * Kick off background feed syncs for active feed modules whose catalog
+     * is empty or stale, so feeds refresh right after (re)activation instead
+     * of waiting for the first search.
+     */
+    private static function scheduleDueFeedSyncs()
+    {
+        foreach (ModuleManager::getInstance()->getModules(true) as $module)
+        {
+            if (!$module instanceof AffiliateFeedParserModule)
+            {
+                continue;
+            }
+
+            try
+            {
+                $module->maybeScheduleImport();
+            }
+            catch (FeedImportPendingException $e)
+            {
+                // Expected when the catalog is empty: the sync is scheduled.
+            }
+            catch (\Throwable $e)
+            {
+                // Never block plugin activation on a misconfigured feed.
+            }
+        }
+    }
+
+    /**
+     * Remove pending feed-sync single events so no orphaned cron entries
+     * are left behind after deactivation.
+     */
+    private static function clearFeedSyncEvents()
+    {
+        foreach (ModuleManager::getInstance()->getModules() as $module)
+        {
+            if (!$module instanceof AffiliateFeedParserModule)
+            {
+                continue;
+            }
+
+            $hook = 'cegg_' . $module->getId() . '_init_products';
+            $args = array('module_id' => $module->getId());
+
+            \wp_clear_scheduled_hook($hook, $args);
+
+            if (function_exists('as_unschedule_all_actions'))
+            {
+                \as_unschedule_all_actions($hook, $args, AffiliateFeedParserModule::AS_GROUP);
+            }
+        }
     }
 
     public static function requirements()

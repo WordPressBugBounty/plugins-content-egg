@@ -58,6 +58,19 @@ class LogoHelper
         return !(bool) filter_var($parser->config('show_large_logos'), FILTER_VALIDATE_BOOLEAN);
     }
 
+    /**
+     * Public accessor for the provider-resolved remote logo URL.
+     *
+     * Returns the configured provider's logo URL (Clearbit / Brandfetch /
+     * Logo.dev) for $item['domain'], or '' when no domain is available.
+     * Exposed for external callers (e.g. Too Much Niche) that download and
+     * store the logo themselves; resolution/config logic stays here (DRY).
+     */
+    public static function getRemoteLogoUrl(array $item): string
+    {
+        return (string) self::resolveRemoteLogoUrl($item);
+    }
+
     /** Build remote URL based on chosen provider or explicit logo. */
     private static function resolveRemoteLogoUrl(array $item)
     {
