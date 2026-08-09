@@ -112,7 +112,7 @@ class ProductPrefillService
             );
         }
 
-        $config = get_transient($row['config_key']);
+        $config = DurableTransient::get($row['config_key']);
 
         if (!is_array($config))
         {

@@ -74,7 +74,7 @@ class UnsplashConfig extends ParserModuleConfig
 					'regular' => __('Medium', 'content-egg'),
 					'full'    => __('Large', 'content-egg'),
 				),
-				'default'          => 'regular',
+				'default'          => 'full',
 				'section'          => 'default',
 			),
 			'orientation'             => array(

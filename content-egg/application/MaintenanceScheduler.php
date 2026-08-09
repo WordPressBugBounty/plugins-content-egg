@@ -3,6 +3,7 @@
 namespace ContentEgg\application;
 
 use ContentEgg\application\admin\ClicksMaintenance;
+use ContentEgg\application\components\DurableTransient;
 use ContentEgg\application\admin\FeedPrefetchMaintenance;
 use ContentEgg\application\admin\ProductMapMaintenance;
 
@@ -148,6 +149,7 @@ class MaintenanceScheduler
             ProductMapMaintenance::garbageCollect();
             ClicksMaintenance::runRetention();
             FeedPrefetchMaintenance::garbageCollect();
+            DurableTransient::gc();
         }
         catch (\Throwable $e)
         {

@@ -4,6 +4,7 @@ namespace ContentEgg\application\admin;
 
 defined('\ABSPATH') || exit;
 
+use ContentEgg\application\components\DurableTransient;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\models\PrefillQueueModel;
@@ -296,7 +297,7 @@ class ProductPrefillController
 
         $transient_key = 'cegg_prefill_ids_' . get_current_user_id() . '_' . wp_generate_password(8, false);
         $transient_expiration = 432000;
-        \set_transient($transient_key, $post_ids, $transient_expiration);
+        DurableTransient::set($transient_key, $post_ids, $transient_expiration);
 
         $has_ai_api_key = (bool) GeneralConfig::getInstance()->option('system_ai_key');
 
@@ -318,8 +319,8 @@ class ProductPrefillController
         $queue_model = \ContentEgg\application\models\PrefillQueueModel::model();
 
         $transient_key = sanitize_text_field($_POST['prefill_transient'] ?? '');
-        $post_ids = get_transient($transient_key);
-        delete_transient($transient_key);
+        $post_ids = DurableTransient::get($transient_key);
+        DurableTransient::delete($transient_key);
 
         if (! is_array($post_ids))
         {
@@ -329,9 +330,11 @@ class ProductPrefillController
         $config = $this->parsePrefillConfig();
         $this->saveUserSettings('prefill_config', $config);
 
-        // Save config to transient
+        // Save config for the queue workers. Must be durable: every queued post
+        // reads it back by key, so an object-cache eviction would fail the rest
+        // of the run.
         $config_key = 'cegg_prefill_config_' . get_current_user_id() . '_' . wp_generate_password(8, false);
-        set_transient($config_key, $config, 7 * DAY_IN_SECONDS);
+        DurableTransient::set($config_key, $config, 7 * DAY_IN_SECONDS);
 
         foreach ($post_ids as $post_id)
         {

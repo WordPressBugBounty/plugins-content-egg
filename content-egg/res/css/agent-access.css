@@ -1,0 +1,784 @@
+/* Content Egg — "AI Agents" (Agent Access) admin screen */
+
+.cegg-aa {
+    --cegg-accent: var(--wp-admin-theme-color, #2271b1);
+    --cegg-border: #dcdcde;
+    --cegg-muted: #646970;
+    --cegg-bg: #fff;
+    max-width: 920px;
+}
+
+.cegg-aa__title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cegg-aa__beta {
+    display: inline-block;
+    background: #f0f0f1;
+    color: var(--cegg-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--cegg-border);
+}
+
+.cegg-aa__lead {
+    font-size: 14px;
+    color: var(--cegg-muted);
+    max-width: 680px;
+    margin: 4px 0 20px;
+}
+
+/* ---------- Cards ---------- */
+.cegg-aa__card,
+.cegg-aa__hero {
+    background: var(--cegg-bg);
+    border: 1px solid var(--cegg-border);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+    padding: 20px 22px;
+    margin-bottom: 18px;
+}
+
+.cegg-aa__card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.cegg-aa__card-head h2,
+.cegg-aa__card h2 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.cegg-aa__extlink {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.cegg-aa__extlink .dashicons {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+}
+
+/* ---------- Status hero ---------- */
+.cegg-aa__hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.cegg-aa__hero-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1 1 auto;
+}
+
+.cegg-aa__state {
+    font-size: 15px;
+}
+
+.cegg-aa__hero-sub {
+    font-size: 13px;
+    color: var(--cegg-muted);
+}
+
+.cegg-aa__hero-meta {
+    text-align: center;
+    color: var(--cegg-muted);
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+.cegg-aa__count {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cegg-accent);
+}
+
+.cegg-aa__save {
+    min-width: 60px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #2a7d2e;
+}
+
+.cegg-aa__save.is-error { color: #d63638; }
+
+/* on/off text swap driven by wrap state class */
+.cegg-aa.is-on .cegg-aa__off-text { display: none; }
+.cegg-aa.is-off .cegg-aa__on-text { display: none; }
+
+/* gate connect card while off */
+.cegg-aa.is-off .cegg-aa__gated {
+    opacity: .5;
+}
+
+/* ---------- Toggle switch ---------- */
+.cegg-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.cegg-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.cegg-switch__track {
+    width: 46px;
+    height: 26px;
+    background: #c3c4c7;
+    border-radius: 13px;
+    transition: background .18s ease;
+    display: inline-block;
+    position: relative;
+}
+
+.cegg-switch__thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    transition: transform .18s ease;
+}
+
+.cegg-switch input:checked + .cegg-switch__track {
+    background: var(--cegg-accent);
+}
+
+.cegg-switch input:checked + .cegg-switch__track .cegg-switch__thumb {
+    transform: translateX(20px);
+}
+
+.cegg-switch input:focus-visible + .cegg-switch__track {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--cegg-accent);
+}
+
+.cegg-switch input:disabled + .cegg-switch__track {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* ---------- Connect steps ---------- */
+.cegg-aa__steps {
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cegg-aa__steps li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13.5px;
+    margin: 0;
+}
+
+.cegg-aa__stepn {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--cegg-accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cegg-aa__steplink {
+    margin-left: 4px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+/* ---------- Connection links ---------- */
+.cegg-aa__links {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cegg-aa__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px;
+    background: #f6f7f7;
+    border: 1px solid var(--cegg-border);
+    border-radius: 6px;
+    margin: 0;
+    flex-wrap: wrap;
+}
+
+.cegg-aa__link-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    /* Fixed basis so every row's label column lines up and the URL inputs
+       start at the same x — the guide row's longer subtitle just wraps. */
+    flex: 0 0 240px;
+    min-width: 0;
+}
+
+.cegg-aa__link-name {
+    font-weight: 600;
+    font-size: 13.5px;
+}
+
+.cegg-aa__link-for {
+    font-size: 12px;
+    color: var(--cegg-muted);
+}
+
+.cegg-aa__link-copy {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 320px;
+}
+
+.cegg-aa__url {
+    /* Fixed basis keeps every URL field the same width regardless of how many
+       action buttons follow it (one for most rows, two on the guide row), so the
+       fields line up and the buttons sit right next to each input. */
+    flex: 0 1 440px;
+    min-width: 0;
+    max-width: 100%;
+    font-family: Menlo, Consolas, monospace;
+    font-size: 12px;
+    background: #fff;
+    border: 1px solid var(--cegg-border);
+    border-radius: 4px;
+    padding: 5px 8px;
+    color: #1d2327;
+}
+
+.cegg-aa__link-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--cegg-muted);
+    flex: 1 1 320px;
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.cegg-aa__link-note .dashicons { color: #b26200; flex: 0 0 auto; margin-top: 1px; }
+
+/* ---------- How to connect (one block per assistant) ---------- */
+.cegg-aa__how {
+    margin-top: 18px;
+}
+
+.cegg-aa__tabs {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--cegg-border);
+    margin-bottom: 14px;
+}
+
+.cegg-aa__tab {
+    appearance: none;
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 7px 13px;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--cegg-muted);
+    cursor: pointer;
+}
+
+.cegg-aa__tab:hover { color: #1d2327; }
+
+.cegg-aa__tab.is-active {
+    color: var(--cegg-accent);
+    border-bottom-color: var(--cegg-accent);
+}
+
+.cegg-aa__tab:focus-visible {
+    outline: 2px solid var(--cegg-accent);
+    outline-offset: -2px;
+}
+
+.cegg-aa__panel[hidden] { display: none; }
+
+/* Instruction on the left, "Step by step" pinned top-right — mirrors the
+   card head's "Full guide" link. */
+.cegg-aa__panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.cegg-aa__tool-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.cegg-aa__tool-link .dashicons {
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
+    line-height: 1.35;
+}
+
+/* The panel's main instruction — not a caption, so it matches the numbered
+   steps above it rather than the muted row subtitles. */
+.cegg-aa__tool-desc {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #1d2327;
+    margin-bottom: 11px;
+    max-width: 78ch;
+}
+
+.cegg-aa__tool-desc code {
+    font-size: 12.5px;
+    padding: 1px 5px;
+    background: #f0f0f1;
+    border-radius: 3px;
+}
+
+/* The helper details sit inside a tab panel, so drop the standalone divider. */
+.cegg-aa__panel .cegg-aa__token {
+    margin-top: 10px;
+    border-top: 0;
+    padding-top: 0;
+}
+
+/* Basic-auth token helper (client-side base64) */
+.cegg-aa__token {
+    margin-top: 14px;
+    border-top: 1px solid #f0f0f1;
+    padding-top: 12px;
+}
+
+.cegg-aa__token-summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cegg-accent);
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cegg-aa__token-summary::-webkit-details-marker { display: none; }
+
+.cegg-aa__token-summary::before {
+    content: "\f345"; /* dashicons arrow-down */
+    font-family: dashicons;
+    font-size: 18px;
+    color: var(--cegg-muted);
+    transition: transform .15s ease;
+}
+
+.cegg-aa__token[open] .cegg-aa__token-summary::before { transform: rotate(180deg); }
+
+.cegg-aa__token-body { padding: 12px 0 2px; }
+
+.cegg-aa__token-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: #fcf9e8;
+    border: 1px solid #f0e6a6;
+    border-radius: 6px;
+    padding: 9px 11px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    margin: 0 0 12px;
+}
+
+.cegg-aa__token-note .dashicons { color: #b26200; flex: 0 0 auto; margin-top: 1px; }
+
+.cegg-aa__token-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.cegg-aa__token-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1 1 220px;
+    font-size: 12px;
+    color: var(--cegg-muted);
+}
+
+.cegg-aa__token-field input {
+    font-family: Menlo, Consolas, monospace;
+    font-size: 13px;
+    border: 1px solid var(--cegg-border);
+    border-radius: 4px;
+    padding: 6px 8px;
+    color: #1d2327;
+    background: #fff;
+    width: 100%;
+}
+
+.cegg-aa__code-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.cegg-aa__code {
+    flex: 1 1 auto;
+    margin: 0;
+    font-family: Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    background: #f6f7f7;
+    border: 1px solid var(--cegg-border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    color: #1d2327;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+/* copy buttons */
+.cegg-copy {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+.cegg-copy__ico {
+    width: 14px;
+    height: 14px;
+    vertical-align: -2px;
+}
+
+.cegg-copy__ico--done { display: none; }
+/* .cegg-aa__guide-text isn't a .cegg-copy (it has its own fetch handler) but
+   shares the same copied-state feedback. */
+.cegg-copy.is-copied .cegg-copy__ico--copy,
+.cegg-aa__guide-text.is-copied .cegg-copy__ico--copy { display: none; }
+.cegg-copy.is-copied .cegg-copy__ico--done,
+.cegg-aa__guide-text.is-copied .cegg-copy__ico--done { display: inline-block; }
+
+.cegg-copy.is-copied,
+.cegg-aa__guide-text.is-copied {
+    color: #2a7d2e !important;
+    border-color: #2a7d2e !important;
+}
+
+/* Icon-only copy button: square, centered, no label. */
+.cegg-copy--icon {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 0 !important;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+}
+
+.cegg-copy--icon .cegg-copy__ico { width: 15px; height: 15px; vertical-align: 0; }
+
+.cegg-copy--mini {
+    padding: 0 !important;
+    color: var(--cegg-muted) !important;
+    opacity: .7;
+}
+
+.cegg-copy--mini:hover { opacity: 1; }
+
+/* ---------- Abilities ---------- */
+.cegg-aa__abilities { width: 100%; }
+
+.cegg-aa__summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cegg-aa__summary::-webkit-details-marker { display: none; }
+
+.cegg-aa__summary::before {
+    content: "\f345"; /* dashicons arrow-down */
+    font-family: dashicons;
+    font-size: 20px;
+    color: var(--cegg-muted);
+    transition: transform .15s ease;
+}
+
+.cegg-aa__abilities[open] .cegg-aa__summary::before {
+    transform: rotate(180deg);
+}
+
+.cegg-aa__summary-title {
+    font-size: 15px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cegg-aa__summary-hint {
+    font-size: 12.5px;
+    color: var(--cegg-muted);
+}
+
+.cegg-aa__pill {
+    background: var(--cegg-accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 1px 8px;
+}
+
+.cegg-aa__gopro {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    color: #5a3ec8;
+    background: #eae6f7;
+    border-radius: 8px;
+    padding: 4px 10px;
+}
+
+.cegg-aa__gopro:hover,
+.cegg-aa__gopro:focus { background: #ded7f3; color: #4a2fb0; }
+
+.cegg-aa__gopro .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+.cegg-aa__abilities-body { padding-top: 16px; }
+
+.cegg-aa__pronote {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fcf9e8;
+    border: 1px solid #f0e6a6;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin: 0 0 16px;
+}
+
+.cegg-aa__pronote .dashicons { color: #b26200; flex: 0 0 auto; }
+
+.cegg-aa__group { margin-bottom: 18px; }
+
+.cegg-aa__group-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--cegg-muted);
+    margin: 0 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.cegg-aa__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+}
+
+.cegg-aa__ability {
+    border: 1px solid var(--cegg-border);
+    border-radius: 6px;
+    padding: 11px 13px;
+    background: #fff;
+}
+
+.cegg-aa__ability.is-locked {
+    background: #f6f7f7;
+    opacity: .75;
+}
+
+.cegg-aa__ability-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 4px;
+}
+
+.cegg-aa__ability-label {
+    font-weight: 600;
+    font-size: 13.5px;
+}
+
+.cegg-aa__tier {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    padding: 1px 6px;
+    border-radius: 8px;
+}
+
+.cegg-aa__tier--free {
+    background: #e6f4ea;
+    color: #1e7d34;
+}
+
+.cegg-aa__tier--pro {
+    background: #eae6f7;
+    color: #5a3ec8;
+}
+
+.cegg-aa__no-gpt {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: #f0f0f1;
+    color: #6a6f76;
+    border: 1px solid #e2e2e4;
+    white-space: nowrap;
+    cursor: help;
+}
+
+.cegg-aa__ability-lock {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    color: var(--cegg-muted);
+    margin-left: auto;
+}
+
+.cegg-aa__ability-desc {
+    font-size: 12.5px;
+    color: #3c434a;
+    margin-bottom: 8px;
+}
+
+.cegg-aa__ability-eg {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.cegg-aa__ability-eg code {
+    font-size: 12px;
+    background: #f6f7f7;
+    color: var(--cegg-muted);
+    padding: 3px 6px;
+    border-radius: 4px;
+    flex: 1 1 auto;
+    font-style: normal;
+}
+
+/* ---------- Activity log ---------- */
+.cegg-aa__empty {
+    color: var(--cegg-muted);
+    font-size: 13.5px;
+    margin: 0;
+}
+
+.cegg-aa__log {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.cegg-aa__log th {
+    text-align: left;
+    color: var(--cegg-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--cegg-border);
+}
+
+.cegg-aa__log td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.cegg-aa__act {
+    font-size: 12px;
+    background: #f6f7f7;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.cegg-aa__result {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 8px;
+}
+
+.cegg-aa__result.is-ok { background: #e6f4ea; color: #1e7d34; }
+.cegg-aa__result.is-err { background: #fce8e8; color: #d63638; }
+
+@media (max-width: 640px) {
+    .cegg-aa__link { flex-direction: column; align-items: stretch; }
+    /* In a column flex row, flex-basis maps to height — reset it. */
+    .cegg-aa__link-info { flex-basis: auto; }
+    .cegg-aa__link-copy { justify-content: flex-start; }
+    /* Fill the stacked row instead of the fixed desktop basis. */
+    .cegg-aa__url { flex: 1 1 auto; max-width: none; }
+}

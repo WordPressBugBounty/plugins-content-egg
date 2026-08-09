@@ -74,7 +74,7 @@ class PexelsConfig extends ParserModuleConfig
 					'large'    => __('Medium', 'content-egg'),
 					'original' => __('Large', 'content-egg'),
 				),
-				'default'          => 'large',
+				'default'          => 'original',
 				'section'          => 'default',
 			),
 			'orientation'             => array(

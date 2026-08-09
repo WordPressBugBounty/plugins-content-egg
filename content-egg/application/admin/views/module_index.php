@@ -213,10 +213,17 @@ function _cegg_print_module_item(array $modules)
 
                 <div class="col-md-4 col-xs-12">
 
-                    <h3 class="h5"><?php esc_html_e('Content modules', 'content-egg'); ?></h3>
+                    <h3 class="h5"><?php esc_html_e('Media modules', 'content-egg'); ?></h3>
                     <div class="list-group">
-                        <?php _cegg_print_module_item(\ContentEgg\application\helpers\AdminHelper::getContentModules()); ?>
+                        <?php _cegg_print_module_item(\ContentEgg\application\helpers\AdminHelper::getMediaModules()); ?>
                     </div>
+
+                    <?php if ($content_modules = \ContentEgg\application\helpers\AdminHelper::getContentModules()) : ?>
+                        <h3 class="h5 mt-4"><?php esc_html_e('Content modules', 'content-egg'); ?></h3>
+                        <div class="list-group">
+                            <?php _cegg_print_module_item($content_modules); ?>
+                        </div>
+                    <?php endif; ?>
 
                 </div>
 

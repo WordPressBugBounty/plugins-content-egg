@@ -460,6 +460,41 @@ class ModuleManager
         return $parsers;
     }
 
+    /**
+     * Parser modules of PRODUCT type only (excludes coupon/content modules).
+     * The in-editor product manager is product-shaped, so it scopes to these.
+     */
+    public function getProductParserModules($only_active = false)
+    {
+        $modules = array();
+        foreach ($this->getParserModules($only_active) as $id => $module)
+        {
+            if ($module->getParserType() === ParserModule::PARSER_TYPE_PRODUCT)
+                $modules[$id] = $module;
+        }
+
+        return $modules;
+    }
+
+    public function getProductParserModulesIdList($only_active = false)
+    {
+        return array_keys($this->getProductParserModules($only_active));
+    }
+
+    /**
+     * True when $module_id is an active PRODUCT-type parser module.
+     * Used to reject non-product modules on the product-manager REST endpoints.
+     */
+    public function isProductParserModule($module_id)
+    {
+        if (!$this->moduleExists($module_id) || !$this->isModuleActive($module_id))
+            return false;
+
+        $module = $this->factory($module_id);
+        return $module->isParser()
+            && $module->getParserType() === ParserModule::PARSER_TYPE_PRODUCT;
+    }
+
     public function getParsers($only_active = false)
     {
         $modules = $this->getModules($only_active);
@@ -601,6 +636,28 @@ class ModuleManager
         \update_option($config->option_name(), $values);
 
         self::$active_modules[$module_id] = self::$modules[$module_id];
+        return true;
+    }
+
+    public function deactivateModule($module_id)
+    {
+        if (!isset(self::$modules[$module_id]))
+        {
+            return false;
+        }
+
+        if (!isset(self::$active_modules[$module_id]))
+        {
+            return false;
+        }
+
+        $config = self::configFactory($module_id);
+        $values = $config->getOptionValues();
+        $values['is_active'] = 0;
+        \update_option($config->option_name(), $values);
+
+        unset(self::$active_modules[$module_id]);
+
         return true;
     }
 

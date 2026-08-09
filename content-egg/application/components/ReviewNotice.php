@@ -23,8 +23,10 @@ class ReviewNotice
 	const MIN_DAYS_TRIGGER = 7;
 	const PRODUC_COUNT_TTL = 86400;
 
-	// Transient that suppresses the notice. Permanent dismiss writes it with no
+	// Key that suppresses the notice. Permanent dismiss writes it with no
 	// expiration; "Maybe later" writes it with SNOOZE_DURATION so it returns.
+	// Stored durably: a transient would be evicted by an object cache, turning
+	// "dismiss forever" into "dismiss for an hour".
 	const HIDE_TRANSIENT = 'cegg_hide_notice_review_products_trigger_v2';
 	const SNOOZE_DURATION = 1209600; // 2 weeks
 
@@ -57,7 +59,7 @@ class ReviewNotice
 			return;
 		}
 
-		if (\get_transient(self::HIDE_TRANSIENT))
+		if (DurableTransient::get(self::HIDE_TRANSIENT))
 		{
 			return;
 		}
@@ -180,7 +182,7 @@ class ReviewNotice
 
 		// dismiss = forever (expiration 0), snooze = come back after SNOOZE_DURATION.
 		$expiration = ($action === 'snooze') ? self::SNOOZE_DURATION : 0;
-		\set_transient(self::HIDE_TRANSIENT, time(), $expiration);
+		DurableTransient::set(self::HIDE_TRANSIENT, time(), $expiration);
 
 		\wp_safe_redirect(\remove_query_arg(array(
 			'cegg_hide_notice',

@@ -73,7 +73,7 @@ class PixabayConfig extends ParserModuleConfig
 					'medium' => __('Medium', 'content-egg'),
 					'large' => __('Large', 'content-egg'),
 				),
-				'default'          => 'medium',
+				'default'          => 'large',
 			),
 			'image_type'              => array(
 				'title'            => __('Type of image', 'content-egg'),

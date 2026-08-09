@@ -634,8 +634,6 @@ class ProductImportService
             'AI.title' => '',
             'AI.content' => '',
             'AI.short_desc' => '',
-            'AI.extra_section1' => '',
-            'AI.extra_section2' => '',
         ];
 
         // ---------- 0.1 AI product processing ----------
@@ -665,7 +663,13 @@ class ProductImportService
         }
 
         // ---------- 0.2 AI-Powered Post Content ----------
-        if (Plugin::isPro() && (! empty($preset['ai_title']) || ! empty($preset['ai_content']) || ! empty($preset['ai_short_desc'])))
+        // Prompts reached only through a %AI.<name>% placeholder — in a template
+        // or a custom meta field — count too. Without them in the condition a
+        // preset that uses nothing but placeholders would skip this block
+        // entirely and every placeholder would resolve to an empty string.
+        $referencedPrompts = PresetNormalizer::collectReferencedNames($preset);
+
+        if (Plugin::isPro() && (! empty($preset['ai_title']) || ! empty($preset['ai_content']) || ! empty($preset['ai_short_desc']) || $referencedPrompts))
         {
             if (!(bool)GeneralConfig::getInstance()->option('ai_key'))
             {
@@ -674,22 +678,31 @@ class ProductImportService
                 );
             }
 
-            $customPrompts = array_intersect_key(
-                $preset,
-                array_flip(['prompt1', 'prompt2', 'prompt3', 'prompt4', 'prompt5'])
-            );
+            // Not $row: that is the queue row parameter, still needed further
+            // down for module_id, scheduled_at and category_id.
+            $promptRows = [];
+            foreach ($preset['ai_prompts'] ?? [] as $promptRow)
+            {
+                if (is_array($promptRow) && !empty($promptRow['name']))
+                {
+                    $promptRows[$promptRow['name']] = $promptRow;
+                }
+            }
 
             $custom_ai_model = isset($preset['ai_model']) ? $preset['ai_model'] : '';
 
             $postPrompt = self::createPostPrompt($custom_ai_model);
             $postPrompt->setSourceProduct($sourceProduct);
             $postPrompt->setProduct($product);
-            $postPrompt->setCustomPrompts($customPrompts);
+            $postPrompt->setCustomPrompts($promptRows);
+
+            // A prompt resolves to exactly one value per product, generated once.
+            $generated = [];
 
             if (!empty($preset['ai_title']))
             {
                 $ai_title_method_key = $preset['ai_title'];
-                if ((bool)$postPrompt->getTitleMethod($ai_title_method_key))
+                if ($postPrompt->canGenerateTitle($ai_title_method_key))
                 {
                     try
                     {
@@ -701,6 +714,11 @@ class ProductImportService
                         throw new \RuntimeException(
                             'AI: Post Title generation error: ' . esc_html($e->getMessage())
                         );
+                    }
+
+                    if (isset($promptRows[$ai_title_method_key]))
+                    {
+                        $generated[$ai_title_method_key] = $ai['AI.title'];
                     }
 
                     $this->logger->notice(
@@ -715,7 +733,7 @@ class ProductImportService
             if (!empty($preset['ai_content']))
             {
                 $ai_description_method_key = $preset['ai_content'];
-                if ((bool)$postPrompt->getDescriptionMethod($ai_description_method_key))
+                if ($postPrompt->canGenerateDescription($ai_description_method_key))
                 {
                     try
                     {
@@ -728,6 +746,11 @@ class ProductImportService
                         );
                     }
 
+                    if (isset($promptRows[$ai_description_method_key]))
+                    {
+                        $generated[$ai_description_method_key] = $ai['AI.content'];
+                    }
+
                     $this->logger->notice(sprintf(
                         __('AI post content generated: %s.', 'content-egg'),
                         $ai_description_method_key
@@ -738,7 +761,7 @@ class ProductImportService
             if (!empty($preset['ai_short_desc']))
             {
                 $ai_short_desc_method_key = $preset['ai_short_desc'];
-                if ((bool)$postPrompt->getShortDescriptionMethod($ai_short_desc_method_key))
+                if ($postPrompt->canGenerateShortDescription($ai_short_desc_method_key))
                 {
                     try
                     {
@@ -751,6 +774,11 @@ class ProductImportService
                         );
                     }
 
+                    if (isset($promptRows[$ai_short_desc_method_key]))
+                    {
+                        $generated[$ai_short_desc_method_key] = $ai['AI.short_desc'];
+                    }
+
                     $this->logger->notice(sprintf(
                         __('AI short desc generated: %s.', 'content-egg'),
                         $ai_short_desc_method_key
@@ -758,50 +786,40 @@ class ProductImportService
                 }
             }
 
-            if (!empty($preset['ai_extra_section1']))
+            // Placeholder-only prompts: generate each referenced prompt once.
+            // Unlike the three sinks above, a failure here is non-fatal — a
+            // missing meta description must not kill a 500-product import.
+            foreach ($promptRows as $name => $promptRow)
             {
-                $ai_extra_section1_method_key = $preset['ai_extra_section1'];
-                if ((bool)$postPrompt->getExtraSectionMethod($ai_extra_section1_method_key))
+                if (isset($generated[$name]) || !in_array($name, $referencedPrompts, true))
                 {
-                    try
-                    {
-                        $ai['AI.extra_section1'] = $postPrompt->generateExtraSection($ai_extra_section1_method_key);
-                    }
-                    catch (\Exception $e)
-                    {
-                        throw new \RuntimeException(
-                            'AI: Post Extra Section 1 generation error: ' . esc_html($e->getMessage())
-                        );
-                    }
+                    continue;
+                }
+
+                try
+                {
+                    $generated[$name] = $postPrompt->generateCustomPrompt($name);
 
                     $this->logger->notice(sprintf(
-                        __('AI extra section 1 generated: %s.', 'content-egg'),
-                        $ai_extra_section1_method_key
+                        __('AI custom prompt generated: %s.', 'content-egg'),
+                        $name
+                    ));
+                }
+                catch (\Exception $e)
+                {
+                    $generated[$name] = '';
+
+                    $this->logger->notice(sprintf(
+                        __('AI custom prompt "%1$s" failed: %2$s.', 'content-egg'),
+                        $name,
+                        $e->getMessage()
                     ));
                 }
             }
 
-            if (!empty($preset['ai_extra_section2']))
+            foreach ($generated as $name => $value)
             {
-                $ai_extra_section2_method_key = $preset['ai_extra_section2'];
-                if ((bool)$postPrompt->getExtraSectionMethod($ai_extra_section2_method_key))
-                {
-                    try
-                    {
-                        $ai['AI.extra_section2'] = $postPrompt->generateExtraSection($ai_extra_section2_method_key);
-                    }
-                    catch (\Exception $e)
-                    {
-                        throw new \RuntimeException(
-                            'AI: Post Extra Section 2 generation error: ' . esc_html($e->getMessage())
-                        );
-                    }
-
-                    $this->logger->notice(sprintf(
-                        __('AI extra section 2 generated: %s.', 'content-egg'),
-                        $ai_extra_section1_method_key
-                    ));
-                }
+                $ai['AI.' . $name] = $value;
             }
         }
 
@@ -821,7 +839,14 @@ class ProductImportService
             'post_status'  => $preset['post_status'] ?? 'draft',
             'post_author'  => $preset['author_id'],
             'post_type'    => $isWoo ? 'product' : 'post',
-            'post_name'    => TextHelper::sluggable($postTitle),
+            'post_name'    => apply_filters(
+                'cegg_import_post_name',
+                TextHelper::sluggable($postTitle),
+                $sourceProduct,
+                $product,
+                $ai,
+                $preset
+            ),
         ];
 
         // ---------- 2.1 Schedule post if needed ----------
@@ -993,11 +1018,25 @@ class ProductImportService
                     continue;
                 }
 
+                // Decide on the template the admin typed, NOT on the resolved
+                // value: product data comes from a queue payload that a mere
+                // Contributor can supply, so testing the resolved string would
+                // let markup smuggled through %SOURCE.description% flip this to
+                // the permissive branch. Markup is allowed only where the admin
+                // wrote markup, e.g. "<div>%AI.faq%</div>".
+                $allow_markup = TextHelper::isHtmlTagDetected($cf['value'] ?? '');
+
                 $val = ProductHelper::replaceImportPatterns($cf['value'] ?? '', $sourceProduct, $product, $ai);
+
+                // Plain values skip kses on purpose — it would rewrite a bare "&"
+                // and corrupt an SEO keyword like "M&S".
+                $val = $allow_markup
+                    ? TextHelper::sanitizeHtml($val)
+                    : sanitize_textarea_field($val);
 
                 $cf_added[] = $cf['key'];
 
-                update_post_meta($postId, $cf['key'], sanitize_text_field($val));
+                update_post_meta($postId, $cf['key'], $val);
             }
 
             if ($cf_added)
@@ -1005,6 +1044,42 @@ class ProductImportService
                 $this->logger->notice(sprintf(
                     __('Custom fields added: %s.', 'content-egg'),
                     implode(', ', $cf_added)
+                ));
+            }
+        }
+
+        // ---------- 6.1 Featured image alt text ----------
+        // Deliberately placed after the custom fields: the thumbnail is attached
+        // back in wp_insert_post() / wooSync(), long before those meta values
+        // exist, so a filter hooked at attach time could not read them. Here a
+        // filter can use either the AI values or any meta the preset just wrote.
+        //
+        //   add_filter('cegg_import_featured_image_alt', function ($alt, $post_id, $source, $product, $ai) {
+        //       return $ai['AI.image_alt'] ?? $alt;          // a custom prompt named image_alt
+        //   }, 10, 5);
+        //
+        //   add_filter('cegg_import_featured_image_alt', function ($alt, $post_id) {
+        //       return get_post_meta($post_id, '_yoast_wpseo_focuskw', true) ?: $alt;
+        //   }, 10, 2);
+        //
+        // Returning '' (the default) leaves the alt WordPress already stored,
+        // which is the product title.
+        $image_alt = apply_filters('cegg_import_featured_image_alt', '', $postId, $sourceProduct, $product, $ai);
+
+        if (is_string($image_alt) && $image_alt !== '')
+        {
+            $thumb_id = get_post_thumbnail_id($postId);
+
+            // In external-featured-image mode get_post_thumbnail_id() returns a
+            // synthetic id that is not a real attachment, so there is nothing to
+            // write meta to. Alt for that mode belongs in a template filter.
+            if ($thumb_id && get_post_type($thumb_id) === 'attachment')
+            {
+                update_post_meta($thumb_id, '_wp_attachment_image_alt', sanitize_text_field($image_alt));
+
+                $this->logger->notice(sprintf(
+                    __('Featured image alt text set: %s.', 'content-egg'),
+                    $image_alt
                 ));
             }
         }

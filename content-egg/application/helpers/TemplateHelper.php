@@ -909,6 +909,13 @@ class TemplateHelper
 
     public static function mergeAndSort(array $data, $order = 'asc', $field = 'price')
     {
+        // "reverse" is not a price field — it reverses the natural (default) order,
+        // mirroring sort="reverse" in single-module shortcodes. Handle it before the
+        // price branch, which would otherwise coerce the unknown field to "price"
+        // (sortByPrice) and silently price-sort instead of reversing.
+        if ($field === 'reverse')
+            return array_reverse(self::mergeAndSort($data, 'asc', ''));
+
         if ($field)
             return self::sortAllByPrice($data, $order, $field);
 

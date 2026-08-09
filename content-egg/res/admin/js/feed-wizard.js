@@ -88,7 +88,12 @@
     if (!value) return false;
     try {
       var parsed = new URL(value);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
+      return (
+        parsed.protocol === "http:" ||
+        parsed.protocol === "https:" ||
+        parsed.protocol === "ftp:" ||
+        parsed.protocol === "ftps:"
+      );
     } catch (e) {
       return false;
     }
@@ -126,13 +131,7 @@
 
     ajax("cegg_feed_wizard_analyze", { url: url })
       .then(function (json) {
-        state.analysis = json.data;
-        state.mapping = Object.assign({}, json.data.mapping_prefill || {});
-        buildDetected();
-        buildMapping();
-        buildSample();
-        renderPreview();
-        buildSummaryDefaults();
+        applyAnalysis(json.data);
         setStep(2);
       })
       .catch(function (error) {
@@ -144,6 +143,64 @@
         $("#cfw-analyze").disabled = false;
       });
   }
+
+  // Populate every step-2 panel from an analysis payload (initial analyze and
+  // product-node re-scan share this; re-scan keeps the current step).
+  function applyAnalysis(data) {
+    state.analysis = data;
+    state.mapping = Object.assign({}, data.mapping_prefill || {});
+    buildDetected();
+    buildNodeRow();
+    buildMapping();
+    buildSample();
+    togglePreview();
+    renderPreview();
+    buildSummaryDefaults();
+  }
+
+  // The preview evaluates mappings as direct field lookups, which XML mappings
+  // (node paths / XPath) don't satisfy; the sample-data table covers XML.
+  function togglePreview() {
+    show($("#cfw-preview-panel"), state.analysis.format !== "xml");
+  }
+
+  // ---------- product node override (XML feeds) ----------
+
+  function buildNodeRow() {
+    var isXml = state.analysis.format === "xml";
+    show($("#cfw-node-row"), isXml);
+    if (isXml) $("#cfw-node").value = state.analysis.product_node || "";
+  }
+
+  function rescanNode() {
+    var node = $("#cfw-node").value.trim();
+    if (!node || !state.analysis) return;
+
+    var button = $("#cfw-node-rescan");
+    var original = button.innerHTML;
+    button.disabled = true;
+    button.textContent = cfg.i18n.rescanning;
+
+    ajax("cegg_feed_wizard_analyze", { url: state.analysis.url, product_node: node })
+      .then(function (json) {
+        applyAnalysis(json.data);
+      })
+      .catch(function (error) {
+        window.alert(error.message);
+      })
+      .finally(function () {
+        button.disabled = false;
+        button.innerHTML = original;
+      });
+  }
+
+  $("#cfw-node-rescan").addEventListener("click", rescanNode);
+  $("#cfw-node").addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      rescanNode();
+    }
+  });
 
   // ---------- step 2: detected summary + mapping + sample ----------
 
@@ -165,7 +222,7 @@
     if (a.archive_format !== "none") html += chip("Archive", a.archive_format.toUpperCase());
     html += chip("Encoding", a.encoding);
     if (a.format === "csv") html += chip("Delimiter", a.csv_delimiter === "tab" ? "Tab" : a.csv_delimiter);
-    if (a.product_node) html += chip("Product node", a.product_node);
+    // Product node is shown as an editable field (#cfw-node-row) for XML feeds.
     if (a.currency) html += chip("Currency", a.currency);
     if (a.domain) html += chip("Merchant", a.domain);
     if (a.estimated_rows) {
@@ -323,12 +380,28 @@
     return already ? value : value + " " + currency;
   }
 
+  function urlPreviewLine(label, value) {
+    if (!value) return "";
+    return (
+      '<div class="small text-truncate" style="max-width: 640px;">' +
+      '<span class="text-muted">' +
+      escapeHtml(label) +
+      ":</span> " +
+      escapeHtml(value) +
+      "</div>"
+    );
+  }
+
   function renderPreview() {
+    // XML mappings can't be resolved by a plain key lookup; panel is hidden.
+    if (!state.analysis || state.analysis.format === "xml") return;
+
     var title = mappedValue(findMappingKey("title"));
     var price = mappedValue(findMappingKey("price"));
     var salePrice = mappedValue(findMappingKey("sale price"));
     var image = mappedValue(findMappingKey("image link"));
     var link = mappedValue(findMappingKey("affiliate link"));
+    var directLink = mappedValue(findMappingKey("direct link"));
     var currency = state.analysis.currency;
 
     var html = '<div class="d-flex align-items-center">';
@@ -352,7 +425,8 @@
       html += escapeHtml(withCurrency(price, currency) || "—");
     }
     html += "</div>";
-    if (link) html += '<div class="small text-truncate" style="max-width: 640px;">' + escapeHtml(link) + "</div>";
+    html += urlPreviewLine("Affiliate URL", link);
+    html += urlPreviewLine("Direct URL", directLink);
     html += "</div></div>";
 
     $("#cfw-preview").innerHTML = html;
@@ -459,6 +533,7 @@
       feed_url: a.url,
       feed_name: $("#cfw-name").value.trim(),
       feed_format: a.format,
+      xml_processor: a.xml_processor,
       archive_format: a.archive_format,
       encoding: a.encoding,
       currency: a.currency,

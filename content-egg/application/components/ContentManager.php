@@ -96,9 +96,30 @@ class ContentManager
     {
         foreach ($data as $i => $d)
         {
+            // Normalize each item to nested arrays. A top-level is_object() check
+            // is not enough: JSON-RPC/MCP clients (e.g. Claude Desktop) decode
+            // params so that nested fields — a coupon's `extra`, a product's
+            // metadata — arrive as stdClass, and the array_walk_recursive sanitize
+            // pass below would (string)-cast such an object leaf and fatal. A JSON
+            // round-trip flattens every nested object to an array. (WP REST decodes
+            // to associative arrays already, so this is a no-op there.)
             if (is_object($d))
             {
                 $data[$i] = ArrayHelper::object2Array($d);
+            }
+            elseif (is_array($d))
+            {
+                $converted = ArrayHelper::object2Array($d);
+                if (is_array($converted))
+                {
+                    $data[$i] = $converted;
+                }
+            }
+
+            if (!is_array($data[$i]))
+            {
+                unset($data[$i]);
+                continue;
             }
 
             $data[$i]['module_id'] = $module_id;
@@ -199,6 +220,16 @@ class ContentManager
 
     private static function sanitizeData(&$data, $key)
     {
+        // array_walk_recursive descends into arrays but treats objects as leaves.
+        // Items are normalized to nested arrays in dataPresavePrepare(), so this
+        // is a last-resort guard: never (string)-cast a stray object leaf, which
+        // would fatal ("Object of class ... could not be converted to string").
+        if (is_object($data))
+        {
+            $data = '';
+            return;
+        }
+
         if (in_array((string) $key, array('img', 'url', 'IFrameURL', 'orig_url')))
         {
             $data = (string) $data;
@@ -1334,7 +1365,14 @@ class ContentManager
 
     public static function getAutoupdateKeyword($post_id, $module_id)
     {
-        if (!$keyword = \get_post_meta($post_id, ContentManager::META_PREFIX_KEYWORD . $module_id, true))
+        $keyword = \get_post_meta($post_id, ContentManager::META_PREFIX_KEYWORD . $module_id, true);
+
+        // The post-global keyword is a PRODUCT-topic fallback and applies to
+        // PRODUCT modules only. Coupon/image/video (and any other non-product)
+        // modules use their own per-module keyword exclusively — a product-topic
+        // global keyword would pull irrelevant coupons or silently overwrite
+        // curated media.
+        if (!$keyword && ModuleManager::getInstance()->isProductParserModule($module_id))
             $keyword = \get_post_meta($post_id, '_cegg_global_autoupdate_keyword', true);
 
         if (!$keyword)

@@ -2,6 +2,7 @@
 
 namespace ContentEgg\application\blocks\productblock;
 
+use ContentEgg\application\Plugin;
 use ContentEgg\application\components\BlockTemplateManager;
 use ContentEgg\application\components\ModuleManager;;
 
@@ -48,6 +49,14 @@ class ProductBlock
                 'type' => 'integer'
             ),
             'products' => array(
+                'type' => 'string',
+                'default' => ''
+            ),
+            'selection_mode' => array(
+                'type' => 'string',
+                'default' => ''
+            ),
+            'chosen_products' => array(
                 'type' => 'string',
                 'default' => ''
             ),
@@ -151,16 +160,38 @@ class ProductBlock
 
     public static function enqueueBlockAssets()
     {
+        // The block source accesses wp-blocks/wp-block-editor/etc. as `wp.*`
+        // globals (not ES imports), so wp-scripts cannot list them in
+        // block.asset.php — declare those explicitly. Merge with the deps
+        // wp-scripts DID detect from ES imports (e.g. wp-data / wp-api-fetch
+        // pulled in by the shared product picker) so the picker works at runtime.
+        $asset_file = __DIR__ . '/block.asset.php';
+        $asset = file_exists($asset_file) ? require $asset_file : array('dependencies' => array(), 'version' => false);
+        $base_deps = array('wp-blocks', 'wp-i18n', 'wp-element', 'wp-block-editor', 'wp-components');
+        $deps = array_values(array_unique(array_merge($base_deps, (array) $asset['dependencies'])));
+
         wp_register_script(
             'content-egg-products-editor',
             plugins_url('block.js', __FILE__),
-            array('wp-blocks', 'wp-i18n', 'wp-element', 'wp-block-editor', 'wp-components')
+            $deps,
+            $asset['version']
         );
+
+        // The block's Inspector controls rely on .cegg-components-label /
+        // .cegg-control-separator from admin.css. That stylesheet is otherwise only
+        // enqueued by the legacy metabox, so subheaders (e.g. "Visible Elements")
+        // render unstyled on editor screens where the metabox is absent (the new
+        // sidebar/workspace presentation modes). Enqueue it here so the block is
+        // self-styled everywhere; same handle as the metabox path, so it de-dupes.
+        \wp_enqueue_style('contentegg-admin', \ContentEgg\PLUGIN_RES . '/css/admin.css', array(), Plugin::version());
 
         $modules = ModuleManager::getInstance()->getAffiliateParsersList(true);
 
         $tpl_manager = BlockTemplateManager::getInstance();
-        $templates = $tpl_manager->getTemplatesList(true, true);
+        // Only product templates — never coupon/image/video templates that ride
+        // the same block pipeline but belong to their own family blocks. Allowlist
+        // (untyped or PRODUCT-typed), so new media families can't leak in.
+        $templates = $tpl_manager->getProductTemplates();
         $formatted_templates = array();
 
         foreach ($templates as $key => $value)
@@ -188,6 +219,9 @@ class ProductBlock
                 'imagesBaseUrl' => \ContentEgg\PLUGIN_DIR_URL . '/templates/preview/',
                 'modules' => $modules,
                 'templates' => $formatted_templates,
+                // Coupons share the editor product snapshot but must never appear
+                // in the product picker — ProductRefsControl excludes these ids.
+                'couponModuleIds' => array_values(ModuleManager::getInstance()->getParserModuleIdsByTypes('COUPON', true)),
             )
         );
     }
@@ -198,10 +232,45 @@ class ProductBlock
 
         $template = isset($attributes['template']) ? $attributes['template'] : '';
 
+        // Module settings store file-prefixed template names ("data_grid");
+        // shortcode/block template ids are unprefixed ("grid"). AI agents and
+        // users copying the module-settings value would otherwise get broken
+        // output — normalize instead. No block template id starts with "data_".
+        if (strpos($template, 'data_') === 0)
+        {
+            $template = substr($template, strlen('data_'));
+            $attributes['template'] = $template;
+        }
+
         if ($is_editor && BlockTemplateManager::isCustomTemplate($template))
         {
             return '<div><small>' . esc_html__('Preview is not available for custom/theme templates.', 'content-egg') . '</small></div>';
         }
+
+        // "Choose products" mode renders exactly the chosen products, which live
+        // in their own `chosen_products` attribute (kept separate from the manual
+        // Filter-mode `products` list so toggling modes never mixes the two). Map
+        // them into the `products=` filter the shortcode understands, and drop the
+        // group/module filters so nothing else is ANDed in. In Filter mode the
+        // manual `products` filter is emitted as-is and chosen_products is ignored.
+        $selection_mode = isset($attributes['selection_mode']) ? $attributes['selection_mode'] : '';
+        if ($selection_mode === 'products')
+        {
+            $chosen = isset($attributes['chosen_products']) ? trim($attributes['chosen_products']) : '';
+
+            // Choose mode shows exactly the chosen products — and only those. With
+            // none chosen, render nothing: an empty products filter would otherwise
+            // be dropped from the shortcode and fall back to showing ALL products.
+            if ($chosen === '')
+                return '';
+
+            $attributes['products'] = $chosen;
+            unset($attributes['groups'], $attributes['modules'], $attributes['exclude_modules']);
+        }
+
+        // Editor-only flags; the shortcode/ModuleViewer layer does not consume them
+        // (in Choose mode the chosen ids were just copied into `products`).
+        unset($attributes['selection_mode'], $attributes['chosen_products']);
 
         foreach ($attributes as $key => $value)
         {

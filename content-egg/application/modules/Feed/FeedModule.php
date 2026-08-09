@@ -25,6 +25,11 @@ use function ContentEgg\prnx;
  */
 class FeedModule extends AffiliateFeedParserModule
 {
+    public function isGtinSearchAllowed()
+    {
+        return true;
+    }
+
     private bool $aiMappingDone = false;
 
     public function info()
@@ -281,7 +286,7 @@ class FeedModule extends AffiliateFeedParserModule
         }
         elseif (filter_var($keyword, FILTER_VALIDATE_URL))
         {
-            $results = $this->product_model->searchByUrl($keyword, $this->config('partial_url_match'), $limit);
+            $results = $this->product_model->searchByUrl($keyword, $this->config('partial_url_match'), $limit, $this->config('ignore_query_string'));
         }
         else
         {

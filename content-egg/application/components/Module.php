@@ -247,6 +247,15 @@ abstract class Module
 		return false;
 	}
 
+	// Affiliate Egg is an affiliate-parser concept; the real check lives on
+	// AffiliateParserModule. Default false here so isAeParser() is always safe to
+	// call on ANY module (video/image/content/coupon), matching isAffiliateParser
+	// above — otherwise non-affiliate modules fatal with "undefined method".
+	public function isAeParser()
+	{
+		return false;
+	}
+
 	public function isParser()
 	{
 		return false;

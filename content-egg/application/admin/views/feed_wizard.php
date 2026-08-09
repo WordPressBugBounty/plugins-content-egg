@@ -49,7 +49,7 @@
                         <?php esc_html_e('CSV, XML or JSON product feed. ZIP and GZIP archives are supported. The plugin will detect the format and settings automatically.', 'content-egg'); ?>
                     </div>
                     <div id="cfw-url-error" class="text-danger small mt-1 d-none">
-                        <?php esc_html_e('Please enter a valid feed URL (starting with http:// or https://).', 'content-egg'); ?>
+                        <?php esc_html_e('Please enter a valid feed URL (starting with http://, https://, ftp://, or ftps://).', 'content-egg'); ?>
                     </div>
                     <div id="cfw-analyze-progress" class="mt-3 d-none">
                         <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
@@ -63,6 +63,20 @@
         <!-- Step 2: Mapping -->
         <div id="cfw-step-2" class="d-none">
             <div id="cfw-detected" class="mb-3"></div>
+
+            <!-- Product node override (XML feeds only) -->
+            <div class="cfw-panel mb-3 d-none" id="cfw-node-row">
+                <div class="cfw-panel-body d-flex align-items-center flex-wrap gap-2">
+                    <label for="cfw-node" class="fw-bold mb-0 me-1"><?php esc_html_e('Product node', 'content-egg'); ?></label>
+                    <input type="text" class="form-control form-control-sm" id="cfw-node" style="max-width: 220px;" />
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="cfw-node-rescan">
+                        <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i><?php esc_html_e('Re-scan fields', 'content-egg'); ?>
+                    </button>
+                    <span class="small text-muted">
+                        <?php esc_html_e('The XML element that repeats once per product. Change it if the sample below looks wrong, then re-scan.', 'content-egg'); ?>
+                    </span>
+                </div>
+            </div>
 
             <div class="row g-4">
                 <div class="col-lg-6">
@@ -89,7 +103,7 @@
                 </div>
             </div>
 
-            <div class="cfw-panel mt-3">
+            <div class="cfw-panel mt-3" id="cfw-preview-panel">
                 <div class="cfw-panel-header"><?php esc_html_e('Product preview (first row, using your mapping)', 'content-egg'); ?></div>
                 <div class="cfw-panel-body" id="cfw-preview"></div>
             </div>

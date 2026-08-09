@@ -58,6 +58,13 @@ class OfferModule extends AffiliateParserModule
         return true;
     }
 
+    public function isSearchable()
+    {
+        // Manual-entry only: doRequest() returns nothing, so the Search tab
+        // hides this module and products are added through "Add product".
+        return false;
+    }
+
     public function doRequest($keyword, $query_params = array(), $is_autoupdate = false)
     {
         return array();

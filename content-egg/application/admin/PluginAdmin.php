@@ -81,9 +81,12 @@ class PluginAdmin
             new ProductController;
             new ClicksStatsController;
             new EggMetabox;
+            \ContentEgg\application\ProductManagerLoader::init();
+            ProductManagerUiNotice::init();
             new ModuleApi;
             new FeaturedImage;
             new ToolsController;
+            new AgentAccessController;
             ImportQueueApi::init();
             AeIntegrationConfig::getInstance()->adminInit();
             AeConnectController::register();

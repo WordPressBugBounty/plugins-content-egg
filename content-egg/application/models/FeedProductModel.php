@@ -41,7 +41,7 @@ abstract class FeedProductModel extends Model
                     ) $this->charset_collate;";
     }
 
-    public function searchByUrl($url, $partial_match = false, $limit = 1)
+    public function searchByUrl($url, $partial_match = false, $limit = 1, $ignore_query_string = false)
     {
         $db    = $this->getDb();
         $table = $this->tableName();
@@ -50,6 +50,15 @@ abstract class FeedProductModel extends Model
         if ($limit < 1)
         {
             $limit = 1;
+        }
+
+        if ($ignore_query_string)
+        {
+            $qpos = strpos($url, '?');
+            if ($qpos !== false)
+            {
+                $url = substr($url, 0, $qpos);
+            }
         }
 
         $like = $db->esc_like($url);

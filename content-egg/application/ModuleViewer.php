@@ -12,6 +12,7 @@ use ContentEgg\application\helpers\ArrayHelper;
 use ContentEgg\application\components\BlockTemplateManager;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ContentProduct;
+use ContentEgg\application\components\ProductBindingFilter;
 use ContentEgg\application\components\ShortcodeAtts;
 use ContentEgg\application\helpers\TemplateHelper;
 
@@ -148,12 +149,12 @@ class ModuleViewer
             }
         }
 
-        // product IDs
+        // product IDs (supports legacy bare unique_id and composite module_id:unique_id)
         if (!empty($params['products']))
         {
             foreach ($data as $key => $d)
             {
-                if (!in_array($d['unique_id'], $params['products']))
+                if (!ProductBindingFilter::matches((string) $d['unique_id'], (string) $module_id, $params['products']))
                     unset($data[$key]);
             }
         }
@@ -287,12 +288,12 @@ class ModuleViewer
                     }
                 }
 
-                // product IDs filter
+                // product IDs filter (supports legacy bare unique_id and composite module_id:unique_id)
                 if (!empty($params['products']))
                 {
                     foreach ($module_data as $key => $d)
                     {
-                        if (!in_array($d['unique_id'], $params['products']))
+                        if (!ProductBindingFilter::matches((string) $d['unique_id'], (string) $module_id, $params['products']))
                             unset($module_data[$key]);
                     }
                 }
@@ -412,8 +413,21 @@ class ModuleViewer
         if ($only_return_data)
             return $data;
 
+        // An explicit selection — "Choose products/coupons" binding, or a manual
+        // products="A:1,A:2,…" list — should display in the exact order it was
+        // listed (pick-order = display-order). Only override this when the user
+        // asked for a sort, or the template price-sorts by design ($sorted_templates,
+        // e.g. comparison tables); otherwise the default merge would re-sort by
+        // drag-order / badge / priority and lose the picked order.
+        $explicit_pick = !$use_sources
+            && !empty($params['products'])
+            && !$user_specified_sort
+            && !in_array($params['template'], $sorted_templates, true);
+
         if ($use_sources && !$user_specified_sort)
             $items = $this->sortBySourceOrder($data);
+        elseif ($explicit_pick)
+            $items = $this->sortByPickOrder($data, $params['products']);
         else
             $items = TemplateHelper::mergeAndSort($data, $params['order'], $params['sort']);
 
@@ -487,6 +501,39 @@ class ModuleViewer
         usort($items, function ($a, $b)
         {
             return ($a['_source_order'] ?? 0) <=> ($b['_source_order'] ?? 0);
+        });
+
+        return $items;
+    }
+
+    /**
+     * Order merged items by their position in an explicit `products=` list, so a
+     * picked/listed selection renders in the order it was given. Tokens are matched
+     * the same way ProductBindingFilter does: composite "module_id:unique_id" first,
+     * then a bare unique_id. Items not in the list sort to the end (the data is
+     * already filtered by the same list, so that's only a safety fallback).
+     */
+    private function sortByPickOrder(array $data, array $products)
+    {
+        $items = TemplateHelper::mergeAll($data);
+
+        $rank = array();
+        foreach (array_values($products) as $i => $token)
+            $rank[(string) $token] = $i;
+
+        $rank_of = function ($item) use ($rank)
+        {
+            $composite = $item['module_id'] . ':' . $item['unique_id'];
+            if (isset($rank[$composite]))
+                return $rank[$composite];
+            if (isset($rank[(string) $item['unique_id']]))
+                return $rank[(string) $item['unique_id']];
+            return PHP_INT_MAX;
+        };
+
+        usort($items, function ($a, $b) use ($rank_of)
+        {
+            return $rank_of($a) <=> $rank_of($b);
         });
 
         return $items;

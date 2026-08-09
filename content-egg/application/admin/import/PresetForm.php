@@ -18,6 +18,9 @@ defined('ABSPATH') || exit;
  */
 class PresetForm
 {
+    /** @var string[] Notices produced by the most recent build_clean_array() call. */
+    private static $lastPromptNotices = [];
+
     /* ------------------------------------------------------------------
        Actions
     ------------------------------------------------------------------ */
@@ -54,13 +57,7 @@ class PresetForm
             'ai_title'            => '',
             'ai_content'          => '',
             'ai_short_desc'       => '',
-            'ai_extra_section1'   => '',
-            'ai_extra_section2'   => '',
-            'prompt1'             => '',
-            'prompt2'             => '',
-            'prompt3'             => '',
-            'prompt4'             => '',
-            'prompt5'             => '',
+            'ai_prompts'          => [],
 
             // Custom fields – provide three empty slots by default
             'custom_fields'       => array_fill(0, 3, [
@@ -84,7 +81,22 @@ class PresetForm
         // Merge incoming data with defaults first so we can rely on keys existing
         $data = wp_parse_args($data, self::get_defaults());
 
-        return [
+        $provider = Plugin::isPro() ? ImportPostPromptPro::class : ImportPostPromptFree::class;
+
+        $builtInKeys = [
+            'ai_title'      => array_column($provider::titleMethods(), 'key'),
+            'ai_content'    => array_column($provider::descriptionMethods(), 'key'),
+            'ai_short_desc' => array_column($provider::shortDescriptionMethods(), 'key'),
+        ];
+
+        // A prompt named e.g. "write_review" would shadow the built-in method of
+        // that key, because generateDescription() checks custom prompts first.
+        $promptResult = PresetNormalizer::sanitizePrompts(
+            (array) $data['ai_prompts'],
+            array_unique(array_merge(...array_values($builtInKeys)))
+        );
+
+        $clean = [
             'post_type'          => in_array($data['post_type'], ['post', 'product'], true)
                 ? $data['post_type']
                 : 'post',
@@ -124,13 +136,7 @@ class PresetForm
             'ai_title'           => sanitize_key($data['ai_title']),
             'ai_content'         => sanitize_key($data['ai_content']),
             'ai_short_desc'      => sanitize_key($data['ai_short_desc']),
-            'ai_extra_section1'  => sanitize_key($data['ai_extra_section1']),
-            'ai_extra_section2'  => sanitize_key($data['ai_extra_section2']),
-            'prompt1'            => sanitize_textarea_field($data['prompt1']),
-            'prompt2'            => sanitize_textarea_field($data['prompt2']),
-            'prompt3'            => sanitize_textarea_field($data['prompt3']),
-            'prompt4'            => sanitize_textarea_field($data['prompt4']),
-            'prompt5'            => sanitize_textarea_field($data['prompt5']),
+            'ai_prompts'         => $promptResult['prompts'],
             'custom_fields'      => array_map(static function ($field)
             {
                 return [
@@ -143,6 +149,19 @@ class PresetForm
             'use_default'               => ! empty($data['use_default']),
             'make_canonical'            => ! empty($data['make_canonical']),
         ];
+
+        // Renames are applied after sanitization so the rewritten templates and
+        // sink selections are the ones that get stored.
+        $clean = PresetNormalizer::applyRenames($clean, $promptResult['renames']);
+
+        // A select still posts its old value after its prompt row was removed in
+        // the browser, which would leave the sink pointing at a name that no
+        // longer exists — generating nothing and yielding an empty title/body.
+        $clean = PresetNormalizer::pruneDanglingSinks($clean, $builtInKeys);
+
+        self::$lastPromptNotices = $promptResult['notices'];
+
+        return $clean;
     }
 
     /* ------------------------------------------------------------------
@@ -154,7 +173,9 @@ class PresetForm
         $post    = $is_edit ? get_post($id) : null;
 
         // Existing data from DB (if in edit mode)
-        $saved_data = $is_edit ? (array) get_post_meta($id, PresetRepository::META_KEY, true) : [];
+        $saved_data = $is_edit
+            ? PresetNormalizer::normalize((array) get_post_meta($id, PresetRepository::META_KEY, true))
+            : [];
 
         // Combine: DB ➜ prefill (e.g. duplicate) ➜ defaults
         $data = wp_parse_args($prefill, $saved_data);
@@ -242,7 +263,12 @@ class PresetForm
             admin_url('admin.php')
         );
 
-        $redirect_url = AdminNotice::add2Url($redirect_url, 'preset_saved', 'success');
+        // The notice channel carries a message ID, not free text, so a generic
+        // warning stands in for the per-name detail — the corrected names are
+        // visible in the Custom Prompts section the redirect lands on.
+        $redirect_url = self::$lastPromptNotices
+            ? AdminNotice::add2Url($redirect_url, 'preset_saved_prompts_renamed', 'warning')
+            : AdminNotice::add2Url($redirect_url, 'preset_saved', 'success');
 
         AdminHelper::redirect($redirect_url);
     }

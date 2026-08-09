@@ -172,6 +172,46 @@ class ExternalFeaturedImage
         return \update_post_meta($post_id, self::EXTERNAL_URL_META, $meta);
     }
 
+    /**
+     * Remove the post's EXTERNAL featured-image override (image_key 0) so an
+     * explicitly set real thumbnail is no longer masked by getFakeThumbnailId()
+     * under "enabled"/"external priority". Leaves other image keys and the
+     * separate gallery meta (_product_image_gallery) untouched. Returns true when
+     * an override existed and was removed.
+     */
+    public static function removeExternalFeaturedImage($post_id, $image_key = 0)
+    {
+        $meta = \get_post_meta($post_id, self::EXTERNAL_URL_META, true);
+
+        // Deprecated flat format: {url,width,height} (the featured slot only).
+        if (is_array($meta) && isset($meta['url']))
+        {
+            if ($image_key !== 0)
+            {
+                return false;
+            }
+            \delete_post_meta($post_id, self::EXTERNAL_URL_META);
+            return true;
+        }
+
+        if (!is_array($meta) || !isset($meta[$image_key]))
+        {
+            return false;
+        }
+
+        unset($meta[$image_key]);
+        if ($meta)
+        {
+            \update_post_meta($post_id, self::EXTERNAL_URL_META, $meta);
+        }
+        else
+        {
+            \delete_post_meta($post_id, self::EXTERNAL_URL_META);
+        }
+
+        return true;
+    }
+
     public static function adminThumbnail($html)
     {
         global $post;

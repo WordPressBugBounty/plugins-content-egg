@@ -1,10 +1,10 @@
 === Content Egg – Affiliate Product Importer & Price Comparison ===
 Contributors: keywordrush
 Tags: affiliate marketing, price comparison, csv import, ai content generation, gutenberg blocks
-Requires at least: 6.0
-Tested up to: 7.0
+Requires at least: 6.9
+Tested up to: 7.0.3
 Requires PHP: 8.0
-Stable tag: 11.4.0
+Stable tag: 11.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,6 +15,8 @@ Import affiliate products, compare prices, and publish structured product review
 Content Egg is an affiliate marketing plugin for WordPress and WooCommerce. Import products from multiple networks, compare prices, sync with WooCommerce, and generate SEO-friendly content with AI to boost traffic and affiliate sales.
 
 Built for sites that turn structured content into trust, clicks, and conversions — with 25+ editorial Gutenberg blocks, the blocks AI search actually cites.
+
+Connect your own AI assistant — ChatGPT, Claude, or any agent that can call an API — and work with Content Egg in plain language, secured with a WordPress application password. In the free version the assistant can research your networks and preview a complete Egg Blocks page; saving it to your site needs Content Egg PRO.
 
 = What is this plugin for? =
 
@@ -49,6 +51,7 @@ AI Power: [www.keywordrush.com/toomuchniche](https://www.keywordrush.com/toomuch
 * Add offers by keyword or product URL
 * Auto-insert affiliate IDs in links
 * 25+ Egg Blocks — editorial Gutenberg blocks for product reviews, roundups, and buying guides
+* Agent Access — drive the plugin from ChatGPT, Claude, or your own AI assistant
 * Price comparison blocks with multiple offers
 * High-conversion templates (ready-made or custom)
 * Create custom templates with ChatGPT
@@ -76,6 +79,17 @@ Includes `CSV-XML Feed`, `CJ Links`, `Coupon`, `GdeSlon`, `Google Images`, `Offe
 
 **PRO Adds Even More:**
 Includes `Aliexpress`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`, `Billigerde`, `Bol.com`, `CJ Products`, `CityAds.com`, `Coupang`, `Clickbank`, `Daisycon`, `eBay`, `Envato`, `Flipkart`, `Geizhalsde`, `Impact Radius`, `Kelkoogroup`, `Kieskeurig.nl`, `Linkwise`, `Lomadee.com`, `Paytm.com`, `Pepperjam`, `Rakuten (LinkShare)`, `Shopee`, `Walmart`, `Webgains`.
+
+**Agent Access — Free Version:**
+Your AI assistant can research and preview, but not save. It can check your setup, modules and feed status, search products across your networks, find images, videos and coupons, read the products and blocks already on a post, and compose, validate and preview a complete Egg Blocks page before you build it.
+
+**Agent Access — PRO Adds:**
+Your assistant can also do the work, not just plan it: attach products (including custom ones you describe), edit, reorder and remove them, refresh prices, add images, videos and coupons to a post, insert blocks, create a full draft page, set the featured image, publish or schedule it, and manage modules, settings, feeds and new affiliate shops.
+
+▶ [Run Content Egg with ChatGPT: Build Affiliate Articles with AI Agents](https://www.youtube.com/watch?v=E_7tw4ACbH0)
+▶ [Claude Scheduled Tasks for WordPress: Automate Article Publishing](https://www.youtube.com/watch?v=du__HYrMnuU)
+
+Both videos show the PRO workflow end to end, including the steps the free version cannot save.
 
 ➡️ Visit us at [www.keywordrush.com/contentegg](https://www.keywordrush.com/contentegg "Content Egg PRO")
 
@@ -145,7 +159,7 @@ Customize prompts with dynamic variables for tailored content creation.
 **Requirements**
 
 * PHP version 8.0 or higher.
-* WordPress 6.0 or higher.
+* WordPress 6.9 or higher.
 
 Installation Instructions
 
@@ -209,6 +223,27 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 
 
 == Changelog ==
+
+= 11.5.0 =
+
+* New: Agent Access — connect your own AI assistant (ChatGPT, Claude, and others) and work with Content Egg in plain language: search products across your networks, find images, videos and coupons, review the products and blocks already on a post, and compose, validate and preview a complete Egg Blocks page. The free version is read-only: the assistant can research and show you the finished page, but saving products, blocks or settings to your site needs Content Egg Pro. Secured with WordPress application passwords; [Guide](https://ce-docs.keywordrush.com/ai-agents).
+* New: Product Manager — manage products inside the editor instead of the metabox below: a Content Egg sidebar in the block editor, or inline on Classic/WooCommerce/other post types. Search, add, edit (rich-text), reorder, group, refresh prices, and insert blocks without leaving the editor. Default for new installs; pick your interface under Settings. The classic metabox is now deprecated.
+* New: Coupons manager — manage vouchers and deals in the editor: search coupon networks or add coupons by hand, then list, reorder, edit, and insert them.
+* New: Coupons block — display coupons on the page: all coupons on the post, narrowed by module or group, or specific ones. Aggregates every coupon source into one list.
+* New: Coupons block — two templates: a voucher-style "Coupon ticket" (default; tear-off stub, click-to-reveal, one-click copy) and a "Coupon list".
+* New: Media manager — manage images and videos in the editor: search media sources, add them to a post, then list, reorder, edit, and group them — no metabox.
+* New: Images and Videos blocks — display media on the page: all media, filtered by module or group, or specific items dragged from the sidebar.
+* New: Media templates — new layouts for the Images and Videos blocks: "Big images", "Images masonry" (with lightbox), "Videos grid", and "Videos playlist".
+* New: Products block — Product Binding: keep showing every attached product (default), or switch to "Choose products" to display only specific ones — so multiple product blocks can sit on the same page, each with its own set.
+* New: Content Egg block category — the Products, Coupons, Images and Videos blocks are now grouped in a "Content Egg" section in the block inserter.
+* New: Media modules — image and video sources grouped under "Media modules"; Google Books, Google News, RSS Fetcher and Related Keywords are deprecated.
+* New: Prefill — "ThirstyAffiliates Link" keyword source: resolves a product's affiliate link and searches by it, so URL-lookup modules match the exact product.
+* New: Image Optimization — resize oversized locally saved product images in the background for faster pages. Configurable max size and quality; existing images included.
+* New: Import presets — Custom Prompts: add as many as you need instead of five. Name a prompt, then use its %AI.name% placeholder in the title and body templates, in custom meta fields, or pick it in the AI Title/Content/Short Description menus. Existing presets, including Extra Sections, are converted automatically.
+* New: Import presets — "Add a known field" fills in SEO meta keys for Yoast SEO, Rank Math, SEOPress and The SEO Framework.
+* Improved: Locally saved images get readable, SEO-friendly file names from the product title.
+* Changed: The Global auto-update keyword now applies to product modules only; coupon, image and video modules use their own per-module keyword.
+* Fixed: Feed — sync state was lost with a persistent object cache (Redis, LiteSpeed Cache 7.8+), causing repeated re-imports.
 
 = 11.4.0 =
 

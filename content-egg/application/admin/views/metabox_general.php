@@ -105,7 +105,7 @@ if (!$global_keyword = \get_post_meta($post->ID, '_cegg_global_autoupdate_keywor
                     <li class="small m-0"><a ng-click="smartGroups('size_volume')" class="dropdown-item"><?php echo esc_html(__('By Size or Volume', 'content-egg')); ?></a></li>
                 </ul>
             <?php endif; ?>
-            <input class="form-control form-control-sm ms-3" name="globalUpdateKeyword" value="<?php echo esc_attr($global_keyword); ?>" type="text" placeholder="<?php esc_html_e('Global auto-update keyword', 'content-egg'); ?>" title="<?php esc_html_e('Global auto-update keyword for all active modules', 'content-egg'); ?>">
+            <input class="form-control form-control-sm ms-3" name="globalUpdateKeyword" value="<?php echo esc_attr($global_keyword); ?>" type="text" placeholder="<?php esc_html_e('Global auto-update keyword', 'content-egg'); ?>" title="<?php esc_html_e('Global auto-update keyword for product modules. Coupon, image and video modules use their own per-module keyword.', 'content-egg'); ?>">
 
             <?php if ($keywordsExist || $global_keyword) : ?>
                 <input type="submit" id="cegg_update_lists" class="btn btn-sm btn-outline-primary ms-3" value="<?php esc_html_e('Refresh listings', 'content-egg'); ?>" title="<?php esc_html_e('Refresh all product listings using auto-update keywords', 'content-egg'); ?>">

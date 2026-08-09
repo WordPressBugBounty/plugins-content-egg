@@ -113,6 +113,7 @@ class FeedWizardController
                 'subtitleStep3' => __('Give your feed a name and choose how often it should refresh, then start the import.', 'content-egg'),
                 'analyzing' => __('Analyzing feed…', 'content-egg'),
                 'analyzeFailed' => __('Analysis failed', 'content-egg'),
+                'rescanning' => __('Re-scanning…', 'content-egg'),
                 'aiMapping' => __('Asking AI…', 'content-egg'),
                 'notMapped' => __('— not mapped —', 'content-egg'),
                 'custom' => __('Custom…', 'content-egg'),
@@ -139,8 +140,12 @@ class FeedWizardController
     // Business logic (public, CLI-testable)
     // ------------------------------------------------------------------
 
-    /** @throws \Exception */
-    public function analyze(string $module_id, string $url): array
+    /**
+     * @param string|null $product_node Optional XML product-node override for a
+     *   "re-scan" when auto-detection picked the wrong node.
+     * @throws \Exception
+     */
+    public function analyze(string $module_id, string $url, ?string $product_node = null): array
     {
         $module = $this->feedModule($module_id);
         $config = $module->getConfigInstance();
@@ -150,7 +155,21 @@ class FeedWizardController
             throw new \Exception(esc_html__('Please enter a valid feed URL. Supported schemes: http://, https://, ftp://, ftps://.', 'content-egg'));
         }
 
-        $result = FeedDetector::analyze($url, array_keys($config->mappingFields()), array($module, 'storePrefetchedArchive'));
+        // wp_remote_get() can't fetch ftp:// URLs; hand FTP/FTPS transfers to
+        // the module's own FTP client (cURL → ext-ftp → stream wrapper), which
+        // downloads the whole file once so the real import can reuse it.
+        $onFtpFetch = function (string $ftp_url) use ($module)
+        {
+            return $module->downloadViaFtp($ftp_url, $module->importTimeLimit());
+        };
+
+        $result = FeedDetector::analyze(
+            $url,
+            array_keys($config->mappingFields()),
+            array($module, 'storePrefetchedArchive'),
+            $onFtpFetch,
+            $product_node
+        );
 
         $result['has_ai_key'] = (bool) GeneralConfig::getOption('system_ai_key', '', 'contentegg_options');
         $result['url'] = $url;
@@ -285,6 +304,7 @@ class FeedWizardController
             'feed_name' => $feed_name,
             'feed_url' => $feed_url,
             'feed_format' => $pick('feed_format', array('csv', 'xml', 'json'), 'csv'),
+            'xml_processor' => $pick('xml_processor', array('XmlStringStreamer', 'XmlReader'), 'XmlStringStreamer'),
             'archive_format' => $pick('archive_format', array('none', 'zip', 'gz'), 'none'),
             'encoding' => $pick('encoding', array('UTF-8', 'ISO-8859-1'), 'UTF-8'),
             'currency' => strtoupper(sanitize_text_field(isset($settings['currency']) ? (string) $settings['currency'] : 'USD')),
@@ -343,7 +363,10 @@ class FeedWizardController
         {
             $url = isset($_POST['url']) ? trim(sanitize_url(wp_unslash($_POST['url']))) : '';
             $module_id = $this->requestedModuleId();
-            \wp_send_json(array('ok' => 1, 'data' => $this->analyze($module_id, $url)));
+            $product_node = isset($_POST['product_node']) && $_POST['product_node'] !== ''
+                ? sanitize_text_field(wp_unslash($_POST['product_node']))
+                : null;
+            \wp_send_json(array('ok' => 1, 'data' => $this->analyze($module_id, $url, $product_node)));
         }
         catch (\Throwable $e)
         {

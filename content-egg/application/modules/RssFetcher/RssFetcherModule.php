@@ -35,6 +35,11 @@ class RssFetcherModule extends ParserModule
 		return self::PARSER_TYPE_CONTENT;
 	}
 
+	public function isDeprecated()
+	{
+		return true;
+	}
+
 	public function isFree()
 	{
 		return true;

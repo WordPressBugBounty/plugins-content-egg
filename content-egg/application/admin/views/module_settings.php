@@ -292,7 +292,7 @@ defined('\ABSPATH') || exit; ?>
                                 </a>
                             <?php endif; ?>
 
-                            <?php if ($module->isAeParser()): ?>
+                            <?php if ($module->isAffiliateParser() && $module->isAeParser()): ?>
                                 <a class="button-link-delete"
                                     href="<?php echo esc_url_raw(
                                                 wp_nonce_url(

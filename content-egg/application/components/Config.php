@@ -156,6 +156,17 @@ abstract class Config
         }
     }
 
+    /**
+     * Unconditionally sets an option value on this instance, keeping the
+     * in-memory cache in sync after a direct option write (set_current()
+     * skips keys absent from the cache, e.g. defined-but-never-stored
+     * options).
+     */
+    public function setOptionValue($option, $value)
+    {
+        $this->option_values[$option] = $value;
+    }
+
     public function register_settings()
     {
         \register_setting(
@@ -504,80 +515,220 @@ abstract class Config
                 continue;
             }
 
-            if (!is_array($value))
+            // Preserve the historical quirk: a validator declared as a bare
+            // (non-array) value skips the option entirely without writing out.
+            $validator = $this->get_validator($option);
+            if ($validator && !is_array($validator))
             {
-                $value = trim($value);
+                continue;
             }
-            if ($validator = $this->get_validator($option))
+
+            $res = $this->evaluateOptionValidators($option, $value);
+            if (!$res['ok'])
             {
-                if (!is_array($validator))
+                \add_settings_error($option, $option, wp_kses_post((string) $res['error']));
+                $value = $this->get_current($option);
+                if (!empty($res['when']))
                 {
-                    continue;
+                    $this->out[$res['when']] = $this->get_current($res['when']);
                 }
-                foreach ($validator as $v)
-                {
-                    if (!is_array($v))
-                    {
-                        if ($v == 'allow_empty')
-                        {
-                            if ($value === '')
-                            {
-                                break;
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-
-                        // filter
-                        $value = call_user_func($v, $value);
-                    }
-                    else
-                    {
-                        // check 'when' condition
-                        if (!empty($v['when']))
-                        {
-                            if (!$this->evaluate_when_condition($v['when']))
-                            {
-                                continue;
-                            }
-                        }
-
-                        if (!empty($v['type']) && $v['type'] == 'filter')
-                        {
-                            // filter
-                            $value = call_user_func($v['call'], $value);
-                        }
-                        else
-                        {
-                            // validator
-                            if (empty($v['arg']))
-                            {
-                                $res = call_user_func($v['call'], $value);
-                            }
-                            else
-                            {
-                                $res = call_user_func($v['call'], $value, $v['arg']);
-                            }
-                            if (!$res)
-                            {
-                                \add_settings_error($option, $option, wp_kses_post($v['message']));
-                                $value = $this->get_current($option);
-                                if (!empty($v['when']))
-                                {
-                                    $this->out[$v['when']] = $this->get_current($v['when']);
-                                }
-                                break;
-                            }
-                        } // .validator
-                    }
-                }
+            }
+            else
+            {
+                $value = $res['value'];
             }
             $this->out[$option] = $value;
         }
 
         return $this->out;
+    }
+
+    /**
+     * Runs the filter/validator chain for a single option against the current
+     * submitted-value context ($this->input / $this->out), with NO side effects
+     * (no add_settings_error, no is_active reverts). This is the shared core of
+     * the admin validate() pipeline and the agent abilities layer, so the two
+     * paths validate identically and cannot drift.
+     *
+     * @param bool $apply_filters When false, filter callbacks are skipped and
+     *   only pass/fail validators run. Dry-run callers (activation readiness,
+     *   patch validation) pass false because some filters persist data as a
+     *   side effect (e.g. saveModuleName / processLinkIndexBackfiller); a
+     *   read-only check must not trigger those. The unconditional leading
+     *   trim() is always applied (it is pure).
+     *
+     * @return array{ok: bool, value: mixed, error: ?string, when: mixed}
+     */
+    public function evaluateOptionValidators($option, $value, $apply_filters = true)
+    {
+        if (!is_array($value))
+        {
+            $value = trim($value);
+        }
+
+        $validator = $this->get_validator($option);
+        if (!$validator || !is_array($validator))
+        {
+            return array('ok' => true, 'value' => $value, 'error' => null, 'when' => null);
+        }
+
+        foreach ($validator as $v)
+        {
+            if (!is_array($v))
+            {
+                if ($v == 'allow_empty')
+                {
+                    if ($value === '')
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+
+                // filter (function name)
+                if ($apply_filters)
+                {
+                    $value = call_user_func($v, $value);
+                }
+                continue;
+            }
+
+            // check 'when' condition
+            if (!empty($v['when']))
+            {
+                if (!$this->evaluate_when_condition($v['when']))
+                {
+                    continue;
+                }
+            }
+
+            if (!empty($v['type']) && $v['type'] == 'filter')
+            {
+                // filter
+                if ($apply_filters)
+                {
+                    $value = call_user_func($v['call'], $value);
+                }
+                continue;
+            }
+
+            // validator
+            if (empty($v['arg']))
+            {
+                $res = call_user_func($v['call'], $value);
+            }
+            else
+            {
+                $res = call_user_func($v['call'], $value, $v['arg']);
+            }
+
+            if (!$res)
+            {
+                return array(
+                    'ok' => false,
+                    'value' => $value,
+                    'error' => isset($v['message']) ? $v['message'] : sprintf(
+                        /* translators: %s: option key */
+                        __('Invalid value for "%s".', 'content-egg'),
+                        $option
+                    ),
+                    'when' => !empty($v['when']) ? $v['when'] : null,
+                );
+            }
+        }
+
+        return array('ok' => true, 'value' => $value, 'error' => null, 'when' => null);
+    }
+
+    /**
+     * Agent-abilities entry point: validate a partial settings patch against the
+     * current stored values WITHOUT persisting and WITHOUT admin side effects.
+     * `when` conditions resolve against current values overlaid with the patch,
+     * so activation-gated requirements evaluate correctly. Filters are not run
+     * (see evaluateOptionValidators); callers own their own sanitization.
+     *
+     * @return array{values: array, errors: array<string,string>}
+     */
+    public function validatePatchValues(array $patch)
+    {
+        $saved_input = $this->input;
+        $saved_out = $this->out;
+
+        $this->input = array_merge($this->getOptionValues(), $patch);
+        $this->out = array();
+
+        $values = array();
+        $errors = array();
+        foreach ($patch as $key => $value)
+        {
+            $key = (string) $key;
+            if (!$this->option_exists($key))
+            {
+                continue;
+            }
+            $res = $this->evaluateOptionValidators($key, $value, false);
+            if ($res['ok'])
+            {
+                $values[$key] = $res['value'];
+                $this->out[$key] = $res['value'];
+            }
+            else
+            {
+                $errors[$key] = (string) $res['error'];
+            }
+        }
+
+        $this->input = $saved_input;
+        $this->out = $saved_out;
+
+        return array('values' => $values, 'errors' => $errors);
+    }
+
+    /**
+     * Agent-abilities entry point: the options that currently BLOCK activation,
+     * i.e. what the admin validate() pipeline would use to snap is_active back
+     * to 0 when the module is turned on. Empty array => safe to activate.
+     *
+     * Mirrors the two admin activation gates: the is_active field's own
+     * requirement validator, and any field whose conditional (`when`) validator
+     * fails once is_active = 1 (e.g. a required API key). Read-only: filters are
+     * not run.
+     *
+     * @return array<string,string> option key => reason message
+     */
+    public function getActivationBlockers()
+    {
+        $saved_input = $this->input;
+        $saved_out = $this->out;
+
+        $this->input = array_merge($this->getOptionValues(), array('is_active' => 1));
+        $this->out = array();
+
+        $blockers = array();
+        foreach (array_keys($this->options()) as $option)
+        {
+            $option = (string) $option;
+            $value = ($option === 'is_active') ? 1 : $this->get_current($option);
+            $res = $this->evaluateOptionValidators($option, $value, false);
+            if ($res['ok'])
+            {
+                continue;
+            }
+            // is_active's own validator (requirement check), or a conditional
+            // validator that only fires because the module is being activated.
+            if ($option === 'is_active' || !empty($res['when']))
+            {
+                $blockers[$option] = (string) $res['error'];
+            }
+        }
+
+        $this->input = $saved_input;
+        $this->out = $saved_out;
+
+        return $blockers;
     }
 
     public function is_checkbox($option)
@@ -655,6 +806,59 @@ abstract class Config
         }
 
         return $result;
+    }
+
+    /**
+     * Machine-readable option metadata for the agent abilities layer:
+     * plain-text titles/descriptions, defaults, sections and choice lists —
+     * no HTML, no render callbacks.
+     */
+    public function getOptionsMeta()
+    {
+        $meta = array();
+        foreach ($this->options() as $key => $def)
+        {
+            $entry = array(
+                'title' => isset($def['title']) ? \wp_strip_all_tags((string) $def['title']) : (string) $key,
+                'default' => isset($def['default']) ? $def['default'] : '',
+            );
+
+            if (!empty($def['description']) && is_string($def['description']))
+            {
+                $description = preg_replace('/<br\s*\/?>/i', ' ', $def['description']);
+                $description = trim((string) preg_replace('/\s+/u', ' ', \wp_strip_all_tags($description)));
+                $entry['description'] = \ContentEgg\application\helpers\TextHelper::truncate($description, 160);
+            }
+
+            if (isset($def['section']))
+            {
+                $entry['section'] = \wp_strip_all_tags((string) $def['section']);
+            }
+
+            foreach (array('dropdown_options', 'checkbox_options') as $choices_key)
+            {
+                if (isset($def[$choices_key]) && is_array($def[$choices_key]))
+                {
+                    $entry['choices'] = array_map(static function ($label)
+                    {
+                        return \wp_strip_all_tags((string) $label);
+                    }, $def[$choices_key]);
+                }
+            }
+
+            if (isset($def['callback']))
+            {
+                $callback_name = is_array($def['callback']) ? end($def['callback']) : $def['callback'];
+                if ($callback_name === 'render_password')
+                {
+                    $entry['is_password'] = true;
+                }
+            }
+
+            $meta[$key] = $entry;
+        }
+
+        return $meta;
     }
 
     protected function render_help_icon($args)

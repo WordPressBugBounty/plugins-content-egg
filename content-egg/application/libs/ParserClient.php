@@ -51,7 +51,7 @@ class ParserClient
 	public static function getHttpClient($opts = array())
 	{
 		$_opts = array(
-			'sslverify'   => false,
+			'sslverify'   => WpHttpClient::sslVerifyDefault(),
 			'redirection' => 3,
 			'timeout'     => 60,
 			'user-agent'  => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:136.0) Gecko/20100101 Firefox/136.0',

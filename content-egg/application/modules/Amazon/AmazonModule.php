@@ -21,6 +21,11 @@ use ContentEgg\application\helpers\TemplateHelper;
  */
 class AmazonModule extends AffiliateParserModule
 {
+    public function isGtinSearchAllowed()
+    {
+        return true;
+    }
+
 
 	private $api_client = null;
 

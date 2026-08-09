@@ -112,4 +112,44 @@ abstract class AffiliateParserModule extends ParserModule
     {
         return [];
     }
+
+    public function getSearchFilters()
+    {
+        $filters = array();
+
+        $config = $this->getConfigInstance();
+        if (method_exists($config, 'getActiveLocalesList'))
+        {
+            $locales = (array) $config->getActiveLocalesList();
+            if (count($locales) > 1)
+            {
+                $options = array();
+                foreach ($locales as $value => $name)
+                {
+                    $options[] = array('value' => (string) $value, 'label' => (string) $name);
+                }
+
+                $filters[] = array(
+                    'key' => 'locale',
+                    'type' => 'select',
+                    'label' => \__('Locale', 'content-egg'),
+                    'options' => $options,
+                    'default' => (string) $config->option('locale'),
+                );
+            }
+        }
+
+        $filters[] = array(
+            'key' => 'minimum_price',
+            'type' => 'number',
+            'label' => \__('Min. price', 'content-egg'),
+        );
+        $filters[] = array(
+            'key' => 'maximum_price',
+            'type' => 'number',
+            'label' => \__('Max. price', 'content-egg'),
+        );
+
+        return $filters;
+    }
 }

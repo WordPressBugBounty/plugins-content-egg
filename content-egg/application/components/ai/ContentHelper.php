@@ -138,6 +138,22 @@ class ContentHelper
         return $html;
     }
 
+    /**
+     * Plain-text result of a custom prompt.
+     *
+     * Unlike prepareTitle(), this keeps multi-line answers intact and does not
+     * trim trailing punctuation — a meta description may legitimately end in a
+     * full stop.
+     */
+    public static function preparePlainText($text)
+    {
+        $text = self::removeMarkdownCodeBlock((string) $text);
+        $text = \wp_strip_all_tags($text);
+        $text = \sanitize_textarea_field($text);
+
+        return trim($text);
+    }
+
     public static function prepareHtml($html)
     {
         $html = preg_replace('~<a.*?>(.*?)</a>~ui', '$1', $html);

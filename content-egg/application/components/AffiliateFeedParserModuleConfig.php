@@ -57,6 +57,14 @@ abstract class AffiliateFeedParserModuleConfig extends AffiliateParserModuleConf
                 'default' => true,
                 'section' => 'default',
             ),
+            'ignore_query_string' => array(
+                'title' => __('Ignore URL query string', 'content-egg'),
+                'description' => __('Strip the query string before matching', 'content-egg')
+                    . '<p class="description">' . __('Removes parameters (e.g. affiliate tracking tags like ?awc=... or ?utm_source=...) from the URL before searching, so products can still be matched by their base URL.', 'content-egg') . '</p>',
+                'callback' => array($this, 'render_checkbox'),
+                'default' => false,
+                'section' => 'default',
+            ),
             'save_img' => array(
                 'title' => __('Save images', 'content-egg'),
                 'description' => __('Save images on server', 'content-egg'),

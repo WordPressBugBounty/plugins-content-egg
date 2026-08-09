@@ -168,6 +168,37 @@ contentEgg.controller(
       }, 0);
     }
 
+    // Merge products added from the block editor (REST write-through) into
+    // the metabox model, so the classic post-save path keeps them. Items are
+    // full product objects; dedupe by unique_id like $scope.add().
+    window.addEventListener("ceggProductsChangedExternally", function (event) {
+      var detail = event && event.detail ? event.detail : {};
+      var module_id = detail.module_id;
+      var items = detail.items && Array.isArray(detail.items) ? detail.items : [];
+
+      if (!module_id || !$scope.models[module_id] || !items.length) return;
+
+      $timeout(function () {
+        angular.forEach(items, function (item) {
+          if (!item || !item.unique_id) return;
+
+          for (
+            var i = 0;
+            i < $scope.models[module_id].added.length;
+            i++
+          ) {
+            if ($scope.models[module_id].added[i].unique_id == item.unique_id)
+              return;
+          }
+
+          $scope.models[module_id].added.push(item);
+          $scope.models[module_id].added_changed = true;
+        });
+
+        scheduleEditorProductsSync();
+      });
+    });
+
     angular.forEach($scope.active_modules, function (module_id, key) {
       $scope.models[module_id] = new ModuleService(module_id);
       $scope.keywords[module_id] = "";

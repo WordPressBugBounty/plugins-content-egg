@@ -8,7 +8,6 @@ use ContentEgg\application\components\ai\AiProcessor;
 use ContentEgg\application\components\feed\FeedImportPendingException;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\components\ModuleManager;
-use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 
 use function ContentEgg\prnx;
@@ -138,7 +137,6 @@ class ModuleApi
 
         $module_id = TextHelper::clear(sanitize_text_field(wp_unslash($_POST['module'])));
         $parser = ModuleManager::getInstance()->parserFactory($module_id);
-        $cls = get_class($parser);
 
         if (!$parser || !$parser->isActive())
         {
@@ -162,84 +160,19 @@ class ModuleApi
             die("Error: 'keyword' parameter cannot be empty.");
         }
 
-        if ($query['keyword'][0] == '[' || filter_var($query['keyword'], FILTER_VALIDATE_URL))
-        {
-            $keyword = filter_var($query['keyword'], FILTER_SANITIZE_URL);
-            // FILTER_SANITIZE_URL strips the space; restore it for both listing prefixes.
-            $keyword = str_replace(array('[importlimit', '[cataloglimit'), array('[import limit', '[catalog limit'), $keyword);
-        }
-        else
-        {
-            $keyword = sanitize_text_field($query['keyword']);
-        }
+        $keyword = ProductSearchService::prepareKeyword($query['keyword']);
 
         if (!$keyword)
         {
             die("Error: 'keyword' parameter cannot be empty.");
         }
 
-        if ($parser->isAffiliateParser())
-        {
-            // price range mapping.
-            $map = $cls::getPriceParamMap();
-
-            if (isset($map['min']) && isset($query['minimum_price']))
-            {
-                $query[$map['min']] = floatval($query['minimum_price']);
-            }
-            if (isset($map['max']) && isset($query['maximum_price']))
-            {
-                $query[$map['max']] = floatval($query['maximum_price']);
-            }
-
-            // locale map
-            $localeMap = $cls::getLocaleParamMap();
-            if (isset($localeMap['locale']) && isset($query['locale']))
-            {
-                $query[$localeMap['locale']] = floatval($query['locale']);
-            }
-        }
+        $query = ProductSearchService::applyParamMaps($parser, $query);
 
         try
         {
             $data = $parser->doMultipleRequests($keyword, $query);
-            foreach ($data as $key => $item)
-            {
-                if (!$item->unique_id)
-                {
-                    throw new \Exception('Item data "unique_id" must be specified.');
-                }
-
-                if ($item->description)
-                {
-                    if (!TextHelper::isHtmlTagDetected($item->description))
-                    {
-                        $item->description = TextHelper::br2nl($item->description);
-                    }
-
-                    $item->description = TextHelper::removeExtraBreaks($item->description);
-                }
-
-                if (property_exists($item, 'price'))
-                {
-                    if (!(float) $item->price)
-                    {
-                        $item->price = 0;
-                        $item->priceOld = 0;
-                    }
-                    elseif (!(float) $item->priceOld)
-                    {
-                        $item->priceOld = 0;
-                    }
-
-                    if ($item->price)
-                        $item->_priceFormatted = TemplateHelper::formatPriceCurrency($item->price, $item->currencyCode);
-                    if ($item->priceOld)
-                        $item->_priceOldFormatted = TemplateHelper::formatPriceCurrency($item->priceOld, $item->currencyCode);
-                    if ($item->description)
-                        $item->_descriptionText = \wp_strip_all_tags($item->description);
-                }
-            }
+            $data = ProductSearchService::formatItems($data);
 
             $notice = method_exists($parser, 'getSearchNotice') ? (string) $parser->getSearchNotice() : '';
             $this->formatJson(array('results' => $data, 'error' => '', 'notice' => $notice));

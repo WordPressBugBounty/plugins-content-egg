@@ -1,8 +1,10 @@
-import { Button, Modal, SelectControl } from "@wordpress/components";
-import { useEffect, useMemo, useState } from "@wordpress/element";
+import { Button, Modal, SelectControl, TabPanel } from "@wordpress/components";
+import { useEffect, useMemo, useRef, useState } from "@wordpress/element";
 import { useSelect } from "@wordpress/data";
 import { __ } from "@wordpress/i18n";
 import useCeggEditorProducts from "./useCeggEditorProducts";
+import SearchPanel from "@cegg/product-manager/SearchPanel";
+import { formatPrice } from "@cegg/product-manager/formatPrice";
 
 function useCurrentPostId() {
     return useSelect((select) => {
@@ -12,16 +14,6 @@ function useCurrentPostId() {
         }
         return Number(store.getCurrentPostId()) || 0;
     }, []);
-}
-
-function formatPrice(product) {
-    const price = String(product?.price || "").trim();
-    const currencyCode = String(product?.currencyCode || "").trim();
-    if (!price) {
-        return "";
-    }
-
-    return currencyCode ? `${price} ${currencyCode}` : price;
 }
 
 function getProductKey(moduleId, uniqueId) {
@@ -48,12 +40,79 @@ export default function ProductRefsControl({
     renderItemFields,
     emptyMessage = __("No products are currently bound to this block.", "content-egg"),
     preserveUnboundRows = false,
+    // Optional allow-list of module ids. When set, the picker only sees items
+    // from these modules — the coupon block passes its coupon modules so the
+    // Post-items tab never shows products. Default (null) = every module.
+    moduleIds = null,
+    // The coupon block draws from post items only (coupon modules aren't
+    // network-searchable), so it hides the Search tab.
+    enableSearch = true,
+    // Override module labels (the coupon block localizes its own module list).
+    moduleLabels: moduleLabelsProp = null,
+    // Override the item-noun wording (defaults are product-facing); the coupon
+    // block passes coupon variants so the picker/modal don't say "products".
+    labels = {},
+    // Cap the number of bound items. `1` gives single-select: picking a card
+    // adds it and closes (no multi-select checkboxes / Add-all), and the "Add"
+    // button hides once one is bound (replace it via the row's "Change"). Null =
+    // unlimited. Lets single-product blocks (product-card, verdict) reuse this
+    // same modal instead of a separate control.
+    maxItems = null,
 }) {
+    const singleSelect = maxItems === 1;
+    const atMax = maxItems !== null && (items || []).length >= maxItems;
     const snapshot = useCeggEditorProducts();
     const currentPostId = useCurrentPostId();
     const postId = currentPostId || snapshot.postId || 0;
-    const byModule = snapshot.byModule || {};
-    const moduleLabels = getModuleLabels();
+    const moduleLabels = moduleLabelsProp || getModuleLabels();
+    const L = {
+        addItems: __("Add products", "content-egg"),
+        noneAvailable: __("No Content Egg products are currently available for this post.", "content-egg"),
+        pickerTitle: __("Select Content Egg Products", "content-egg"),
+        pickerReplaceTitle: __("Replace Content Egg Product", "content-egg"),
+        postTabTitle: __("Post products", "content-egg"),
+        noneFound: __("No products found for the current filter.", "content-egg"),
+        ...labels,
+    };
+    // Scope the snapshot so an out-of-scope module is invisible to this control.
+    // Two mechanisms, checked in order:
+    //  1. allow-list (`moduleIds` prop) — the coupon block passes its coupon
+    //     modules so the picker shows only coupons.
+    //  2. default deny-list — with no allow-list (the product callers), exclude
+    //     coupon modules so the shared editor snapshot never leaks coupons into
+    //     the product picker. Absent data = no exclusion (original behavior).
+    const moduleIdsKey = Array.isArray(moduleIds) && moduleIds.length ? moduleIds.join(",") : "";
+    const allowSet = useMemo(
+        () => (moduleIdsKey ? new Set(moduleIdsKey.split(",")) : null),
+        [moduleIdsKey]
+    );
+    const denySet = useMemo(() => {
+        if (allowSet) {
+            return null;
+        }
+        const couponIds = (typeof window !== "undefined" && window.contentEggProductsBlockData && window.contentEggProductsBlockData.couponModuleIds) || [];
+        return couponIds.length ? new Set(couponIds) : null;
+    }, [allowSet]);
+    const inScope = (moduleId) => {
+        if (allowSet) {
+            return allowSet.has(moduleId);
+        }
+        return denySet ? !denySet.has(moduleId) : true;
+    };
+    const byModule = useMemo(
+        () => (allowSet || denySet
+            ? Object.fromEntries(Object.entries(snapshot.byModule || {}).filter(([moduleId]) => inScope(moduleId)))
+            : (snapshot.byModule || {})),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [allowSet, denySet, snapshot.byModule]
+    );
+    const scopedAll = useMemo(
+        () => (allowSet || denySet
+            ? (snapshot.all || []).filter((product) => inScope(product.module_id))
+            : (snapshot.all || [])),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [allowSet, denySet, snapshot.all]
+    );
     const [isPickerOpen, setIsPickerOpen] = useState(false);
     const [moduleFilter, setModuleFilter] = useState("");
     const [groupFilter, setGroupFilter] = useState("");
@@ -61,16 +120,25 @@ export default function ProductRefsControl({
     const [selectedProductKeys, setSelectedProductKeys] = useState([]);
     const [expandedItemIds, setExpandedItemIds] = useState({});
 
-    const moduleIds = Object.keys(byModule).filter((moduleId) => Array.isArray(byModule[moduleId]) && byModule[moduleId].length > 0);
+    // Tracks the latest `items` synchronously so multiple SearchPanel onAdded
+    // calls fired back-to-back in the same tick (e.g. "Add all" resolving
+    // several products at once) each append to the previous addition
+    // instead of racing against a stale `items` closure.
+    const itemsRef = useRef(items);
+    useEffect(() => {
+        itemsRef.current = items;
+    }, [items]);
+
+    const availableModuleIds = Object.keys(byModule).filter((moduleId) => Array.isArray(byModule[moduleId]) && byModule[moduleId].length > 0);
     const filterOptions = [
         { label: __("All modules", "content-egg"), value: "" },
-        ...moduleIds.map((moduleId) => ({ label: moduleLabels[moduleId] || moduleId, value: moduleId })),
+        ...availableModuleIds.map((moduleId) => ({ label: moduleLabels[moduleId] || moduleId, value: moduleId })),
     ];
 
     const itemsWithProducts = useMemo(() => {
         return (items || []).map((item, index) => {
             const ref = item?.product_ref || {};
-            const product = (snapshot.all || []).find((candidate) => (
+            const product = (scopedAll || []).find((candidate) => (
                 getProductKey(candidate.module_id, candidate.unique_id) === getProductKey(ref.module_id, ref.unique_id)
             )) || null;
 
@@ -81,7 +149,7 @@ export default function ProductRefsControl({
                 productKey: getProductKey(ref.module_id, ref.unique_id),
             };
         });
-    }, [items, snapshot.all]);
+    }, [items, scopedAll]);
 
     const existingKeys = useMemo(() => (
         itemsWithProducts
@@ -91,7 +159,7 @@ export default function ProductRefsControl({
 
     const moduleFilteredProducts = moduleFilter && Array.isArray(byModule[moduleFilter])
         ? byModule[moduleFilter]
-        : (snapshot.all || []);
+        : (scopedAll || []);
     const groupValues = useMemo(() => (
         Array.from(new Set(
             moduleFilteredProducts
@@ -122,7 +190,7 @@ export default function ProductRefsControl({
                 return preserveUnboundRows;
             }
 
-            return (snapshot.all || []).some((product) => (
+            return (scopedAll || []).some((product) => (
                 getProductKey(product.module_id, product.unique_id) === getProductKey(ref.module_id, ref.unique_id)
             ));
         });
@@ -130,7 +198,7 @@ export default function ProductRefsControl({
         if (nextItems.length !== (items || []).length) {
             onChange(nextItems);
         }
-    }, [items, onChange, snapshot.all, snapshot.updatedAt, preserveUnboundRows]);
+    }, [items, onChange, scopedAll, snapshot.updatedAt, preserveUnboundRows]);
 
     useEffect(() => {
         if (groupFilter && !groupValues.includes(groupFilter)) {
@@ -186,7 +254,7 @@ export default function ProductRefsControl({
     };
 
     const handleAddSelectedProducts = () => {
-        const selectedProducts = (snapshot.all || []).filter((product) => (
+        const selectedProducts = (scopedAll || []).filter((product) => (
             selectedProductKeys.includes(getProductKey(product.module_id, product.unique_id))
         ));
 
@@ -228,7 +296,7 @@ export default function ProductRefsControl({
         setIsPickerOpen(false);
     };
 
-    const hasAvailableProducts = moduleIds.length > 0;
+    const hasAvailableProducts = availableModuleIds.length > 0;
 
     return (
         <>
@@ -252,7 +320,7 @@ export default function ProductRefsControl({
 
                         return (
                             <div key={itemId} style={{ borderTop: index > 0 ? "1px solid #e0e0e0" : "0", paddingTop: index > 0 ? "10px" : 0 }}>
-                                <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                                <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
                                     {product ? (
                                         <div
                                             style={{
@@ -275,54 +343,59 @@ export default function ProductRefsControl({
                                         </div>
                                     ) : null}
                                     <div style={{ minWidth: 0, flex: 1 }}>
-                                        <div
-                                            title={displayTitle}
-                                            style={{
-                                                fontSize: "12px",
-                                                fontWeight: 600,
-                                                color: "#1e1e1e",
-                                                whiteSpace: "nowrap",
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                marginBottom: "2px",
-                                            }}
-                                        >
-                                            {displayTitle}
+                                        {/* Title + inline remove (x) so actions live in the content column, not a full-width row below. */}
+                                        <div style={{ display: "flex", gap: "4px", alignItems: "flex-start" }}>
+                                            <div
+                                                title={displayTitle}
+                                                style={{
+                                                    flex: 1,
+                                                    minWidth: 0,
+                                                    fontSize: "12px",
+                                                    fontWeight: 600,
+                                                    color: "#1e1e1e",
+                                                    whiteSpace: "nowrap",
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    lineHeight: "24px",
+                                                }}
+                                            >
+                                                {displayTitle}
+                                            </div>
+                                            <Button
+                                                icon="no-alt"
+                                                label={__("Remove", "content-egg")}
+                                                showTooltip
+                                                size="small"
+                                                onClick={() => removeItem(index)}
+                                                style={{ flexShrink: 0, color: "#757575" }}
+                                            />
                                         </div>
-                                        <div style={{ fontSize: "11px", color: "#757575" }}>
+                                        <div style={{ fontSize: "11px", color: "#757575", marginBottom: "2px" }}>
                                             {metaText}
                                         </div>
+                                        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                                            <Button
+                                                variant="link"
+                                                size="small"
+                                                style={{ padding: 0 }}
+                                                onClick={() => openReplacePicker(index, item?.product_ref?.module_id || "")}
+                                            >
+                                                {product
+                                                    ? __("Change product", "content-egg")
+                                                    : __("Bind product", "content-egg")}
+                                            </Button>
+                                            {renderItemFields && (
+                                                <Button
+                                                    variant="link"
+                                                    size="small"
+                                                    style={{ padding: 0 }}
+                                                    onClick={() => toggleExpandedItem(itemId, index)}
+                                                >
+                                                    {isExpanded ? __("Hide details", "content-egg") : __("Edit details", "content-egg")}
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-
-                                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
-                                    <Button
-                                        variant="secondary"
-                                        size="small"
-                                        onClick={() => openReplacePicker(index, item?.product_ref?.module_id || "")}
-                                        disabled={!hasAvailableProducts}
-                                    >
-                                        {product
-                                            ? __("Change product", "content-egg")
-                                            : __("Bind product", "content-egg")}
-                                    </Button>
-                                    {renderItemFields && (
-                                        <Button
-                                            variant="tertiary"
-                                            size="small"
-                                            onClick={() => toggleExpandedItem(itemId, index)}
-                                        >
-                                            {isExpanded ? __("Hide details", "content-egg") : __("Edit details", "content-egg")}
-                                        </Button>
-                                    )}
-                                    <Button
-                                        variant="tertiary"
-                                        isDestructive
-                                        size="small"
-                                        onClick={() => removeItem(index)}
-                                    >
-                                        {__("Remove", "content-egg")}
-                                    </Button>
                                 </div>
 
                                 {isExpanded && renderItemFields ? (
@@ -341,21 +414,22 @@ export default function ProductRefsControl({
                 ) : (
                     <p style={{ margin: 0, fontSize: "12px", color: "#757575" }}>
                         {!hasAvailableProducts
-                            ? __("No Content Egg products are currently available for this post.", "content-egg")
+                            ? L.noneAvailable
                             : emptyMessage}
                     </p>
                 )}
 
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    <Button
-                        variant="secondary"
-                        size="small"
-                        onClick={openAddPicker}
-                        disabled={!hasAvailableProducts}
-                    >
-                        {__("Add products", "content-egg")}
-                    </Button>
-                </div>
+                {!atMax && (
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={openAddPicker}
+                        >
+                            {L.addItems}
+                        </Button>
+                    </div>
+                )}
 
                 {!postId && (
                     <p style={{ margin: 0, fontSize: "12px", color: "#757575" }}>
@@ -366,147 +440,211 @@ export default function ProductRefsControl({
 
             {isPickerOpen && (
                 <Modal
-                    title={pickerMode.type === "replace" ? __("Replace Content Egg Product", "content-egg") : __("Select Content Egg Products", "content-egg")}
+                    title={pickerMode.type === "replace" ? L.pickerReplaceTitle : L.pickerTitle}
                     onRequestClose={() => setIsPickerOpen(false)}
-                    size="large"
-                    className="modal-xl"
+                    className="cegg-pm"
+                    isFullScreen
                 >
-                    <div className="cegg5-container">
-                        <div className="row g-3 align-items-end mb-3">
-                            <div className={groupValues.length > 0 ? "col-12 col-md-6" : "col-12"}>
-                                <SelectControl
-                                    label={__("Filter by Module", "content-egg")}
-                                    value={moduleFilter}
-                                    options={filterOptions}
-                                    onChange={setModuleFilter}
-                                />
-                            </div>
+                    <TabPanel
+                        tabs={[
+                            { name: "products", title: L.postTabTitle },
+                            ...(enableSearch ? [{ name: "search", title: __("Search", "content-egg") }] : []),
+                        ]}
+                        initialTabName={hasAvailableProducts || !enableSearch ? "products" : "search"}
+                    >
+                        {(tab) => (tab.name === "search" ? (
+                            <SearchPanel
+                                postId={postId}
+                                existingKeys={existingKeys}
+                                onAdded={(product) => {
+                                    if (pickerMode.type === "replace" && pickerMode.index !== null) {
+                                        handleReplaceProduct(pickerMode.index, product);
+                                        return;
+                                    }
 
-                            {groupValues.length > 0 ? (
-                                <div className="col-12 col-md-6">
-                                    <SelectControl
-                                        label={__("Filter by Group", "content-egg")}
-                                        value={groupFilter}
-                                        options={groupFilterOptions}
-                                        onChange={setGroupFilter}
-                                    />
-                                </div>
-                            ) : null}
-                        </div>
-
-                        {filteredProducts.length > 0 ? (
-                            <>
-                                <div className="row row-cols-2 row-cols-md-4 row-cols-xl-5 g-3">
-                                    {filteredProducts.map((product) => {
-                                        const productKey = getProductKey(product.module_id, product.unique_id);
-                                        const isAlreadyBound = existingKeys.includes(productKey);
-                                        const isUnavailable = pickerMode.type === "add"
-                                            ? isAlreadyBound
-                                            : (isAlreadyBound && productKey !== currentReplaceKey);
-                                        const isSelected = pickerMode.type === "replace"
-                                            ? productKey === currentReplaceKey
-                                            : selectedProductKeys.includes(productKey);
-
-                                        return (
-                                            <div key={productKey} className="col">
-                                                <button
-                                                    type="button"
-                                                    className="card h-100 text-start w-100"
-                                                    onClick={() => {
-                                                        if (pickerMode.type === "replace" && pickerMode.index !== null) {
-                                                            if (isUnavailable) {
-                                                                return;
-                                                            }
-                                                            handleReplaceProduct(pickerMode.index, product);
-                                                            return;
-                                                        }
-
-                                                        if (isUnavailable) {
-                                                            return;
-                                                        }
-
-                                                        toggleSelectedProduct(productKey);
-                                                    }}
-                                                    disabled={isUnavailable}
-                                                    style={{
-                                                        borderColor: isSelected ? "var(--cegg-success)" : undefined,
-                                                        boxShadow: isSelected ? "0 0 0 1px var(--cegg-success)" : undefined,
-                                                        opacity: isUnavailable ? 0.55 : 1,
-                                                        background: "#fff",
-                                                        padding: 0,
-                                                        cursor: isUnavailable ? "not-allowed" : "pointer",
-                                                    }}
-                                                >
-                                                    <div
-                                                        className="ratio ratio-1x1"
-                                                        style={{
-                                                            overflow: "hidden",
-                                                            borderBottom: "1px solid #e0e0e0",
-                                                        }}
-                                                    >
-                                                        {product.img ? (
-                                                            <img
-                                                                src={product.img}
-                                                                alt=""
-                                                                className="object-fit-scale"
-                                                                style={{
-                                                                    maxHeight: "250px",
-                                                                    width: "100%",
-                                                                    height: "100%",
-                                                                    objectFit: "contain",
-                                                                    display: "block",
-                                                                }}
-                                                            />
-                                                        ) : null}
-                                                    </div>
-                                                    <div className="card-body p-2">
-                                                        <div className="small text-muted mb-1">{moduleLabels[product.module_id] || product.module_id}</div>
-                                                        <div
-                                                            className="fw-semibold lh-sm mb-1 text-truncate"
-                                                            title={product.title || product.unique_id}
-                                                        >
-                                                            {product.title || product.unique_id}
-                                                        </div>
-                                                        {formatPrice(product) && <div className="small">{formatPrice(product)}</div>}
-                                                        {isUnavailable ? (
-                                                            <div className="small text-muted mt-1">
-                                                                {pickerMode.type === "replace"
-                                                                    ? __("Already bound", "content-egg")
-                                                                    : __("Already added", "content-egg")}
-                                                            </div>
-                                                        ) : null}
-                                                    </div>
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {pickerMode.type === "add" ? (
-                                    <div className="d-flex justify-content-end gap-2 mt-3">
-                                        <Button
-                                            variant="secondary"
-                                            onClick={handleAddAllProducts}
-                                            disabled={addableFilteredProducts.length === 0}
-                                        >
-                                            {__("Add all", "content-egg")}
-                                        </Button>
-                                        <Button
-                                            variant="primary"
-                                            onClick={handleAddSelectedProducts}
-                                            disabled={selectedProductKeys.length === 0}
-                                        >
-                                            {__("Add selected", "content-egg")}
-                                        </Button>
-                                    </div>
-                                ) : null}
-                            </>
+                                    const nextItems = [
+                                        ...(itemsRef.current || []),
+                                        createEmptyItem(buildProductRef(product, postId)),
+                                    ];
+                                    itemsRef.current = nextItems;
+                                    onChange(nextItems);
+                                }}
+                            />
                         ) : (
-                            <p className="mb-0 text-muted">
-                                {__("No products found for the current filter.", "content-egg")}
-                            </p>
-                        )}
-                    </div>
+                            <div className="cegg5-container">
+                                <div className="row g-3 align-items-end mt-3 mb-3">
+                                    <div className={groupValues.length > 0 ? "col-12 col-md-6" : "col-12"}>
+                                        <SelectControl
+                                            label={__("Filter by Module", "content-egg")}
+                                            value={moduleFilter}
+                                            options={filterOptions}
+                                            onChange={setModuleFilter}
+                                        />
+                                    </div>
+
+                                    {groupValues.length > 0 ? (
+                                        <div className="col-12 col-md-6">
+                                            <SelectControl
+                                                label={__("Filter by Group", "content-egg")}
+                                                value={groupFilter}
+                                                options={groupFilterOptions}
+                                                onChange={setGroupFilter}
+                                            />
+                                        </div>
+                                    ) : null}
+                                </div>
+
+                                {filteredProducts.length > 0 ? (
+                                    <>
+                                        <div className="row row-cols-2 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-3">
+                                            {filteredProducts.map((product) => {
+                                                const productKey = getProductKey(product.module_id, product.unique_id);
+                                                const isAlreadyBound = existingKeys.includes(productKey);
+                                                const isUnavailable = pickerMode.type === "add"
+                                                    ? isAlreadyBound
+                                                    : (isAlreadyBound && productKey !== currentReplaceKey);
+                                                const isSelected = pickerMode.type === "replace"
+                                                    ? productKey === currentReplaceKey
+                                                    : selectedProductKeys.includes(productKey);
+
+                                                return (
+                                                    <div key={productKey} className="col">
+                                                        <button
+                                                            type="button"
+                                                            className="card h-100 text-start w-100 cegg-pm-bind-card"
+                                                            onClick={() => {
+                                                                if (pickerMode.type === "replace" && pickerMode.index !== null) {
+                                                                    if (isUnavailable) {
+                                                                        return;
+                                                                    }
+                                                                    handleReplaceProduct(pickerMode.index, product);
+                                                                    return;
+                                                                }
+
+                                                                if (isUnavailable) {
+                                                                    return;
+                                                                }
+
+                                                                // Single-select: pick one, add it, and close — no
+                                                                // multi-select checkboxes / Add-all step.
+                                                                if (singleSelect) {
+                                                                    onChange([
+                                                                        ...(items || []),
+                                                                        createEmptyItem(buildProductRef(product, postId)),
+                                                                    ]);
+                                                                    setIsPickerOpen(false);
+                                                                    return;
+                                                                }
+
+                                                                toggleSelectedProduct(productKey);
+                                                            }}
+                                                            disabled={isUnavailable}
+                                                            style={{
+                                                                position: "relative",
+                                                                borderColor: isSelected ? "var(--wp-admin-theme-color, #3858e9)" : undefined,
+                                                                boxShadow: isSelected ? "0 0 0 2px var(--wp-admin-theme-color, #3858e9)" : undefined,
+                                                                opacity: isUnavailable ? 0.55 : 1,
+                                                                background: "#fff",
+                                                                padding: 0,
+                                                                cursor: isUnavailable ? "not-allowed" : "pointer",
+                                                            }}
+                                                        >
+                                                            {isSelected ? (
+                                                                <span
+                                                                    aria-hidden="true"
+                                                                    style={{
+                                                                        position: "absolute",
+                                                                        top: "6px",
+                                                                        right: "6px",
+                                                                        zIndex: 2,
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        justifyContent: "center",
+                                                                        width: "22px",
+                                                                        height: "22px",
+                                                                        borderRadius: "50%",
+                                                                        background: "var(--wp-admin-theme-color, #3858e9)",
+                                                                        color: "#fff",
+                                                                        boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+                                                                    }}
+                                                                >
+                                                                    <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+                                                                        <path d="M4 10l4 4 9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                                    </svg>
+                                                                </span>
+                                                            ) : null}
+                                                            <div
+                                                                className="ratio ratio-1x1"
+                                                                style={{
+                                                                    overflow: "hidden",
+                                                                    borderBottom: "1px solid #e0e0e0",
+                                                                }}
+                                                            >
+                                                                {product.img ? (
+                                                                    <img
+                                                                        src={product.img}
+                                                                        alt=""
+                                                                        className="object-fit-scale"
+                                                                        style={{
+                                                                            maxHeight: "250px",
+                                                                            width: "100%",
+                                                                            height: "100%",
+                                                                            objectFit: "contain",
+                                                                            display: "block",
+                                                                        }}
+                                                                    />
+                                                                ) : null}
+                                                            </div>
+                                                            <div className="card-body p-2">
+                                                                <div className="small text-muted mb-1">{moduleLabels[product.module_id] || product.module_id}</div>
+                                                                <div
+                                                                    className="fw-semibold lh-sm mb-1 text-truncate"
+                                                                    title={product.title || product.unique_id}
+                                                                >
+                                                                    {product.title || product.unique_id}
+                                                                </div>
+                                                                {formatPrice(product) && <div className="small">{formatPrice(product)}</div>}
+                                                                {isUnavailable ? (
+                                                                    <div className="small text-muted mt-1">
+                                                                        {pickerMode.type === "replace"
+                                                                            ? __("Already bound", "content-egg")
+                                                                            : __("Already added", "content-egg")}
+                                                                    </div>
+                                                                ) : null}
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {pickerMode.type === "add" && !singleSelect ? (
+                                            <div className="d-flex justify-content-end gap-2 mt-3">
+                                                <Button
+                                                    variant="secondary"
+                                                    onClick={handleAddAllProducts}
+                                                    disabled={addableFilteredProducts.length === 0}
+                                                >
+                                                    {__("Add all", "content-egg")}
+                                                </Button>
+                                                <Button
+                                                    variant="primary"
+                                                    onClick={handleAddSelectedProducts}
+                                                    disabled={selectedProductKeys.length === 0}
+                                                >
+                                                    {__("Add selected", "content-egg")}
+                                                </Button>
+                                            </div>
+                                        ) : null}
+                                    </>
+                                ) : (
+                                    <p className="mb-0 text-muted">
+                                        {L.noneFound}
+                                    </p>
+                                )}
+                            </div>
+                        ))}
+                    </TabPanel>
                 </Modal>
             )}
         </>

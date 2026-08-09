@@ -6,7 +6,8 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\ModuleManager;
-use ContentEgg\application\components\ContentProduct;;
+use ContentEgg\application\components\ContentProduct;
+use ContentEgg\application\components\ProductScanState;
 
 /**
  * ProductModel class file
@@ -18,7 +19,6 @@ use ContentEgg\application\components\ContentProduct;;
 class ProductModel extends Model
 {
 
-    const TRANSIENT_LAST_SYNC_DATE = 'cegg_products_last_sync';
     const PRODUCTS_TTL = 3600;
 
     public function tableName()
@@ -122,11 +122,11 @@ class ProductModel extends Model
 
     public function maybeScanProducts($forced = false)
     {
-        if (!$this->getLastSync() || $forced)
+        if ($forced || ProductScanState::isDue(self::PRODUCTS_TTL))
         {
             $this->truncateTable();
             ProductModel::model()->scanProducts();
-            \set_transient(self::TRANSIENT_LAST_SYNC_DATE, time(), self::PRODUCTS_TTL);
+            ProductScanState::touch();
 
             return true;
         }
@@ -136,7 +136,7 @@ class ProductModel extends Model
 
     public function getLastSync()
     {
-        return \get_transient(self::TRANSIENT_LAST_SYNC_DATE);
+        return ProductScanState::get();
     }
 
     private function processProducts(array $metas)

@@ -33,6 +33,32 @@ class CouponModule extends AffiliateParserModule
 		return self::PARSER_TYPE_COUPON;
 	}
 
+	public function isSearchable()
+	{
+		// Manual-entry only (the coupon counterpart of Offer): doRequest()
+		// returns nothing, so the Search tab hides this module and coupons are
+		// added through "Add coupon".
+		return false;
+	}
+
+	/**
+	 * Normalize a start/end date to unix seconds. Accepts a JS millisecond
+	 * epoch (the Angular metabox), a unix-seconds epoch (the editor's REST path,
+	 * already sanitized by ProductDataService), or a parseable date string.
+	 * Mirrors ProductDataService's `date` sanitizer so both entry points agree.
+	 */
+	private static function normalizeDate($value)
+	{
+		if (is_numeric($value))
+		{
+			$n = (int) $value;
+			// > ~Nov 2286 in seconds → it's really milliseconds.
+			return $n > 100000000000 ? intdiv($n, 1000) : $n;
+		}
+
+		return strtotime((string) $value) ?: '';
+	}
+
 	public function releaseVersion()
 	{
 		return '4.1.0';
@@ -78,20 +104,14 @@ class CouponModule extends AffiliateParserModule
 
 			if (!empty($item['startDate']))
 			{
-				if (is_numeric($item['startDate']))
-					$item['startDate'] = $item['startDate'] / 1000;
-				else
-					$item['startDate'] = strtotime($item['startDate']);
+				$item['startDate'] = self::normalizeDate($item['startDate']);
 			}
 			if (!$item['startDate'])
 				$item['startDate'] = '';
 
 			if (!empty($item['endDate']))
 			{
-				if (is_numeric($item['endDate']))
-					$item['endDate'] = $item['endDate'] / 1000;
-				else
-					$item['endDate'] = strtotime($item['endDate']);
+				$item['endDate'] = self::normalizeDate($item['endDate']);
 			}
 			if (!$item['endDate'])
 				$item['endDate'] = '';

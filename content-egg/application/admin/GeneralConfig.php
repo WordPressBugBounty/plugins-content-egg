@@ -9,6 +9,7 @@ use ContentEgg\application\Plugin;
 use ContentEgg\application\admin\PluginAdmin;
 use ContentEgg\application\components\ai\AiClient;
 use ContentEgg\application\models\PriceAlertModel;
+use ContentEgg\application\components\ImageOptimizeService;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\TemplateManager;
 use ContentEgg\application\helpers\TemplateHelper;
@@ -71,6 +72,9 @@ class GeneralConfig extends Config
             'Last price changes' => __('Last price changes', 'content-egg-tpl'),
             'Start date: %s' => __('Start date: %s', 'content-egg-tpl'),
             'End date: %s' => __('End date: %s', 'content-egg-tpl'),
+            'Valid until %s' => __('Valid until %s', 'content-egg-tpl'),
+            'Copy code' => __('Copy code', 'content-egg-tpl'),
+            'Copied!' => __('Copied!', 'content-egg-tpl'),
             'Set Alert for' => __('Set Alert for', 'content-egg-tpl'),
             'Price History' => __('Price History', 'content-egg-tpl'),
             'Create Your Free Price Drop Alert!' => __('Create Your Free Price Drop Alert!', 'content-egg-tpl'),
@@ -224,6 +228,45 @@ class GeneralConfig extends Config
                     'enabled' => __('Enabled', 'content-egg'),
                 ),
                 'default' => 'disabled',
+                'section' => __('General settings', 'content-egg'),
+            ),
+            'image_optimization' => array(
+                'title' => __('Image Optimization', 'content-egg'),
+                'description' => __('Resize oversized product images saved on your server ("Save images" option) for faster pages. Product modules only.<br>Runs in the background, so it may take a while to process all images. Originals are replaced.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'disabled' => __('Disabled', 'content-egg'),
+                    'enabled' => __('Enabled', 'content-egg'),
+                ),
+                'default' => 'enabled',
+                'section' => __('General settings', 'content-egg'),
+            ),
+            'image_optimization_max_size' => array(
+                'title' => __('Image Max Size (px)', 'content-egg'),
+                'description' => sprintf(__('Maximum width or height, in pixels, for locally saved product images (%1$d-%2$d). The default of 1000px comfortably covers all templates, including retina displays. Lowering this value re-scans existing images.', 'content-egg'), ImageOptimizeService::MIN_MAX_SIZE, ImageOptimizeService::MAX_MAX_SIZE),
+                'callback' => array($this, 'render_input'),
+                'default' => 1000,
+                'validator' => array(
+                    'trim',
+                    array(
+                        'call' => array($this, 'imageMaxSizeFilter'),
+                        'type' => 'filter',
+                    ),
+                ),
+                'section' => __('General settings', 'content-egg'),
+            ),
+            'image_optimization_quality' => array(
+                'title' => __('Image Quality', 'content-egg'),
+                'description' => sprintf(__('JPEG/WebP compression quality (%1$d-100) applied when images are resized.', 'content-egg'), ImageOptimizeService::MIN_QUALITY),
+                'callback' => array($this, 'render_input'),
+                'default' => 82,
+                'validator' => array(
+                    'trim',
+                    array(
+                        'call' => array($this, 'imageQualityFilter'),
+                        'type' => 'filter',
+                    ),
+                ),
                 'section' => __('General settings', 'content-egg'),
             ),
             'post_types' => array(
@@ -802,6 +845,26 @@ class GeneralConfig extends Config
                     'dark'  => __('Dark', 'content-egg'),
                 ),
                 'default'          => 'light',
+                'section'          => __('Egg Blocks', 'content-egg'),
+            ),
+            'product_manager_ui' => array(
+                'title'            => __('Product manager interface', 'content-egg'),
+                'description'      => __('Where products are managed on the post edit screen:', 'content-egg')
+                    . '<ul style="list-style:disc;margin:.4em 0 0;padding-left:0px;">'
+                    . '<li>' . __('In-editor sidebar — a compact Products panel beside the editor.', 'content-egg') . '</li>'
+                    . '<li>' . __('Full product manager — the full search &amp; manage screen, shown as a metabox.', 'content-egg') . '</li>'
+                    . '<li>' . __('Classic metabox — the older interface. Deprecated; it will be removed in a future version.', 'content-egg') . '</li>'
+                    . '</ul>',
+                'callback'         => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'sidebar'   => __('In-editor sidebar', 'content-egg'),
+                    'workspace' => __('Full product manager', 'content-egg'),
+                    'metabox'   => __('Classic metabox (legacy — deprecated)', 'content-egg'),
+                ),
+                // New installs get the modern sidebar; existing installs are
+                // pinned to the classic metabox by Installer::upgrade_v93() so a
+                // plugin update never silently swaps their product UI.
+                'default'          => 'sidebar',
                 'section'          => __('Egg Blocks', 'content-egg'),
             ),
         );
@@ -1803,6 +1866,26 @@ class GeneralConfig extends Config
     public function openRouterModelsFilter($value)
     {
         return TextHelper::commaList($value);
+    }
+
+    public function imageMaxSizeFilter($value)
+    {
+        $value = (int) $value;
+
+        if ($value <= 0)
+            return ImageOptimizeService::DEFAULT_MAX_SIZE;
+
+        return min(max($value, ImageOptimizeService::MIN_MAX_SIZE), ImageOptimizeService::MAX_MAX_SIZE);
+    }
+
+    public function imageQualityFilter($value)
+    {
+        $value = (int) $value;
+
+        if ($value <= 0)
+            return ImageOptimizeService::DEFAULT_QUALITY;
+
+        return min(max($value, ImageOptimizeService::MIN_QUALITY), 100);
     }
 
     public function importOptions(array $options): array

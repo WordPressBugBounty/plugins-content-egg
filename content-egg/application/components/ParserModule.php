@@ -56,6 +56,26 @@ abstract class ParserModule extends Module
         return false;
     }
 
+    /**
+     * Whether the module supports keyword/product search at all. Base is true;
+     * manual-entry modules (e.g. Offer), whose doRequest() returns nothing,
+     * override this to false so the product-manager Search tab hides them.
+     */
+    public function isSearchable()
+    {
+        return true;
+    }
+
+    /**
+     * Whether the module can search by a GTIN/EAN/UPC code. Base is false;
+     * modules that branch on TextHelper::isEan() in their search override this.
+     * Used to adapt the product-manager search placeholder.
+     */
+    public function isGtinSearchAllowed()
+    {
+        return false;
+    }
+
     public function presavePrepare($data, $post_id)
     {
         global $post;
@@ -259,6 +279,15 @@ abstract class ParserModule extends Module
     public function getSearchNotice()
     {
         return $this->search_notice;
+    }
+
+    /**
+     * Declarative search-filter descriptors for editor UIs (REST GET /modules).
+     * Keys must match the query params the search pipeline understands.
+     */
+    public function getSearchFilters()
+    {
+        return array();
     }
 
     private static function filterDuplicateItems(array $items)

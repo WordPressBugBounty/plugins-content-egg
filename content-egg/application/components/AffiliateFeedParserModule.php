@@ -7,6 +7,7 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\components\feed\FeedFileCache;
 use ContentEgg\application\components\feed\FeedImportPendingException;
+use ContentEgg\application\components\feed\FeedImportState;
 use ContentEgg\application\components\feed\FeedImportStatus;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\CsvReader;
@@ -27,13 +28,10 @@ use function ContentEgg\prnx;
  */
 abstract class AffiliateFeedParserModule extends AffiliateParserModule
 {
-    const TRANSIENT_LAST_IMPORT_DATE = 'cegg_products_last_import_';
-    const TRANSIENT_LAST_IMPORT_NOTICE = 'cegg_last_import_notice_';
     const PRODUCTS_TTL = 43200;
     const MULTIPLE_INSERT_ROWS = 100;
     const IMPORT_TIME_LIMT = 600;
     const DATAFEED_DIR_NAME = 'cegg-datafeeds';
-    const TRANSIENT_LAST_IMPORT_ERROR = 'cegg_last_import_error_';
 
     /** Wizard-analysis ZIP prefetch: long enough to review the mapping step, short enough to bound disk use if abandoned. */
     const PREFETCH_TTL = 900;
@@ -48,6 +46,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
     protected $product_model;
     protected $product_node;
     protected $import_status;
+    protected $import_state;
 
     /** Tracks the feed file currently being processed so fatalHandler() can remove it on a PHP fatal error. */
     protected $current_file;
@@ -126,7 +125,9 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
     public function prefetchFilePath(): string
     {
-        return trailingslashit($this->getDatafeedDir()) . strtolower($this->getId()) . '.prefetch.zip';
+        // Generic extension: a wizard prefetch can be a ZIP, a GZ, or a plain
+        // CSV/XML/JSON fetched over FTP — not always an archive.
+        return trailingslashit($this->getDatafeedDir()) . strtolower($this->getId()) . '.prefetch.dat';
     }
 
     public function prefetchOptionName(): string
@@ -135,10 +136,11 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
     }
 
     /**
-     * Take ownership of a ZIP archive that was just downloaded elsewhere
-     * (the setup wizard's analysis pass) so the next real import can reuse
-     * it instead of downloading the archive a second time. Matches
-     * FeedDetector's $onZipDownloaded callback signature.
+     * Take ownership of a feed file that was just downloaded elsewhere (the
+     * setup wizard's analysis pass) so the next real import can reuse it
+     * instead of downloading the same file a second time. Applies to any feed
+     * fetched in full for analysis — ZIP archives over HTTP and every FTP/FTPS
+     * transfer. Matches FeedDetector's $onZipDownloaded callback signature.
      */
     public function storePrefetchedArchive(string $tmp_file, string $feed_url): bool
     {
@@ -339,39 +341,44 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         return 'cegg_feed_' . $this->getId() . '_schema_version';
     }
 
+    public function importState(): FeedImportState
+    {
+        if ($this->import_state === null)
+        {
+            $this->import_state = new FeedImportState($this->getId());
+        }
+
+        return $this->import_state;
+    }
+
     public function getLastImportDate()
     {
-        return \get_transient(self::TRANSIENT_LAST_IMPORT_DATE . $this->getId());
+        return $this->importState()->getDate();
     }
 
     public function getLastImportError()
     {
-        return \get_transient(self::TRANSIENT_LAST_IMPORT_ERROR . $this->getId());
+        return $this->importState()->getError();
     }
 
     public function setLastImportDate($time = null)
     {
-        if ($time === null)
-            $time = time();
-
-        \set_transient(self::TRANSIENT_LAST_IMPORT_DATE . $this->getId(), $time, DAY_IN_SECONDS * 30);
+        $this->importState()->setDate($time);
     }
 
     public function setLastImportError($error)
     {
-        $error = TextHelper::truncate($error, 500);
-        \set_transient(self::TRANSIENT_LAST_IMPORT_ERROR . $this->getId(), $error, DAY_IN_SECONDS * 30);
+        $this->importState()->setError((string) $error);
     }
 
     public function getLastImportNotice()
     {
-        return \get_transient(self::TRANSIENT_LAST_IMPORT_NOTICE . $this->getId());
+        return $this->importState()->getNotice();
     }
 
     public function setLastImportNotice($notice)
     {
-        $notice = TextHelper::truncate($notice, 500);
-        \set_transient(self::TRANSIENT_LAST_IMPORT_NOTICE . $this->getId(), $notice, DAY_IN_SECONDS * 30);
+        $this->importState()->setNotice((string) $notice);
     }
 
     /**
@@ -629,6 +636,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             finally
             {
                 $this->product_model->setWriteTable(null);
+                $this->importState()->flushRowErrors();
             }
 
             $staging_count = (int) $this->product_model->getDb()->get_var(
@@ -735,9 +743,12 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         $scheme = strtolower((string) parse_url($feed_url, PHP_URL_SCHEME));
 
-        // The setup wizard already downloads the full ZIP once to analyze it;
-        // reuse that copy here instead of downloading the same archive again.
-        $tmp_file = $this->isZippedFeed() ? $this->consumePrefetchedArchive($feed_url) : null;
+        // The setup wizard already downloads the full feed once to analyze it
+        // whenever a sample can't be Range-fetched (ZIP archives, and any
+        // FTP/FTPS transfer); reuse that copy here instead of downloading the
+        // same file again.
+        $wizard_prefetchable = $this->isZippedFeed() || $scheme === 'ftp' || $scheme === 'ftps';
+        $tmp_file = $wizard_prefetchable ? $this->consumePrefetchedArchive($feed_url) : null;
 
         // 1) Stream-download (HTTP(S) via WP; FTP(S) via our helper) unless reused above
         if ($tmp_file === null)
@@ -816,12 +827,15 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
      * Download via FTP/FTPS to a temp file, streaming to disk.
      * Tries: cURL → PHP FTP extension → FTP stream wrapper (FTP only).
      *
+     * Public so the setup wizard's analyze step can fetch an FTP feed for
+     * detection (wp_remote_get() cannot handle ftp:// URLs).
+     *
      * @param string $ftp_url  ftp://user:pass@host/path/file.xml or ftps://...
      * @param int    $timeout  Total timeout (seconds)
      * @return string Absolute path to temp file.
      * @throws \Exception
      */
-    protected function downloadViaFtp(string $ftp_url, int $timeout = 900): string
+    public function downloadViaFtp(string $ftp_url, int $timeout = 900): string
     {
         if (! function_exists('wp_tempnam'))
         {
@@ -1920,8 +1934,9 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             if ($node === false)
             {
                 $err = libxml_get_last_error();
-                // Skip bad product but keep importing others
-                $this->setLastImportError('Unable to load XML source for a product: ' . ($err ? trim($err->message) : 'unknown'));
+                // Skip bad product but keep importing others. Buffered rather than
+                // written per row: a broken feed hits this on every node.
+                $this->importState()->recordRowError('Unable to load XML source for a product: ' . ($err ? trim($err->message) : 'unknown'));
                 continue;
             }
 

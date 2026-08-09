@@ -20,6 +20,11 @@ use ContentEgg\application\components\LinkHandler;;
  */
 class ViglinkModule extends AffiliateParserModule
 {
+    public function isGtinSearchAllowed()
+    {
+        return true;
+    }
+
 
 	private $api_client = null;
 

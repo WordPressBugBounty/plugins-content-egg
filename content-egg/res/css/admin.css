@@ -703,3 +703,319 @@ body .cegg_nomargin_components .components-range-control .components-base-contro
     align-self: flex-start;
     font-size: 12px;
 }
+
+/* ==========================================================================
+   Custom Prompts repeater — import presets
+   Each card defines one reusable prompt and mints the %AI.name% placeholder
+   that carries its result into templates, meta fields and the AI dropdowns.
+   ========================================================================== */
+
+#cegg_preset_ai_prompts {
+    --cegg-accent: var(--wp-admin-theme-color, #2271b1);
+    --cegg-border: #dcdcde;
+    --cegg-muted: #646970;
+    --cegg-ink: #1d2327;
+    max-width: 780px;
+}
+
+/* --- the card ------------------------------------------------------------ */
+
+.cegg-prompt-card {
+    position: relative;
+    background: #fff;
+    border: 1px solid var(--cegg-border);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+    padding: 14px 16px 16px;
+    margin: 0 0 10px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.cegg-prompt-card:focus-within {
+    border-color: var(--cegg-accent);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 0 0 1px var(--cegg-accent);
+}
+
+.cegg-prompt-card__head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    /* clears the remove button, which is pinned to the card corner */
+    padding-right: 32px;
+    margin: 0 0 10px;
+}
+
+.cegg-prompt-card .cegg-prompt-name {
+    flex: 0 1 210px;
+    min-width: 140px;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 13px;
+}
+
+/* --- the placeholder token: this prompt's output handle ------------------- */
+
+.cegg-prompt-token {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 2px 1px 8px;
+    border: 1px solid #c3d9ed;
+    border-radius: 6px;
+    background: #f0f6fc;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+.cegg-prompt-token[hidden] {
+    display: none;
+}
+
+.cegg-prompt-token .cegg-prompt-placeholder {
+    background: none;
+    padding: 0;
+    margin: 0;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 12px;
+    line-height: 22px;
+    color: var(--cegg-accent);
+    white-space: nowrap;
+}
+
+.cegg-prompt-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--cegg-muted);
+    cursor: pointer;
+}
+
+.cegg-prompt-copy:hover {
+    background: rgba(0, 0, 0, .06);
+    color: var(--cegg-ink);
+}
+
+.cegg-prompt-copy:focus-visible {
+    outline: 2px solid var(--cegg-accent);
+    outline-offset: 1px;
+}
+
+.cegg-prompt-copy .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.cegg-prompt-token.is-copied {
+    background: #edfaef;
+    border-color: #8bc99a;
+}
+
+.cegg-prompt-token.is-copied .cegg-prompt-placeholder,
+.cegg-prompt-token.is-copied .cegg-prompt-copy {
+    color: #1a7f37;
+}
+
+/* --- remove ------------------------------------------------------------- */
+
+/* Pinned rather than laid out, so it never orphans onto its own line when the
+   token is hidden or the card wraps at narrow widths. */
+.cegg-prompt-remove {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--cegg-muted);
+    cursor: pointer;
+}
+
+.cegg-prompt-remove:hover {
+    background: #fcf0f1;
+    color: #b32d2e;
+}
+
+.cegg-prompt-remove:focus-visible {
+    outline: 2px solid var(--cegg-accent);
+    outline-offset: 1px;
+}
+
+.cegg-prompt-remove .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* --- prompt body -------------------------------------------------------- */
+
+.cegg-prompt-card .cegg-prompt-body {
+    display: block;
+    width: 100%;
+    min-height: 78px;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: vertical;
+}
+
+/* --- format, as a segmented control ------------------------------------- */
+
+.cegg-prompt-card__foot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.cegg-prompt-foot-label {
+    font-size: 12px;
+    color: var(--cegg-muted);
+}
+
+.cegg-prompt-formats {
+    display: inline-flex;
+    border: 1px solid var(--cegg-border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #f6f7f7;
+}
+
+.cegg-prompt-formats label {
+    margin: 0;
+    cursor: pointer;
+}
+
+.cegg-prompt-formats input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.cegg-prompt-formats label span {
+    display: block;
+    padding: 4px 12px;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--cegg-muted);
+    transition: background-color .12s ease, color .12s ease;
+}
+
+.cegg-prompt-formats label + label span {
+    border-left: 1px solid var(--cegg-border);
+}
+
+.cegg-prompt-formats input:checked + span {
+    background: var(--cegg-accent);
+    color: #fff;
+    font-weight: 600;
+}
+
+.cegg-prompt-formats input:focus-visible + span {
+    outline: 2px solid var(--cegg-accent);
+    outline-offset: -2px;
+}
+
+.cegg-prompt-formats input:disabled + span {
+    cursor: default;
+    opacity: .6;
+}
+
+/* --- empty state and actions -------------------------------------------- */
+
+.cegg-prompt-empty {
+    margin: 0 0 10px;
+    padding: 20px 16px;
+    border: 1px dashed var(--cegg-border);
+    border-radius: 8px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--cegg-muted);
+}
+
+.cegg-prompt-empty[hidden] {
+    display: none;
+}
+
+.cegg-prompt-actions {
+    margin: 0 0 12px;
+}
+
+.cegg-prompt-actions .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Dashicons carry their own line-height, which drops the glyph off the flex
+   centre line. Reset it so the icon sits on the label's optical centre. */
+.cegg-prompt-actions .button .dashicons,
+.cegg-prompt-copy .dashicons,
+.cegg-prompt-remove .dashicons {
+    display: block;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.cegg-prompt-actions .button .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+@media screen and (max-width: 782px) {
+    .cegg-prompt-card .cegg-prompt-name {
+        flex: 1 1 160px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cegg-prompt-card,
+    .cegg-prompt-token,
+    .cegg-prompt-formats label span {
+        transition: none;
+    }
+}
+
+/* Known-field picker beside "Add field" in the custom meta fields repeater */
+.cegg-meta-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: .5em;
+}
+
+/* Keep key and value on one line so a picked field reads as a single pair */
+.cegg-custom-field-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cegg-custom-field-row .regular-text {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.cegg-custom-field-row .cegg-remove-field {
+    flex: 0 0 auto;
+}

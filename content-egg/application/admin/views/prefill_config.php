@@ -187,6 +187,7 @@ $ai_warning = AdminHelper::getSysAiWarning();
                             <?php $radio('post_title', __('Post Title', 'content-egg'), __('Uses the post’s title as the keyword.', 'content-egg')); ?>
                             <?php $radio('product_title_module', __('Product Title from Existing Module', 'content-egg'), __('Use product titles from an existing module as new keyword sources.', 'content-egg')); ?>
                             <?php $radio('meta_field', __('Custom Field (Meta)', 'content-egg'), __('Specify a custom field name that contains the keyword.', 'content-egg')); ?>
+                            <?php $radio('thirsty_link', __('ThirstyAffiliates Link', 'content-egg'), __('Resolves the product’s affiliate link to its destination URL and uses it as the search query.', 'content-egg')); ?>
                             <?php $radio('gtin_module', __('GTIN/EAN from Existing Module', 'content-egg'), __('Use GTIN/EAN values from products added by another module.', 'content-egg')); ?>
                             <?php if ($post_type === 'product')
                             {

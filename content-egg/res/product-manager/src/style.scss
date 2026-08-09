@@ -1,0 +1,2214 @@
+/**
+ * Content Egg — Product Manager design system.
+ *
+ * Native to the WordPress block editor: tokens alias WP's own admin theme
+ * color + Gutenberg grays, the 4px spacing grid, and the 13px admin type
+ * scale. Everything is scoped under .cegg-pm so it can't leak into wp-admin.
+ * Font family is intentionally NOT set here — the editor owns it.
+ */
+
+.cegg-pm {
+	/* Spacing — WP 4px grid */
+	--cegg-pm-space-1: 4px;
+	--cegg-pm-space-2: 8px;
+	--cegg-pm-space-3: 12px;
+	--cegg-pm-space-4: 16px;
+
+	/* Radius — WP controls are 2px */
+	--cegg-pm-radius: 2px;
+	--cegg-pm-radius-lg: 4px;
+
+	/* Type — WP admin base is 13px */
+	--cegg-pm-font-xs: 11px;
+	--cegg-pm-font-sm: 12px;
+	--cegg-pm-font-base: 13px;
+
+	/* Color — follow the admin theme color; Gutenberg grays as the rest */
+	--cegg-pm-accent: var( --wp-admin-theme-color, #3858e9 );
+	--cegg-pm-text: #1e1e1e;
+	--cegg-pm-text-muted: #757575;
+	--cegg-pm-border: #e0e0e0;
+	--cegg-pm-border-subtle: #f0f0f0;
+	--cegg-pm-surface: #fff;
+	--cegg-pm-surface-subtle: #f6f7f7;
+	--cegg-pm-danger: #cc1818;
+	--cegg-pm-success: #198754;
+	--cegg-pm-success-tint: rgba( 25, 135, 84, 0.08 );
+
+	color: var( --cegg-pm-text );
+	font-size: var( --cegg-pm-font-base );
+}
+
+/* The classic-editor metabox wraps our panel in WP's `.postbox > .inside`,
+   which adds its own padding on top of the component's — a visible double
+   inset. Neutralize the wrapper so .cegg-pm owns the spacing, matching the
+   block-editor sidebar (which has no `.inside`). Scoped to our box by id.
+   Both presentations (roster + workspace) share this box id, so each React
+   root supplies its own inset below: the roster via .cegg-pm-sidebar, the
+   workspace via .cegg-pm-classic:not(--roster). */
+#cegg_product_manager > .inside {
+	margin: 0;
+	padding: 0;
+}
+
+/* ---- Sidebar ------------------------------------------------------------ */
+
+.cegg-pm-sidebar {
+	padding: var( --cegg-pm-space-2 );
+}
+
+.cegg-pm-sidebar__actions {
+	display: flex;
+	gap: var( --cegg-pm-space-1 );
+}
+
+.cegg-pm-sidebar__add {
+	flex: 1;
+	justify-content: center;
+}
+
+.cegg-pm-sidebar__manage {
+	flex: none;
+}
+
+.cegg-pm-roster {
+	margin-top: var( --cegg-pm-space-3 );
+}
+
+.cegg-pm-notice {
+	margin: 0 0 var( --cegg-pm-space-2 );
+}
+
+.cegg-pm-loading {
+	display: flex;
+	justify-content: center;
+	padding: var( --cegg-pm-space-4 ) 0;
+}
+
+.cegg-pm-empty {
+	margin: var( --cegg-pm-space-4 ) 0;
+	text-align: center;
+	color: var( --cegg-pm-text-muted );
+}
+
+.cegg-pm-empty__title {
+	margin: 0 0 var( --cegg-pm-space-1 );
+	font-size: var( --cegg-pm-font-base );
+	font-weight: 600;
+}
+
+.cegg-pm-empty__hint {
+	margin: 0;
+	font-size: var( --cegg-pm-font-sm );
+}
+
+.cegg-pm-footer {
+	display: flex;
+	align-items: center;
+	gap: var( --cegg-pm-space-2 );
+	margin-top: var( --cegg-pm-space-3 );
+	padding-top: var( --cegg-pm-space-2 );
+	border-top: 1px solid var( --cegg-pm-border );
+}
+
+/* ---- Roster row --------------------------------------------------------- */
+
+.cegg-pm-row {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: var( --cegg-pm-space-2 );
+	padding: var( --cegg-pm-space-1 ) var( --cegg-pm-space-1 );
+	border-bottom: 1px solid var( --cegg-pm-border-subtle );
+	user-select: none;
+	cursor: grab;
+	transition: background-color 0.1s ease;
+}
+
+.cegg-pm-row:active {
+	cursor: grabbing;
+}
+
+.cegg-pm-row:hover {
+	background: var( --cegg-pm-surface-subtle );
+}
+
+/* Selected (for multi-drag): subtle accent wash + left accent bar. */
+.cegg-pm-row.is-selected {
+	background: rgba( 56, 88, 233, 0.08 );
+	box-shadow: inset 3px 0 0 0 var( --wp-admin-theme-color, #3858e9 );
+}
+
+/* Drop indicator: a 2px insertion line at the top edge of the hovered row,
+   marking where the dragged product will land. */
+.cegg-pm-row.is-drop-target::before {
+	content: '';
+	position: absolute;
+	top: -1px;
+	left: 0;
+	right: 0;
+	height: 2px;
+	background: var( --cegg-pm-accent );
+	border-radius: 1px;
+	pointer-events: none;
+}
+
+.cegg-pm-row__grip {
+	flex: none;
+	color: var( --cegg-pm-text-muted );
+	opacity: 0.6;
+	cursor: grab;
+}
+
+.cegg-pm-thumb {
+	flex: none;
+	border-radius: var( --cegg-pm-radius );
+	border: 1px solid var( --cegg-pm-border );
+	overflow: hidden;
+	background: var( --cegg-pm-surface );
+}
+
+.cegg-pm-thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	display: block;
+}
+
+.cegg-pm-row__thumb {
+	position: relative;
+	width: 24px;
+	height: 24px;
+}
+
+/* Badge indicator: a colored dot in the thumbnail corner so a "pick" is
+   scannable without hovering. Inset slightly so overflow:hidden doesn't clip
+   it; white ring keeps it visible against any image. */
+.cegg-pm-row__badge-dot {
+	position: absolute;
+	top: 1px;
+	left: 1px;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	box-shadow: 0 0 0 1px #fff;
+	pointer-events: none;
+}
+
+/* Enlarged image preview shown on thumbnail hover (portaled to <body>). */
+.cegg-pm-preview {
+	position: fixed;
+	transform: translateY( -50% );
+	z-index: 100001;
+	padding: var( --cegg-pm-space-1 );
+	background: var( --cegg-pm-surface );
+	border: 1px solid var( --cegg-pm-border );
+	border-radius: var( --cegg-pm-radius-lg );
+	box-shadow: 0 6px 24px rgba( 0, 0, 0, 0.25 );
+	pointer-events: none;
+}
+
+.cegg-pm-preview img {
+	display: block;
+	width: 220px;
+	max-width: 40vw;
+	height: auto;
+	border-radius: var( --cegg-pm-radius );
+}
+
+.cegg-pm-preview__badge {
+	position: absolute;
+	top: var( --cegg-pm-space-2 );
+	left: var( --cegg-pm-space-2 );
+	max-width: calc( 100% - 2 * var( --cegg-pm-space-2 ) );
+	padding: 2px 8px;
+	border-radius: var( --cegg-pm-radius );
+	font-size: var( --cegg-pm-font-xs );
+	font-weight: 600;
+	line-height: 1.6;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	box-shadow: 0 1px 3px rgba( 0, 0, 0, 0.3 );
+}
+
+.cegg-pm-row__body {
+	min-width: 0;
+	flex: 1;
+}
+
+.cegg-pm-row__title {
+	font-size: var( --cegg-pm-font-base );
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cegg-pm-row__meta {
+	font-size: var( --cegg-pm-font-xs );
+	color: var( --cegg-pm-text-muted );
+}
+
+.cegg-pm-row__merchant {
+	color: var( --cegg-pm-text-muted );
+	text-decoration: none;
+}
+
+.cegg-pm-row__merchant:hover {
+	color: var( --cegg-pm-accent );
+	text-decoration: underline;
+}
+
+.cegg-pm-row__price-old {
+	margin-left: 4px;
+	text-decoration: line-through;
+	opacity: 0.7;
+}
+
+.cegg-pm-row__oos {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 0 4px;
+	border: 1px solid currentColor;
+	border-radius: var( --cegg-pm-radius );
+	color: var( --cegg-pm-danger );
+	line-height: 1.6;
+	white-space: nowrap;
+	vertical-align: baseline;
+}
+
+/* Out-of-stock: dim the row so it reads as a warning at a glance. */
+.cegg-pm-row.is-oos .cegg-pm-row__thumb {
+	opacity: 0.45;
+}
+
+.cegg-pm-row.is-oos .cegg-pm-row__title {
+	color: var( --cegg-pm-text-muted );
+}
+
+/* ---- Table base --------------------------------------------------------- */
+
+.cegg-pm-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var( --cegg-pm-font-sm );
+}
+
+.cegg-pm-table th {
+	text-align: left;
+	font-size: var( --cegg-pm-font-xs );
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var( --cegg-pm-text-muted );
+	font-weight: 600;
+	padding: var( --cegg-pm-space-2 ) var( --cegg-pm-space-2 );
+	border-bottom: 1px solid var( --cegg-pm-border );
+}
+
+.cegg-pm-table td {
+	padding: var( --cegg-pm-space-1 ) var( --cegg-pm-space-2 );
+	border-bottom: 1px solid var( --cegg-pm-border-subtle );
+	vertical-align: middle;
+}
+
+/* ---- Added tab (Manage products) ---------------------------------------- */
+
+.cegg-pm-added {
+	display: flex;
+	flex-direction: column;
+	/* Full width — fills the full-screen manager modal. */
+	width: 100%;
+}
+
+/* Sticky action bar: contextual bulk actions on the left, always-available
+   global refresh actions on the right — pinned so they stay reachable however
+   far the list scrolls. Sticks to the top of the modal's scroll area. */
+.cegg-pm-added__toolbar {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: var( --cegg-pm-space-3 );
+	padding: var( --cegg-pm-space-2 ) 0;
+	background: var( --cegg-pm-surface );
+	border-bottom: 1px solid var( --cegg-pm-border );
+}
+
+.cegg-pm-added__bulk,
+.cegg-pm-added__global {
+	display: flex;
+	align-items: center;
+	gap: var( --cegg-pm-space-2 );
+	flex-wrap: wrap;
+}
+
+.cegg-pm-added__count {
+	/* Reserve a stable slot so the bulk buttons don't shift as the label swaps
+	   between "None selected" and "N selected" (or the digit count grows). */
+	min-width: 6rem;
+	font-size: var( --cegg-pm-font-sm );
+	color: var( --cegg-pm-text-muted );
+	white-space: nowrap;
+}
+
+/* Keep the "Assign group…" select compact so it doesn't stretch across the
+   bulk toolbar. */
+.cegg-pm-added__group {
+	max-width: 160px;
+
+	.components-input-control__container,
+	select {
+		min-width: 0;
+	}
+}
+
+/* Empty state: centered in the panel, mirroring the sidebar's empty roster. */
+.cegg-pm-added--empty {
+	align-items: center;
+	justify-content: center;
+	min-height: 320px;
+}
+
+.cegg-pm-empty__cta {
+	margin-top: var( --cegg-pm-space-3 );
+}
+
+.cegg-pm-empty__actions {
+	display: flex;
+	gap: var( --cegg-pm-space-2 );
+	justify-content: center;
+	margin-top: var( --cegg-pm-space-3 );
+}
+
+.cegg-pm-empty__actions .cegg-pm-empty__cta {
+	margin-top: 0;
+}
+
+/* The table's scroll boundary. The wide data table keeps its column layout and
+   scrolls horizontally WITHIN this box on narrow screens (small laptops, the
+   full-screen modal on a phone) instead of overflowing the modal and breaking
+   the page. The toolbar sits outside this box, so it wraps rather than scrolls. */
+.cegg-pm-added__scroll {
+	width: 100%;
+	overflow-x: auto;
+}
+
+/* ---- Added table -------------------------------------------------------- */
+
+/* Fixed layout so the Product column absorbs the leftover width and its long
+   feed titles/merchant names truncate instead of stretching the table. The
+   min-width is the floor below which columns would collapse into each other —
+   past it the table scrolls horizontally inside .cegg-pm-added__scroll. */
+.cegg-pm-atable {
+	table-layout: fixed;
+	min-width: 760px;
+}
+
+/* A little more vertical air than the base table: the product cell can stack a
+   title, subtitle, rating and source line, so the row needs room to read as a
+   calm hierarchy rather than a cramped block. Top-align every cell so the title
+   is always the first line at the same height — the eye locks onto one title
+   scan line down the list instead of it drifting with each row's content. */
+.cegg-pm-atable td {
+	padding-top: var( --cegg-pm-space-2 );
+	padding-bottom: var( --cegg-pm-space-2 );
+	vertical-align: top;
+}
+
+/* Hybrid alignment: text columns stay top-aligned with the title (above), but
+   the row-level interactive controls — the Group select and the action buttons
+   — center against the full row height so they don't float detached at the top
+   of a tall row. */
+.cegg-pm-atable td.cegg-pm-arow__group-cell,
+.cegg-pm-atable td.cegg-pm-arow__actions {
+	vertical-align: middle;
+}
+
+.cegg-pm-atable__grip {
+	width: 30px;
+}
+
+.cegg-pm-atable__select {
+	width: 36px;
+}
+
+.cegg-pm-atable__module {
+	width: 140px;
+}
+
+.cegg-pm-atable__price {
+	width: 130px;
+}
+
+.cegg-pm-atable__group {
+	width: 165px;
+}
+
+.cegg-pm-atable__actions {
+	width: 112px;
+}
+
+.cegg-pm-arow {
+	transition: background-color 0.1s ease;
+}
+
+.cegg-pm-arow:hover {
+	background: var( --cegg-pm-surface-subtle );
+}
+
+/* Drop indicator: a 2px insertion line across the top of the hovered row.
+   Drawn as an inset shadow on each cell so it renders reliably on <tr>. */
+.cegg-pm-arow.is-drop-target td {
+	box-shadow: inset 0 2px 0 0 var( --cegg-pm-accent );
+}
+
+.cegg-pm-arow__grip-cell {
+	text-align: center;
+}
+
+.cegg-pm-arow__grip {
+	color: var( --cegg-pm-text-muted );
+	opacity: 0.6;
+	cursor: grab;
+}
+
+.cegg-pm-arow__cell {
+	display: flex;
+	align-items: flex-start;
+	gap: var( --cegg-pm-space-2 );
+	min-width: 0;
+}
+
+/* Title + trailing badge share one line; the title takes the room and
+   truncates, the badge holds its size at the end. */
+.cegg-pm-arow__titlerow {
+	display: flex;
+	align-items: center;
+	gap: var( --cegg-pm-space-2 );
+	min-width: 0;
+}
+
+.cegg-pm-arow__thumb {
+	position: relative;
+	width: 64px;
+	height: 64px;
+	border-radius: var( --cegg-pm-radius-lg );
+}
+
+.cegg-pm-arow__text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.cegg-pm-arow__title {
+	flex: 0 1 auto;
+	min-width: 0;
+	font-size: var( --cegg-pm-font-base );
+	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cegg-pm-arow__subtitle {
+	overflow: hidden;
+	font-size: var( --cegg-pm-font-xs );
+	color: var( --cegg-pm-text-muted );
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Rating · promo line. */
+.cegg-pm-arow__meta {
+	display: flex;
+	align-items: baseline;
+	gap: var( --cegg-pm-space-2 );
+	min-width: 0;
+	font-size: var( --cegg-pm-font-xs );
+}
+
+.cegg-pm-arow__rating {
+	flex: none;
+	color: var( --cegg-pm-text-muted );
+	white-space: nowrap;
+}
+
+.cegg-pm-arow__attrs {
+	flex: none;
+	color: var( --cegg-pm-text-muted );
+	white-space: nowrap;
+}
+
+/* Selling signal — green to match the Search tab (promo + free shipping read as
+   positive deal signals in both places). */
+.cegg-pm-arow__promo {
+	overflow: hidden;
+	color: var( --cegg-pm-success );
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cegg-pm-arow__source {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	column-gap: var( --cegg-pm-space-2 );
+	row-gap: 2px;
+	min-width: 0;
+	margin-top: var( --cegg-pm-space-1 );
+	font-size: var( --cegg-pm-font-xs );
+	color: var( --cegg-pm-text-muted );
+}
+
+/* Prime deal access (Amazon) — an accent label, mirroring the legacy metabox's
+   text-primary. */
+.cegg-pm-arow__prime {
+	flex: none;
+	color: var( --cegg-pm-accent );
+	white-space: nowrap;
+}
+
+/* Amazon availability message ("Only 2 left in stock", etc.) — muted, and
+   truncates so a long message can't blow out the row. */
+.cegg-pm-arow__availability {
+	overflow: hidden;
+	max-width: 100%;
+	color: var( --cegg-pm-text-muted );
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cegg-pm-arow__merchant {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var( --cegg-pm-text-muted );
+	text-decoration: none;
+}
+
+.cegg-pm-arow__merchant:hover {
+	color: var( --cegg-pm-accent );
+	text-decoration: underline;
+}
+
+.cegg-pm-arow__oos {
+	flex: none;
+	display: inline-block;
+	padding: 0 4px;
+	border: 1px solid currentColor;
+	border-radius: var( --cegg-pm-radius );
+	color: var( --cegg-pm-danger );
+	line-height: 1.5;
+	white-space: nowrap;
+}
+
+/* Badge as a soft tinted label (from badgeTintStyle) trailing the title inline.
+   Holds its size at the end of the title line so the title truncates first. */
+.cegg-pm-arow__badge {
+	flex: 0 0 auto;
+	max-width: 40%;
+	padding: 0 6px;
+	border-radius: var( --cegg-pm-radius );
+	overflow: hidden;
+	font-size: var( --cegg-pm-font-xs );
+	font-weight: 600;
+	line-height: 1.6;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.cegg-pm-arow__ean {
+	font-family: Menlo, Consolas, monospace;
+}
+
+/* Clickable EAN → jump to Search and compare across merchants. Reset the
+   wp-admin button chrome down to link-like text (same as the search row). */
+button.cegg-pm-arow__ean--action {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	box-shadow: none;
+	min-height: 0;
+	height: auto;
+	line-height: inherit;
+	font-size: inherit;
+	color: var( --cegg-pm-text-muted );
+	cursor: pointer;
+}
+
+button.cegg-pm-arow__ean--action:hover,
+button.cegg-pm-arow__ean--action:focus {
+	color: var( --cegg-pm-accent );
+	text-decoration: underline;
+}
+
+.cegg-pm-arow__free-ship {
+	color: var( --cegg-pm-success );
+	white-space: nowrap;
+}
+
+.cegg-pm-arow__discount {
+	display: block;
+	margin-top: 2px;
+	color: var( --cegg-pm-success );
+	font-weight: 600;
+}
+
+.cegg-pm-arow__price {
+	font-weight: 700;
+}
+
+.cegg-pm-arow__price-old {
+	margin-left: 6px;
+	text-decoration: line-through;
+	color: var( --cegg-pm-text-muted );
+	font-weight: 400;
+}
+
+.cegg-pm-arow__price-empty {
+	color: var( --cegg-pm-text-muted );
+}
+
+.cegg-pm-arow__module {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var( --cegg-pm-text-muted );
+}
+
+/* Quiet inline Group select. A native <select> (not WP's SelectControl) so we
+   fully own the chrome: a faint border at rest keeps the control (and its
+   chevron) reading as one piece without the heavy wp-admin stripe, then it
+   firms up on hover and turns to the accent on focus. wp-admin's chevron image
+   stays (kept via a transparent background-color, not a background reset).
+   Two-class selectors clear wp-admin's `.wp-core-ui select` (0,1,1) base. */
+.cegg-pm-arow__group-cell .cegg-pm-arow__group-select {
+	width: 100%;
+	max-width: 100%;
+	min-height: 0;
+	margin: 0;
+	padding: 4px 24px 4px 8px;
+	border: 1px solid var( --cegg-pm-border-subtle );
+	border-radius: var( --cegg-pm-radius );
+	background-color: transparent;
+	color: var( --cegg-pm-text );
+	font-size: var( --cegg-pm-font-sm );
+	line-height: 1.4;
+	box-shadow: none;
+}
+
+.cegg-pm-arow__group-cell .cegg-pm-arow__group-select:hover {
+	border-color: var( --cegg-pm-border );
+	background-color: var( --cegg-pm-surface );
+}
+
+.cegg-pm-arow__group-cell .cegg-pm-arow__group-select:focus {
+	border-color: var( --cegg-pm-accent );
+	box-shadow: 0 0 0 1px var( --cegg-pm-accent );
+	outline: none;
+	background-color: var( --cegg-pm-surface );
+}
+
+/* Inline row actions: Edit + Remove surfaced as icon buttons, ⋮ for extras. */
+.cegg-pm-arow__actions-row {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var( --cegg-pm-space-1 );
+}
+
+/* Out-of-stock: dim the thumb + title so it reads as a warning at a glance. */
+.cegg-pm-arow.is-oos .cegg-pm-arow__thumb {
+	opacity: 0.45;
+}
+
+.cegg-pm-arow.is-oos .cegg-pm-arow__title {
+	color: var( --cegg-pm-text-muted );
+}
+
+/* Narrow screens (WP admin's mobile breakpoint). WordPress editing is rarely
+   done on a phone, so the goal is "reads normally", not a bespoke mobile layout:
+   the table keeps its shape and scrolls sideways (see .cegg-pm-added__scroll),
+   while the toolbar clusters stack full-width so their controls stay reachable,
+   and a smaller thumb trims the horizontal scroll distance. */
+@media ( max-width: 782px ) {
+	.cegg-pm-added__toolbar {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.cegg-pm-added__bulk,
+	.cegg-pm-added__global {
+		justify-content: flex-start;
+	}
+
+	.cegg-pm-arow__thumb {
+		width: 48px;
+		height: 48px;
+	}
+}
+
+/* ---- Classic / Woo / CPT metabox shell ---------------------------------- */
+
+/* The manager renders inline in a metabox, whose content column is much narrower
+   than the full-screen modal (WP menu on the left, publish/sidebar on the
+   right). The compact table (Module + 30-day columns dropped in JS) plus these
+   overrides let the Product column keep the width, and the toolbar stack tidily
+   instead of scattering across a space-between row. The modal opened via
+   "Full screen" is unscoped and keeps the roomy layout. */
+/* Float the "Full screen" button onto the tab row (top-right) rather than a
+   line of its own, so it doesn't leave a gap under the tabs. The three tabs sit
+   on the left with room to spare at metabox width. */
+.cegg-pm-classic {
+	position: relative;
+}
+
+/* The workspace metabox (main content column) has no self-padding and relies on
+   WP's `.inside`, which we zero above — so give it an inset here. Excludes the
+   roster variant, which already self-pads via .cegg-pm-sidebar (re-adding it
+   would restore the double inset). The absolute __bar stays pinned to the box's
+   padding-box corner, so it is unaffected. */
+.cegg-pm-classic:not( .cegg-pm-classic--roster ) {
+	padding: var( --cegg-pm-space-2 );
+}
+
+.cegg-pm-classic__bar {
+	position: absolute;
+	top: 6px;
+	right: 8px;
+	z-index: 3;
+}
+
+/* Drop the modal's wide floor so the fixed-layout table fits the metabox and the
+   Product column absorbs the slack instead of forcing a horizontal scrollbar. */
+.cegg-pm-classic .cegg-pm-atable {
+	min-width: 0;
+}
+
+/* Tighten the low-content columns so the width goes to the product title:
+   the grip, the select checkbox, and the row actions. */
+.cegg-pm-classic .cegg-pm-atable__grip {
+	width: 22px;
+}
+
+.cegg-pm-classic .cegg-pm-atable__select {
+	width: 28px;
+}
+
+.cegg-pm-classic .cegg-pm-atable__group {
+	width: 130px;
+}
+
+.cegg-pm-classic .cegg-pm-atable__actions {
+	width: 84px;
+}
+
+/* The "None selected / N selected" label reserves 6rem in the modal to stop the
+   bulk buttons shifting; the stacked metabox toolbar doesn't need that slack, and
+   it was widening the left edge. Let it size to content. */
+.cegg-pm-classic .cegg-pm-added__count {
+	min-width: 0;
+}
+
+/* Stack the two toolbar clusters and left-align them (same idea as the mobile
+   breakpoint) so the bulk and global actions read as two tidy rows rather than
+   drifting apart at metabox width. */
+.cegg-pm-classic .cegg-pm-added__toolbar {
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.cegg-pm-classic .cegg-pm-added__bulk,
+.cegg-pm-classic .cegg-pm-added__global {
+	justify-content: flex-start;
+}
+
+/* ---- Quick-edit drawer (light, native) --------------------------------- */
+
+.cegg-pm-drawer {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	width: 400px;
+	max-width: 92vw;
+	z-index: 100000;
+	display: flex;
+	flex-direction: column;
+	background: var( --cegg-pm-surface );
+	color: var( --cegg-pm-text );
+	border-left: 1px solid var( --cegg-pm-border );
+	box-shadow: -1px 0 12px rgba( 0, 0, 0, 0.12 );
+}
+
+.cegg-pm-drawer__head {
+	display: flex;
+	align-items: center;
+	gap: var( --cegg-pm-space-2 );
+	padding: var( --cegg-pm-space-3 ) var( --cegg-pm-space-4 );
+	border-bottom: 1px solid var( --cegg-pm-border );
+	font-weight: 600;
+}
+
+.cegg-pm-drawer__close {
+	margin-left: auto;
+}
+
+.cegg-pm-drawer__body {
+	flex: 1;
+	overflow-y: auto;
+	padding: var( --cegg-pm-space-4 );
+}
+
+.cegg-pm-drawer__foot {
+	display: flex;
+	justify-content: flex-end;
+	gap: var( --cegg-pm-space-2 );
+	padding: var( --cegg-pm-space-3 ) var( --cegg-pm-space-4 );
+	border-top: 1px solid var( --cegg-pm-border );
+}
+
+/* Compact WooCommerce role toggles in the drawer footer — pushed to the left,
+   opposite Cancel/Save, so the section no longer eats the drawer's height. */
+.cegg-pm-drawer__foot-woo {
+	display: flex;
+	align-items: center;
+	gap: var( --cegg-pm-space-4 );
+	margin-right: auto;
+}
+
+/* Read-only WooCommerce role chip on the Added-table row (indigo). */
+.cegg-pm-arow__woo {
+	display: inline-block;
+	padding: 0 6px;
+	border: 1px solid #c7d2fe;
+	border-radius: 9px;
+	background: #eef2ff;
+	font-size: var( --cegg-pm-font-xs );
+	color: #4338ca;
+	white-space: nowrap;
+}
+
+.cegg-pm-field-row {
+	display: flex;
+	gap: var( --cegg-pm-space-3 );
+}
+
+.cegg-pm-field-row > * {
+	flex: 1;
+	min-width: 0;
+}
+
+/* Compact currency select tucked next to the price inputs (manual products). */
+.cegg-pm-field-row > .cegg-pm-field--currency {
+	flex: 0 0 92px;
+}
+
+/* Give each field consistent breathing room in the taller, denser drawer. */
+.cegg-pm-drawer__body > .components-base-control,
+.cegg-pm-drawer__body > .cegg-pm-field-row,
+.cegg-pm-drawer__body > .cegg-pm-field-ai,
+.cegg-pm-drawer__advanced > .components-base-control,
+.cegg-pm-drawer__advanced > .cegg-pm-field-row {
+	margin-bottom: var( --cegg-pm-space-4 );
+}
+
+/* The field spans the full width; its AI menu floats onto the field's label
+   line (top-right corner) instead of taking a column beside the input, so the
+   input / textarea keeps the whole row. */
+.cegg-pm-field-ai {
+	position: relative;
+}
+
+.cegg-pm-field-ai > * + * {
+	position: absolute;
+	top: 0;
+	right: 0;
+	z-index: 1;
+}
+
+
+/* Required-field marker in labels. */
+.cegg-pm-required {
+	color: var( --cegg-pm-danger );
+}
+
+/* Required-title error state: tint the field's error help text. */
+.cegg-pm-field--invalid .components-text-control__input {
+	box-shadow: 0 0 0 1px var( --cegg-pm-danger );
+}
+
+.cegg-pm-field--invalid .components-base-control__help {
+	color: var( --cegg-pm-danger );
+}
+
+/* "More fields" disclosure — a quiet, full-width toggle that separates the
+   default fields from the advanced set. */
+.cegg-pm-drawer__more {
+	display: flex;
+	align-items: center;
+	gap: var( --cegg-pm-space-2 );
+	width: 100%;
+	margin: var( --cegg-pm-space-2 ) 0 var( --cegg-pm-space-4 );
+	padding: var( --cegg-pm-space-2 ) 0;
+	border: 0;
+	border-top: 1px solid var( --cegg-pm-border-subtle );
+	background: none;
+	color: var( --cegg-pm-text-muted );
+	font-size: var( --cegg-pm-font-sm );
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.cegg-pm-drawer__more:hover {
+	color: var( --cegg-pm-accent );
+}
+
+.cegg-pm-drawer__more-chevron {
+	font-size: 10px;
+	line-height: 1;
+}
+
+.cegg-pm-drawer__advanced {
+	padding-top: var( --cegg-pm-space-1 );
+}
+
+.cegg-pm-drawer__last-error {
+	margin-top: calc( -1 * var( --cegg-pm-space-2 ) );
+	color: var( --cegg-pm-danger );
+	font-size: var( --cegg-pm-font-xs );
+}
+
+/* Description field: auto-growing HTML textarea with a Write/Preview toggle. */
+.cegg-pm-desc__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var( --cegg-pm-space-2 );
+	margin-bottom: var( --cegg-pm-space-1 );
+}
+
+.cegg-pm-desc__label {
+	font-size: var( --cegg-pm-font-sm );
+	font-weight: 500;
+	color: var( --cegg-pm-text );
+}
+
+.cegg-pm-desc__modes {
+	display: flex;
+	gap: 2px;
+}
+
+.cegg-pm-desc__input {
+	display: block;
+	width: 100%;
+	min-height: 64px;
+	max-height: 260px;
+	padding: var( --cegg-pm-space-2 );
+	border: 1px solid var( --cegg-pm-border );
+	border-radius: var( --cegg-pm-radius );
+	background: var( --cegg-pm-surface );
+	color: var( --cegg-pm-text );
+	font-family: Menlo, Consolas, monospace;
+	font-size: var( --cegg-pm-font-sm );
+	line-height: 1.5;
+	resize: none;
+	overflow-y: auto;
+}
+
+.cegg-pm-desc__input:focus {
+	border-color: var( --cegg-pm-accent );
+	box-shadow: 0 0 0 1px var( --cegg-pm-accent );
+	outline: none;
+}
+
+.cegg-pm-desc__preview {
+	min-height: 64px;
+	max-height: 260px;
+	padding: var( --cegg-pm-space-2 );
+	border: 1px solid var( --cegg-pm-border-subtle );
+	border-radius: var( --cegg-pm-radius );
+	background: var( --cegg-pm-surface-subtle );
+	font-size: var( --cegg-pm-font-base );
+	line-height: 1.5;
+	overflow-y: auto;
+	overflow-wrap: break-word;
+
+	> :first-child {
+		margin-top: 0;
+	}
+
+	> :last-child {
+		margin-bottom: 0;
+	}
+
+	img {
+		max-width: 100%;
+		height: auto;
+	}
+}
+
+.cegg-pm-desc__tools {
+	display: flex;
+	align-items: center;
+	gap: var( --cegg-pm-space-1 );
+}
+
+.cegg-pm-desc__empty {
+	color: var( --cegg-pm-text-muted );
+	font-style: italic;
+}
+
+/* Expand-to-modal editor: side-by-side HTML + live preview in a roomy dialog.
+   Sits above the drawer (z-index 100000) and the snackbars (100001). */
+.cegg-pm-desc-modal {
+	z-index: 100002;
+}
+
+.cegg-pm-desc-modal__frame {
+	width: min( 1000px, 94vw );
+}
+
+.cegg-pm-desc-modal__grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var( --cegg-pm-space-4 );
+	height: min( 62vh, 560px );
+}
+
+@media ( max-width: 782px ) {
+	.cegg-pm-desc-modal__grid {
+		grid-template-columns: 1fr;
+		height: auto;
+	}
+}
+
+.cegg-pm-desc-modal__pane {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.cegg-pm-desc-modal__pane-label {
+	margin-bottom: var( --cegg-pm-space-1 );
+	color: var( --cegg-pm-text-muted );
+	font-size: var( --cegg-pm-font-xs );
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.cegg-pm-desc-modal__input {
+	flex: 1;
+	min-height: 220px;
+	padding: var( --cegg-pm-space-3 );
+	border: 1px solid var( --cegg-pm-border );
+	border-radius: var( --cegg-pm-radius );
+	background: var( --cegg-pm-surface );
+	color: var( --cegg-pm-text );
+	font-family: Menlo, Consolas, monospace;
+	font-size: var( --cegg-pm-font-sm );
+	line-height: 1.6;
+	resize: none;
+}
+
+.cegg-pm-desc-modal__input:focus {
+	border-color: var( --cegg-pm-accent );
+	box-shadow: 0 0 0 1px var( --cegg-pm-accent );
+	outline: none;
+}
+
+.cegg-pm-desc-modal__preview {
+	flex: 1;
+	min-height: 220px;
+	padding: var( --cegg-pm-space-3 );
+	border: 1px solid var( --cegg-pm-border-subtle );
+	border-radius: var( --cegg-pm-radius );
+	background: var( --cegg-pm-surface-subtle );
+	font-size: var( --cegg-pm-font-base );
+	line-height: 1.6;
+	overflow-y: auto;
+	overflow-wrap: break-word;
+
+	> :first-child {
+		margin-top: 0;
+	}
+
+	> :last-child {
+		margin-bottom: 0;
+	}
+
+	img {
+		max-width: 100%;
+		height: auto;
+	}
+}
+
+.cegg-pm-desc-modal__foot {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: var( --cegg-pm-space-4 );
+}
+
+/* WYSIWYG (TinyMCE) container inside the expand modal. */
+.cegg-pm-desc-modal__rte .wp-editor-container {
+	border: 1px solid var( --cegg-pm-border );
+	border-radius: var( --cegg-pm-radius );
+}
+
+.cegg-pm-desc-modal__rte .mce-edit-area iframe {
+	/* Leave room for the modal header, TinyMCE toolbar and the Done button so
+	   the dialog doesn't need its own scrollbar. */
+	min-height: min( 42vh, 340px ) !important;
+	height: min( 42vh, 340px ) !important;
+}
+
+/* TinyMCE renders its dropdowns/dialogs into <body> at a z-index well below the
+   modal (100002); lift them so the format menu and link dialog aren't trapped
+   behind it. */
+.mce-floatpanel,
+.mce-menu,
+.mce-window,
+.mce-window-head,
+.mce-tooltip,
+.mce-notification {
+	z-index: 100010 !important;
+}
+
+/* Save/error toasts, pinned bottom-left inside the full-screen manager modal
+   (above the drawer, which is z-index 100000). */
+.cegg-pm-snackbars {
+	position: fixed;
+	left: var( --cegg-pm-space-4 );
+	bottom: var( --cegg-pm-space-4 );
+	z-index: 100001;
+}
+
+/* Attributes (features) — repeatable name/value rows behind their own toggle. */
+.cegg-pm-attrs__toggle {
+	margin-bottom: var( --cegg-pm-space-2 );
+}
+
+.cegg-pm-attrs__list {
+	display: flex;
+	flex-direction: column;
+	gap: var( --cegg-pm-space-2 );
+	margin-bottom: var( --cegg-pm-space-2 );
+}
+
+.cegg-pm-attrs__row {
+	display: flex;
+	align-items: flex-start;
+	gap: var( --cegg-pm-space-2 );
+}
+
+.cegg-pm-attrs__name {
+	flex: 0 0 40%;
+	min-width: 0;
+}
+
+.cegg-pm-attrs__value {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.cegg-pm-attrs__remove {
+	flex: 0 0 auto;
+	color: var( --cegg-pm-text-muted );
+}
+
+.cegg-pm-attrs__remove:hover:not( :disabled ) {
+	color: var( --cegg-pm-danger );
+}
+
+.cegg-pm-attrs__add {
+	align-self: flex-start;
+}
+
+/* ---- Search panel (shared: block binding modals + manager modal) -------- */
+
+.cegg-pm-search {
+	display: flex;
+	flex-direction: column;
+	gap: var( --cegg-pm-space-3 );
+	padding-top: var( --cegg-pm-space-3 );
+	/* Full width — fills the full-screen manager modal, and the narrower binding
+	   modals it's also used in. */
+	width: 100%;
+}
+
+.cegg-pm-search__results {
+	display: flex;
+	flex-direction: column;
+	gap: var( --cegg-pm-space-3 );
+}
+
+/* Media search results are a thumbnail GRID (images/videos read better as cards
+   than as list rows). Non-media families keep the plain stacked list. */
+.cegg-pm-result-list {
+	display: flex;
+	flex-direction: column;
+}
+
+.cegg-pm-media-grid {
+	display: grid;
+	grid-template-columns: repeat( auto-fill, minmax( 170px, 1fr ) );
+	gap: 12px;
+	margin: 6px 0;
+}
+
+.cegg-pm-media-card {
+	position: relative;
+	overflow: hidden;
+	border: 1px solid var( --cegg-pm-border-subtle );
+	border-radius: 6px;
+	background: #fff;
+
+	&.is-clickable {
+		cursor: pointer;
+
+		&:hover {
+			border-color: var( --cegg-pm-accent );
+		}
+	}
+
+	&.is-added {
+		opacity: 0.6;
+	}
+
+	&__thumb {
+		position: relative;
+		display: block;
+		aspect-ratio: 1 / 1;
+		background: var( --cegg-pm-border-subtle );
+
+		img {
+			display: block;
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+	}
+
+	&.is-video &__thumb {
+		aspect-ratio: 16 / 9;
+	}
+
+	&__play {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: #fff;
+		font-size: 24px;
+		text-shadow: 0 1px 4px rgb( 0 0 0 / 55% );
+		pointer-events: none;
+	}
+
+	&__state {
+		position: absolute;
+		top: 4px;
+		right: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		background: rgb( 0 0 0 / 55% );
+		color: #fff;
+		font-size: 14px;
+		line-height: 1;
+
+		.components-spinner {
+			margin: 0;
+		}
+	}
+
+	&__added {
+		color: #4ade80;
+	}
+
+	/* "Add & set as featured" — top-left, opposite the add/added state badge. */
+	&__feature {
+		position: absolute;
+		top: 4px;
+		left: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 22px;
+		height: 22px;
+		padding: 0;
+		border: 0;
+		border-radius: 50%;
+		background: rgb( 0 0 0 / 55% );
+		color: #fff;
+		font-size: 13px;
+		line-height: 1;
+		cursor: pointer;
+
+		&:hover {
+			background: var( --cegg-pm-accent );
+			color: #fff;
+		}
+	}
+
+	&__source {
+		position: absolute;
+		bottom: 4px;
+		left: 4px;
+		padding: 1px 5px;
+		border-radius: 3px;
+		background: rgb( 0 0 0 / 60% );
+		color: #fff;
+		font-size: 10px;
+		line-height: 1.4;
+	}
+
+	&__title {
+		padding: 6px 8px;
+		font-size: 12px;
+		line-height: 1.35;
+		overflow: hidden;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+	}
+}
+
+.cegg-pm-search__bar {
+	display: flex;
+	gap: var( --cegg-pm-space-2 );
+	align-items: flex-end;
+	flex-wrap: wrap;
+}
+
+.cegg-pm-search__bar-field {
+	flex: 1;
+	min-width: 160px;
+}
+
+/* Reserve enough width for the busy "Searching…" label so the button (and the
+   bar) don't reflow when it swaps back to "Search". Centered so the shorter
+   label sits balanced in the fixed footprint. */
+.cegg-pm-search__submit {
+	min-width: 104px;
+	justify-content: center;
+}
+
+.cegg-pm-search__module {
+	font-weight: 600;
+	font-size: var( --cegg-pm-font-base );
+	margin: var( --cegg-pm-space-1 ) 0;
+}
+
+.cegg-pm-search__empty {
+	margin: 0;
+	font-size: var( --cegg-pm-font-sm );
+	color: var( --cegg-pm-text-muted );
+}
+
+.cegg-pm-search__addall {
+	margin-top: var( --cegg-pm-space-2 );
+}
+
+.cegg-pm-search__hint {
+	margin: var( --cegg-pm-space-2 ) 0 0;
+	font-size: var( --cegg-pm-font-sm );
+	color: var( --cegg-pm-text-muted );
+}
+
+.cegg-pm-modules__actions {
+	display: flex;
+	gap: var( --cegg-pm-space-2 );
+	margin-bottom: var( --cegg-pm-space-1 );
+}
+
+.cegg-pm-modules__actions .components-button.is-link {
+	font-size: var( --cegg-pm-font-sm );
+}
+
+.cegg-pm-chips {
+	display: flex;
+	gap: var( --cegg-pm-space-1 );
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.cegg-pm-filters {
+	display: flex;
+	gap: var( --cegg-pm-space-2 );
+	flex-wrap: wrap;
+	align-items: flex-end;
+}
+
+/* ---- Search result row -------------------------------------------------- */
+
+.cegg-pm-result {
+	display: flex;
+	gap: var( --cegg-pm-space-3 );
+	align-items: flex-start;
+	padding: var( --cegg-pm-space-3 ) var( --cegg-pm-space-2 );
+	border-bottom: 1px solid var( --cegg-pm-border-subtle );
+	transition: background-color 0.1s ease;
+}
+
+/* The whole row adds the product on click; cue it with a pointer + hover. */
+.cegg-pm-result.is-clickable {
+	cursor: pointer;
+}
+
+.cegg-pm-result.is-clickable:hover {
+	background: var( --cegg-pm-surface-subtle );
+}
+
+/* Already added: green tint + left accent bar so it's obvious at a glance. */
+.cegg-pm-result.is-added {
+	background: var( --cegg-pm-success-tint );
+	box-shadow: inset 3px 0 0 var( --cegg-pm-success );
+}
+
+.cegg-pm-result__thumb {
+	position: relative;
+	width: 72px;
+	height: 72px;
+	border-radius: var( --cegg-pm-radius-lg );
+}
+
+/* Badge dot in the thumbnail corner (same idea as the roster). */
+.cegg-pm-result__badge-dot {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	box-shadow: 0 0 0 1px #fff;
+	pointer-events: none;
+}
+
+.cegg-pm-result__body {
+	min-width: 0;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+/* Title + description clamp to two lines so long feed titles/descriptions don't
+   blow up row height, while still giving enough text to identify the product. */
+.cegg-pm-result__title {
+	font-weight: 600;
+	font-size: var( --cegg-pm-font-base );
+	line-height: 1.4;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.cegg-pm-result__desc {
+	font-size: var( --cegg-pm-font-sm );
+	color: var( --cegg-pm-text-muted );
+	line-height: 1.4;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+/* Price line: current price, was-price, promo, rating. */
+.cegg-pm-result__meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: var( --cegg-pm-space-2 );
+	margin-top: 2px;
+	font-size: var( --cegg-pm-font-sm );
+}
+
+.cegg-pm-result__price {
+	font-weight: 700;
+}
+
+.cegg-pm-result__price-old {
+	text-decoration: line-through;
+	color: var( --cegg-pm-text-muted );
+}
+
+.cegg-pm-result__promo {
+	color: var( --cegg-pm-success );
+	font-weight: 600;
+}
+
+.cegg-pm-result__rating {
+	color: var( --cegg-pm-text-muted );
+	white-space: nowrap;
+}
+
+/* Source line: merchant · EAN · stock. */
+.cegg-pm-result__source {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: var( --cegg-pm-space-2 );
+	font-size: var( --cegg-pm-font-xs );
+	color: var( --cegg-pm-text-muted );
+}
+
+.cegg-pm-result__merchant {
+	color: var( --cegg-pm-text-muted );
+	text-decoration: none;
+}
+
+.cegg-pm-result__merchant:hover {
+	color: var( --cegg-pm-accent );
+	text-decoration: underline;
+}
+
+.cegg-pm-result__ean {
+	font-family: Menlo, Consolas, monospace;
+}
+
+/* Clickable EAN → search this code across every EAN-capable merchant (build a
+   comparison list). Reset the wp-admin button chrome down to link-like text. */
+button.cegg-pm-result__ean--action {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	box-shadow: none;
+	min-height: 0;
+	height: auto;
+	line-height: inherit;
+	font-size: inherit;
+	color: var( --cegg-pm-text-muted );
+	cursor: pointer;
+}
+
+button.cegg-pm-result__ean--action:hover,
+button.cegg-pm-result__ean--action:focus {
+	color: var( --cegg-pm-accent );
+	text-decoration: underline;
+}
+
+.cegg-pm-result__oos {
+	display: inline-block;
+	padding: 0 4px;
+	border: 1px solid currentColor;
+	border-radius: var( --cegg-pm-radius );
+	color: var( --cegg-pm-danger );
+	line-height: 1.5;
+	white-space: nowrap;
+}
+
+.cegg-pm-result__free-ship {
+	color: var( --cegg-pm-success );
+	white-space: nowrap;
+}
+
+/* Amazon Prime deal access — an accent label, mirroring the legacy metabox's
+   text-primary. */
+.cegg-pm-result__prime {
+	color: var( --cegg-pm-accent );
+	white-space: nowrap;
+}
+
+/* Amazon availability message ("Only 2 left in stock", etc.) — muted, and
+   truncates so a long message can't blow out the row. */
+.cegg-pm-result__availability {
+	overflow: hidden;
+	max-width: 100%;
+	color: var( --cegg-pm-text-muted );
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cegg-pm-result__add {
+	flex: none;
+}
+
+/* Save-in-flight: center the spinner in roughly the button's footprint so the
+   row doesn't jump when it swaps back to the "Added" button. */
+.cegg-pm-result__saving {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 3.5rem;
+}
+
+.cegg-pm-result__saving .components-spinner {
+	margin: 0;
+}
+
+/* Out-of-stock: dim the thumb + title so it reads as a warning at a glance. */
+.cegg-pm-result.is-oos .cegg-pm-result__thumb {
+	opacity: 0.45;
+}
+
+.cegg-pm-result.is-oos .cegg-pm-result__title {
+	color: var( --cegg-pm-text-muted );
+}
+
+/* ---- Manager modal ------------------------------------------------------ */
+
+/* Compact the modal header (WP default is 72px tall, 24px padding, 20px title)
+   to free vertical space in the full-screen manager. .cegg-pm sits on the modal
+   frame, so this stays scoped to our modal. The content clears the absolute
+   header via margin-top, so match it to the new height. */
+.cegg-pm.components-modal__frame .components-modal__header {
+	height: 48px;
+	padding: 0 var( --cegg-pm-space-4 );
+	border-bottom: 1px solid var( --cegg-pm-border );
+}
+
+.cegg-pm.components-modal__frame .components-modal__header-heading {
+	font-size: 15px;
+}
+
+.cegg-pm.components-modal__frame .components-modal__content {
+	margin-top: 48px;
+}
+
+/* ---- Binding picker product cards --------------------------------------- */
+
+/* Hover lift for the selectable product cards in the binding modal. The
+   selection ring + checkmark badge are inline-styled on the element so they
+   show even where this stylesheet isn't loaded; the hover is the enhancement. */
+.cegg-pm-bind-card {
+	transition: border-color 0.12s ease, box-shadow 0.12s ease,
+		transform 0.12s ease;
+}
+
+.cegg-pm-bind-card:hover:not( :disabled ) {
+	border-color: var( --wp-admin-theme-color, #3858e9 );
+	box-shadow: 0 2px 10px rgba( 0, 0, 0, 0.14 );
+	transform: translateY( -2px );
+}
+
+/* Live count badge on the "Added" tab. */
+.cegg-pm-tab-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 18px;
+	height: 18px;
+	margin-left: var( --cegg-pm-space-2 );
+	padding: 0 5px;
+	border-radius: 9px;
+	background: var( --cegg-pm-accent );
+	color: #fff;
+	font-size: var( --cegg-pm-font-xs );
+	font-weight: 600;
+	line-height: 1;
+}
+
+/* ---- Compact form controls ---------------------------------------------- */
+
+/* Two sources push controls to 40px in the dense manager, both neutralized to
+   32px within our scope:
+   1) @wordpress/components opt-in class (buttons + inputs). */
+.cegg-pm .is-next-40px-default-size {
+	min-height: 32px;
+	height: 32px;
+}
+
+/* 2) wp-admin forms.css sets min-height:40px on bare input[type=…]/select
+   (specificity 0,1,1). Beat it with .cegg-pm + element + attribute (0,2,1). */
+.cegg-pm input[type='text'],
+.cegg-pm input[type='search'],
+.cegg-pm input[type='url'],
+.cegg-pm input[type='email'],
+.cegg-pm input[type='tel'],
+.cegg-pm input[type='number'],
+.cegg-pm select {
+	min-height: 32px;
+	height: 32px;
+}
+
+/* ---- Clicks column (Added table) ---------------------------------------- */
+
+.cegg-pm-atable__clicks {
+	width: 68px;
+	text-align: right;
+	white-space: nowrap;
+}
+
+.cegg-pm-arow__clicks-cell {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.cegg-pm-clicks {
+	display: inline-flex;
+	gap: 4px;
+	align-items: baseline;
+	justify-content: flex-end;
+	font-variant-numeric: tabular-nums;
+
+	&__primary {
+		font-weight: 600;
+	}
+
+	&__total {
+		color: #757575;
+		font-size: 11px;
+	}
+
+	&--empty {
+		color: #757575;
+	}
+}
+
+/* ---- Settings tab (auto-update) ----------------------------------------- */
+
+.cegg-pm-settings {
+	padding: 4px 0;
+
+	&--loading {
+		display: flex;
+		justify-content: center;
+		padding: 32px 0;
+	}
+
+	&__intro {
+		max-width: 640px;
+		color: #757575;
+		line-height: 1.5;
+		margin: 0 0 16px;
+	}
+
+	&__help {
+		text-decoration: none;
+		color: #757575;
+		vertical-align: text-bottom;
+
+		.dashicons {
+			font-size: 16px;
+			width: 16px;
+			height: 16px;
+			line-height: 16px;
+		}
+
+		&:hover,
+		&:focus {
+			color: var( --wp-admin-theme-color, #3858e9 );
+		}
+	}
+
+	/* Global keyword: a readable field, not full-bleed. */
+	&__global {
+		max-width: 360px;
+		margin-bottom: 20px;
+	}
+
+	&__overrides {
+		max-width: 620px;
+	}
+
+	&__loading-inline {
+		display: flex;
+		justify-content: center;
+		padding: 12px 0;
+	}
+
+	&__overrides-title {
+		font-weight: 600;
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: 0.02em;
+		color: #757575;
+		margin-bottom: 8px;
+	}
+
+	&__empty {
+		color: #757575;
+		margin: 0 0 12px;
+	}
+
+	&__table {
+		th {
+			font-size: 11px;
+			color: #757575;
+			font-weight: 500;
+			text-align: left;
+		}
+
+		/* Keyword gets the room; price columns stay narrow. */
+		td:nth-child(3),
+		td:nth-child(4),
+		th:nth-child(3),
+		th:nth-child(4) {
+			width: 96px;
+		}
+	}
+
+	&__module {
+		font-weight: 500;
+		white-space: nowrap;
+		padding-right: 8px;
+	}
+
+	&__na {
+		color: #757575;
+	}
+
+	&__remove-col {
+		width: 32px;
+		text-align: center;
+	}
+
+	&__add {
+		max-width: 260px;
+		margin-top: 4px;
+	}
+
+	&__footer {
+		margin-top: 20px;
+	}
+}
+
+// "Shortcode" builder tab: two-column (scope inputs | template list) + a single
+// bottom bar (preview + Copy + Insert), so everything fits without page scroll.
+.cegg-pm-builder {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	// Breathing room below the TabPanel's bottom border.
+	padding-top: 12px;
+	// The manager modal is full-screen; without a cap a 40-char shortcode and
+	// two selects stretch across the whole monitor. Sized like the Settings
+	// tab's __overrides block. Products overrides this via --wide.
+	max-width: 620px;
+
+	// Products: room for the template thumbnail column beside the inputs.
+	&--wide {
+		max-width: 900px;
+	}
+
+	// Two columns on wide screens (the full-screen modal); stacks on the narrow
+	// inline metabox so the fields never get cramped.
+	&__cols {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 24px;
+
+		@media (min-width: 700px) {
+			grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.2fr);
+		}
+	}
+
+	&__field {
+		margin-bottom: 14px;
+		// A single control, sized like the Settings tab's __global field.
+		max-width: 360px;
+
+		&--narrow {
+			max-width: 160px;
+		}
+	}
+
+	&__label {
+		display: block;
+		margin-bottom: 6px;
+		font-weight: 600;
+	}
+
+	// Vertical list of compact horizontal cards; scrolls internally if long.
+	&__templates {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		max-height: 320px;
+		overflow-y: auto;
+		padding-right: 4px;
+	}
+
+	&__tpl {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		width: 100%;
+		padding: 6px 10px 6px 6px;
+		background: none;
+		text-align: left;
+		border: 1px solid #dcdcde;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease,
+			background 0.15s ease;
+
+		&:hover {
+			border-color: var(--wp-admin-theme-color, #3858e9);
+		}
+
+		&.is-selected {
+			border-color: var(--wp-admin-theme-color, #3858e9);
+			box-shadow: 0 0 0 1px var(--wp-admin-theme-color, #3858e9);
+			background: rgba(56, 88, 233, 0.04);
+		}
+	}
+
+	&__tpl-thumb {
+		flex: 0 0 auto;
+		width: 56px;
+		height: 40px;
+		border-radius: 3px;
+		overflow: hidden;
+		background: #f0f0f1;
+
+		img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
+		}
+	}
+
+	&__tpl-noimg {
+		display: block;
+		width: 100%;
+		height: 100%;
+		background: repeating-linear-gradient(
+			45deg,
+			#f0f0f1,
+			#f0f0f1 6px,
+			#e6e6e8 6px,
+			#e6e6e8 12px
+		);
+	}
+
+	&__tpl-name {
+		flex: 1 1 auto;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		min-width: 0;
+		font-size: 13px;
+	}
+
+	&__tpl-custom {
+		font-style: normal;
+		font-size: 10px;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		opacity: 0.6;
+	}
+
+	&__tpl-check {
+		flex: 0 0 auto;
+		color: var(--wp-admin-theme-color, #3858e9);
+		font-weight: 700;
+	}
+
+	// Shortcode preview at the top: a native InputControl (read-only, select-all
+	// on focus, like the legacy metabox) with the copy button grouped inside its
+	// suffix — WP owns the border, height and focus ring.
+	&__bar {
+		display: block;
+	}
+
+	&__code {
+		width: 100%;
+
+		input {
+			font-family: Menlo, Consolas, Monaco, monospace;
+			font-size: 12px;
+		}
+	}
+
+	&__copy {
+		&.is-copied svg {
+			color: #008a20;
+		}
+	}
+}
+
+/* --- Coupons ------------------------------------------------------------- */
+
+/* Code chip, discount badge, and validity label — shared by the coupon search
+   result and the Added-table row so a voucher reads the same in both. */
+.cegg-pm-coupon__code {
+	display: inline-block;
+	padding: 1px 6px;
+	border: 1px dashed var( --cegg-pm-accent );
+	border-radius: 3px;
+	color: var( --cegg-pm-accent );
+	font-family: Menlo, Consolas, monospace;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+}
+
+.cegg-pm-coupon__discount {
+	display: inline-block;
+	padding: 1px 6px;
+	border-radius: 3px;
+	background: #fce8e6;
+	color: #b3261e;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.cegg-pm-coupon__validity {
+	color: var( --cegg-pm-text-muted );
+	font-size: 12px;
+}
+
+/* Expired/upcoming pill — mirrors the products "Out of stock" treatment. */
+.cegg-pm-coupon__pill {
+	display: inline-block;
+	padding: 0 6px;
+	border-radius: 9px;
+	font-size: 10px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	line-height: 16px;
+
+	&--expired {
+		background: #fce8e6;
+		color: #b3261e;
+	}
+
+	&--upcoming {
+		background: #e6f4ea;
+		color: #1e7d34;
+	}
+}
+
+/* Family switcher — a small segmented control atop the unified sidebar. */
+.cegg-pm-family {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px;
+	padding: 2px;
+	margin: 0 0 12px;
+	background: var( --cegg-pm-border-subtle );
+	border-radius: 6px;
+
+	&__tab {
+		display: flex;
+		// At most two tabs per row; a third wraps to a new line (the sidebar is
+		// too narrow for four across). flex-shrink MUST be 0 — otherwise flexbox
+		// squeezes all four onto one line instead of wrapping. A lone tab on its
+		// row still grows (flex-grow 1) to fill the width.
+		flex: 1 0 calc( 50% - 2px );
+		align-items: center;
+		justify-content: center;
+		gap: 5px;
+		padding: 5px 8px;
+		border: 0;
+		border-radius: 4px;
+		background: transparent;
+		color: var( --cegg-pm-text-muted );
+		font-size: 12px;
+		font-weight: 600;
+		cursor: pointer;
+
+		&:hover {
+			color: inherit;
+		}
+
+		&.is-active {
+			background: #fff;
+			color: var( --cegg-pm-accent );
+			box-shadow: 0 1px 2px rgb( 0 0 0 / 8% );
+		}
+	}
+
+	/* Per-family count badge on each tab — a solid accent pill in every state
+	   (active or inactive) so it always reads clearly against both the grey
+	   switcher track and the white active-tab background. */
+	&__count {
+		min-width: 18px;
+		padding: 0 5px;
+		border-radius: 9px;
+		background: var( --cegg-pm-accent );
+		color: #fff;
+		font-size: 11px;
+		font-weight: 600;
+		line-height: 16px;
+		text-align: center;
+	}
+}
+
+.cegg-pm-classic__bar .cegg-pm-family {
+	margin-bottom: 0;
+	max-width: 240px;
+}
+
+/* Free-build upsell — rides the far end of the Products footer row, next to
+   "Update prices". Deliberately a muted link, not a filled pill, so it never
+   competes with the primary "Search & add products" button. */
+.cegg-pm-footer__gopro {
+	margin-left: auto;
+	color: var( --cegg-pm-text-muted );
+	font-size: var( --cegg-pm-font-sm );
+	text-decoration: none;
+	white-space: nowrap;
+
+	&:hover,
+	&:focus {
+		color: var( --cegg-pm-accent );
+		text-decoration: underline;
+	}
+}
+
+/* Coupons sidebar summary — the roster-less count line + empty state. */
+.cegg-pm-coupons-summary {
+	margin-top: 12px;
+
+	&__count {
+		display: block;
+		width: 100%;
+		padding: 8px 10px;
+		border: 1px solid var( --cegg-pm-border );
+		border-radius: 6px;
+		background: transparent;
+		color: inherit;
+		font-size: 13px;
+		text-align: left;
+		cursor: pointer;
+
+		&:hover {
+			border-color: var( --cegg-pm-accent );
+			color: var( --cegg-pm-accent );
+		}
+	}
+}
+
+/* A past-end coupon greys out (row-level), like an out-of-stock product row. */
+.cegg-pm-crow.is-expired .cegg-pm-arow__thumb {
+	opacity: 0.45;
+}
+
+.cegg-pm-crow.is-expired .cegg-pm-arow__title {
+	color: var( --cegg-pm-text-muted );
+}
+
+/* Same greying for the compact sidebar coupon roster row (CouponRosterRow). */
+.cegg-pm-row.is-expired .cegg-pm-row__thumb {
+	opacity: 0.45;
+}
+
+.cegg-pm-row.is-expired .cegg-pm-row__title {
+	color: var( --cegg-pm-text-muted );
+}
+
+.cegg-pm-coupon-result.is-expired .cegg-pm-result__thumb {
+	opacity: 0.45;
+}
+
+.cegg-pm-coupon-result.is-expired .cegg-pm-result__title {
+	color: var( --cegg-pm-text-muted );
+}

@@ -7,6 +7,7 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ModuleName;
+use ContentEgg\application\components\ParserModule;
 use ContentEgg\application\Plugin;;
 
 /**
@@ -208,6 +209,26 @@ class AdminHelper
 		return $results;
 	}
 
+	public static function getMediaModules()
+	{
+		$modules = ModuleManager::getInstance()->getConfigurableModules();
+		$results = array();
+		foreach ($modules as $module)
+		{
+			if ($module->isDeprecated() && !$module->isActive())
+			{
+				continue;
+			}
+
+			if (in_array($module->getParserType(), array(ParserModule::PARSER_TYPE_IMAGE, ParserModule::PARSER_TYPE_VIDEO), true))
+			{
+				$results[] = $module;
+			}
+		}
+
+		return $results;
+	}
+
 	public static function getContentModules()
 	{
 		$modules = ModuleManager::getInstance()->getConfigurableModules();
@@ -219,7 +240,7 @@ class AdminHelper
 				continue;
 			}
 
-			if (!$module->isAffiliateParser())
+			if ($module->getParserType() === ParserModule::PARSER_TYPE_CONTENT)
 			{
 				$results[] = $module;
 			}

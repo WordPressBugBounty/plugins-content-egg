@@ -80,7 +80,7 @@ class RestClient
     public static function getHttpClient($opts = array())
     {
         $_opts = array(
-            'sslverify' => false,
+            'sslverify' => WpHttpClient::sslVerifyDefault(),
             'redirection' => 5,
             'timeout' => static::$timeout,
             'user-agent' => static::$useragent,

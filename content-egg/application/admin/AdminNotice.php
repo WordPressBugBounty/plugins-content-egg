@@ -39,6 +39,7 @@ class AdminNotice
             'plugin_purged_cached_logos' => __('Cached logos have been purged.', 'content-egg'),
             'product_import_stopped' => __('All pending product import tasks have been stopped.', 'content-egg'),
             'preset_saved'         => __('Preset saved successfully.', 'content-egg'),
+            'preset_saved_prompts_renamed' => __('Preset saved. Some custom prompt names were already in use or reserved and have been adjusted — check the Custom Prompts section.', 'content-egg'),
             'preset_deleted'       => __('Preset deleted.', 'content-egg'),
             'preset_delete_error'  => __('You must have at least one preset. You cannot delete the last one.', 'content-egg'),
             'preset_in_use'        => __('Cannot delete this preset because it’s still used by active import jobs.', 'content-egg'),

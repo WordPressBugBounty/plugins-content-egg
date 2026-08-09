@@ -269,6 +269,47 @@ class FeedDetector
     }
 
     /**
+     * The merchant/advertiser name carried in the feed itself, if any — many
+     * affiliate feeds (Awin, CJ, GMC exports) include it as a column. Returns
+     * the first non-empty value of an advertiser/merchant-name field, or '' when
+     * the feed carries no such column. A far better default feed name than the
+     * domain (e.g. "Andyanand US" instead of "Andyanand").
+     */
+    public static function detectAdvertiserName(array $records): string
+    {
+        $synonyms = array(
+            'advertisername', 'merchantname', 'advertiser', 'merchant',
+            'programname', 'programmename', 'storename', 'shopname',
+            'sellername', 'retailername', 'suppliername',
+        );
+
+        foreach ($records as $record)
+        {
+            if (!is_array($record))
+            {
+                continue;
+            }
+            foreach ($record as $key => $value)
+            {
+                if (!is_scalar($value))
+                {
+                    continue;
+                }
+                if (in_array(self::normalizeFieldName((string) $key), $synonyms, true))
+                {
+                    $name = trim((string) $value);
+                    if ($name !== '')
+                    {
+                        return $name;
+                    }
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /**
      * Prefill the CE-field → feed-field mapping by normalized synonym match.
      * Keys of the result are the original CE field names (whatever unicode
      * quirks they carry); values are original feed field names.
@@ -611,15 +652,29 @@ class FeedDetector
      * payload; ZIP archives require a full download).
      *
      * @param callable|null $onZipDownloaded Optional hook invoked with
-     *   ($tmp_file, $url) after a ZIP archive has been downloaded and read.
-     *   Return true to take ownership of $tmp_file (it will not be deleted
-     *   here); used by the setup wizard to hand the archive off to the real
-     *   import so it isn't downloaded a second time.
+     *   ($tmp_file, $url) after the full feed file has been downloaded and
+     *   read (ZIP archives over HTTP, and any FTP/FTPS transfer). Return true
+     *   to take ownership of $tmp_file (it will not be deleted here); used by
+     *   the setup wizard to hand the file off to the real import so it isn't
+     *   downloaded a second time.
+     * @param callable|null $onFtpFetch Optional fetcher invoked with ($url)
+     *   for ftp/ftps feeds; must download the feed to a local temp file and
+     *   return its path (or throw). Required to analyze FTP feeds, which the
+     *   WP HTTP API cannot fetch.
      * @return array{head:string, archive:string, complete:bool, bytes_total:int, warnings:array}
      * @throws \Exception when nothing usable could be downloaded.
      */
-    public static function fetchSample(string $url, ?callable $onZipDownloaded = null): array
+    public static function fetchSample(string $url, ?callable $onZipDownloaded = null, ?callable $onFtpFetch = null): array
     {
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+
+        // wp_remote_get() cannot fetch ftp:// URLs (WP_Http strips any scheme
+        // outside http/https/ssl), so FTP feeds take a full local download.
+        if ($scheme === 'ftp' || $scheme === 'ftps')
+        {
+            return self::fetchFtpSample($url, $onFtpFetch, $onZipDownloaded);
+        }
+
         $result = array('head' => '', 'archive' => 'none', 'complete' => false, 'bytes_total' => 0, 'warnings' => array());
 
         $response = \wp_remote_get($url, array(
@@ -692,11 +747,14 @@ class FeedDetector
      * @param string        $url             Feed URL.
      * @param array         $ce_fields       Mapping field names from FeedConfig::mappingFields().
      * @param callable|null $onZipDownloaded See fetchSample().
+     * @param callable|null $onFtpFetch      See fetchSample().
+     * @param string|null   $product_node    Force this XML product node instead
+     *   of auto-detecting it (the wizard's "re-scan with this node" override).
      * @throws \Exception on download failure.
      */
-    public static function analyze(string $url, array $ce_fields, ?callable $onZipDownloaded = null): array
+    public static function analyze(string $url, array $ce_fields, ?callable $onZipDownloaded = null, ?callable $onFtpFetch = null, ?string $product_node = null): array
     {
-        $sample = self::fetchSample($url, $onZipDownloaded);
+        $sample = self::fetchSample($url, $onZipDownloaded, $onFtpFetch);
         $head = $sample['head'];
         $warnings = $sample['warnings'];
 
@@ -720,8 +778,15 @@ class FeedDetector
         }
         elseif ($format === 'xml')
         {
-            $node = self::detectProductNode($tmp);
-            $settings['product_node'] = $node !== null ? $node : 'product';
+            if ($product_node !== null && $product_node !== '')
+            {
+                $settings['product_node'] = $product_node;
+            }
+            else
+            {
+                $node = self::detectProductNode($tmp);
+                $settings['product_node'] = $node !== null ? $node : 'product';
+            }
         }
 
         $records = self::sampleRecords($tmp, $format, $settings, 10);
@@ -734,6 +799,16 @@ class FeedDetector
         else
         {
             $warnings[] = esc_html__('Could not parse sample products from the feed. Please verify the detected settings.', 'content-egg');
+        }
+
+        // Feeds that nest the product node inside itself (e.g. a click URL as
+        // <product>…<URL><product>…</product></URL>…</product>) truncate under
+        // the default streamer parser; XmlReader reads the full node and skips
+        // the inner one. Default to the streamer for everything else.
+        $xml_processor = 'XmlStringStreamer';
+        if ($format === 'xml' && class_exists('\XMLReader') && self::xmlNodeSelfNests($tmp, $settings['product_node']))
+        {
+            $xml_processor = 'XmlReader';
         }
 
         @unlink($tmp);
@@ -760,11 +835,12 @@ class FeedDetector
             'csv_delimiter' => $settings['csv_delimiter'] === "\t" ? 'tab' : $settings['csv_delimiter'],
             'csv_enclosure' => $settings['csv_enclosure'],
             'product_node' => $settings['product_node'],
+            'xml_processor' => $xml_processor,
             'price_decimal_separator' => self::detectDecimalSeparator(self::priceValues($records)),
             'currency' => $currency !== '' ? $currency : 'USD',
             'currency_detected' => $currency !== '',
             'domain' => $domain,
-            'feed_name' => self::suggestFeedName($domain),
+            'feed_name' => self::detectAdvertiserName($records) ?: self::suggestFeedName($domain),
             'feed_fields' => $feed_fields,
             'sample_records' => $records,
             'mapping_prefill' => self::heuristicMapping($feed_fields, $ce_fields),
@@ -777,10 +853,130 @@ class FeedDetector
     }
 
     /**
-     * Detect the most likely XML product node by counting direct children of
-     * sampled top-level elements (static equivalent of the module detector).
+     * Detect the most likely XML product node.
+     *
+     * The repeating product element is the one that occurs most often. When it
+     * ties on count with its own always-present children (one per product),
+     * the outermost (shallowest) element is the product node — this is what
+     * separates a flat feed (<merchandiser><product>… where <product>'s first
+     * child <category> repeats just as often) from a nested one
+     * (<rss><channel><item>… where <item> sits below the single <channel>).
+     * A naive "most common element" or "most common child of the repeating
+     * unit" gets exactly one of those two shapes wrong; the count-then-depth
+     * rule below gets both right.
      */
     public static function detectProductNode(string $file, int $sample_count = 100): ?string
+    {
+        if (class_exists('\XMLReader'))
+        {
+            $node = self::detectProductNodeReader($file, $sample_count);
+            if ($node !== null)
+            {
+                return $node;
+            }
+        }
+
+        // Fallback for the rare server without ext-xmlreader.
+        return self::detectProductNodeStreamer($file, $sample_count);
+    }
+
+    /** Depth-aware detector: max repeat count, ties broken toward the outermost element. */
+    private static function detectProductNodeReader(string $file, int $sample_count): ?string
+    {
+        $flags = (defined('LIBXML_NONET') ? LIBXML_NONET : 0) | (defined('LIBXML_PARSEHUGE') ? LIBXML_PARSEHUGE : 0);
+
+        $reader = new \XMLReader();
+        if (@$reader->open($file, null, $flags) !== true)
+        {
+            return null;
+        }
+
+        libxml_use_internal_errors(true);
+
+        $counts = array();
+        $depths = array();
+        $has_child_elements = array();
+        $open = array(); // depth => most recently opened element name at that depth
+        $seen = 0;
+        // Each product contributes several elements, so scan well past the
+        // product target to establish repetition on a bounded sample.
+        $limit = max(2000, $sample_count * 20);
+
+        try
+        {
+            while (@$reader->read())
+            {
+                if ($reader->nodeType !== \XMLReader::ELEMENT)
+                {
+                    continue;
+                }
+
+                $name = $reader->name;
+                $depth = $reader->depth;
+
+                $counts[$name] = (isset($counts[$name]) ? $counts[$name] : 0) + 1;
+                if (!isset($depths[$name]) || $depth < $depths[$name])
+                {
+                    $depths[$name] = $depth;
+                }
+
+                // In document order a child element's event fires right after its
+                // parent's, so $open[$depth - 1] is this element's parent: mark it
+                // as a container. Leaf elements (title, link, description in an RSS
+                // feed) never get marked and are excluded as product-node
+                // candidates below — otherwise the channel-level <title>/<link>/
+                // <description>, which recur once per item PLUS once for the
+                // channel, out-count <item> and get mis-detected as the node.
+                if ($depth > 0 && isset($open[$depth - 1]))
+                {
+                    $has_child_elements[$open[$depth - 1]] = true;
+                }
+                $open[$depth] = $name;
+
+                if (++$seen >= $limit)
+                {
+                    break;
+                }
+            }
+        }
+        catch (\Throwable $e)
+        {
+            // Keep whatever was collected from a partial/broken sample.
+        }
+
+        $reader->close();
+
+        // The root element is never the product node; neither is a leaf element
+        // (one that never contains child elements) — a product node holds the
+        // product's field elements.
+        foreach ($depths as $name => $depth)
+        {
+            if ($depth === 0 || empty($has_child_elements[$name]))
+            {
+                unset($counts[$name]);
+            }
+        }
+
+        if (!$counts)
+        {
+            return null;
+        }
+
+        uksort($counts, static function ($a, $b) use ($counts, $depths)
+        {
+            if ($counts[$a] !== $counts[$b])
+            {
+                return $counts[$b] <=> $counts[$a]; // higher count first
+            }
+
+            return $depths[$a] <=> $depths[$b]; // shallower (outermost) first
+        });
+
+        return (string) array_key_first($counts);
+    }
+
+    /** Streamer fallback: counts direct child names of sampled top-level elements. */
+    private static function detectProductNodeStreamer(string $file, int $sample_count): ?string
     {
         libxml_use_internal_errors(true);
 
@@ -830,6 +1026,72 @@ class FeedDetector
         arsort($counts);
 
         return (string) array_key_first($counts);
+    }
+
+    /**
+     * True when the product node contains a descendant element with the same
+     * name (e.g. Rakuten/LinkShare feeds nest a click URL as
+     * <product>…<URL><product>…</product></URL>…</product>). The default
+     * XmlStringStreamer parser stops at the first matching close tag and
+     * truncates such nodes, so the wizard steers these feeds to the XmlReader
+     * processor, which reads the full outer node and skips the inner one.
+     */
+    public static function xmlNodeSelfNests(string $file, string $node): bool
+    {
+        if ($node === '' || !class_exists('\XMLReader'))
+        {
+            return false;
+        }
+
+        $flags = (defined('LIBXML_NONET') ? LIBXML_NONET : 0) | (defined('LIBXML_PARSEHUGE') ? LIBXML_PARSEHUGE : 0);
+
+        $reader = new \XMLReader();
+        if (@$reader->open($file, null, $flags) !== true)
+        {
+            return false;
+        }
+
+        libxml_use_internal_errors(true);
+
+        $open = 0;
+        $found = false;
+        $seen = 0;
+
+        try
+        {
+            while (@$reader->read())
+            {
+                if ($reader->nodeType === \XMLReader::ELEMENT && $reader->name === $node)
+                {
+                    if ($open > 0)
+                    {
+                        $found = true;
+                        break;
+                    }
+                    if (!$reader->isEmptyElement)
+                    {
+                        $open++;
+                    }
+                }
+                elseif ($reader->nodeType === \XMLReader::END_ELEMENT && $reader->name === $node && $open > 0)
+                {
+                    $open--;
+                }
+
+                if (++$seen > 20000)
+                {
+                    break;
+                }
+            }
+        }
+        catch (\Throwable $e)
+        {
+            // Inconclusive on a broken sample: treat as not-nested.
+        }
+
+        $reader->close();
+
+        return $found;
     }
 
     /** Raw XML string of the first product node (for AI mapping). */
@@ -890,10 +1152,41 @@ class FeedDetector
             ));
         }
 
-        $zip = new \ZipArchive();
-        if ($zip->open($tmp) !== true)
+        try
+        {
+            $body = self::readZipEntrySample($tmp, $result);
+        }
+        catch (\Throwable $e)
         {
             @unlink($tmp);
+            throw $e;
+        }
+
+        $kept = $onZipDownloaded !== null && (bool) $onZipDownloaded($tmp, $url);
+        if (!$kept)
+        {
+            @unlink($tmp);
+        }
+
+        return $body;
+    }
+
+    /**
+     * Read a decompressed sample from the first regular entry of a local ZIP
+     * file, recording its size/completeness into $result. Shared by the
+     * ZIP-over-HTTP (fetchZipSample) and ZIP-over-FTP (fetchFtpSample) paths;
+     * the caller owns $zip_path's lifecycle.
+     */
+    private static function readZipEntrySample(string $zip_path, array &$result): string
+    {
+        if (!class_exists('\ZipArchive'))
+        {
+            throw new \Exception(esc_html__('This feed is a ZIP archive, but the ZipArchive PHP extension is not available on your server.', 'content-egg'));
+        }
+
+        $zip = new \ZipArchive();
+        if ($zip->open($zip_path) !== true)
+        {
             throw new \Exception(esc_html__('Could not open the ZIP feed archive.', 'content-egg'));
         }
 
@@ -919,13 +1212,78 @@ class FeedDetector
 
         $zip->close();
 
+        return $body;
+    }
+
+    /**
+     * Sample an ftp/ftps feed. There is no protocol-agnostic partial-read
+     * across our FTP transports, so $onFtpFetch downloads the whole file to a
+     * local temp path and detection runs against that (mirroring the ZIP-over-
+     * HTTP full-download cost). The same file is handed to $onZipDownloaded so
+     * the real import reuses it instead of downloading over FTP a second time.
+     *
+     * @throws \Exception when $onFtpFetch is missing or the fetch/read fails.
+     */
+    private static function fetchFtpSample(string $url, ?callable $onFtpFetch, ?callable $onZipDownloaded): array
+    {
+        $result = array('head' => '', 'archive' => 'none', 'complete' => false, 'bytes_total' => 0, 'warnings' => array());
+
+        if ($onFtpFetch === null)
+        {
+            throw new \Exception(esc_html__('FTP feeds cannot be analyzed in this context.', 'content-egg'));
+        }
+
+        $tmp = (string) $onFtpFetch($url);
+        if ($tmp === '' || !is_readable($tmp))
+        {
+            throw new \Exception(esc_html__('Could not download the FTP feed for analysis.', 'content-egg'));
+        }
+
+        try
+        {
+            $size = (int) filesize($tmp);
+            $head = (string) @file_get_contents($tmp, false, null, 0, self::SAMPLE_BYTES * 4);
+            $result['archive'] = self::detectArchive($head);
+            $result['bytes_total'] = $size;
+
+            if ($result['archive'] === 'gz')
+            {
+                // Match the HTTP path: partial-inflate the compressed head only.
+                $body = self::inflateSample((string) @file_get_contents($tmp, false, null, 0, self::SAMPLE_BYTES));
+                $result['complete'] = $size > 0 && $size <= self::SAMPLE_BYTES;
+            }
+            elseif ($result['archive'] === 'zip')
+            {
+                $body = self::readZipEntrySample($tmp, $result);
+            }
+            else
+            {
+                $body = $head;
+                $result['complete'] = $size > 0 && strlen($head) >= $size;
+            }
+        }
+        catch (\Throwable $e)
+        {
+            @unlink($tmp);
+            throw $e;
+        }
+
+        if (trim($body) === '')
+        {
+            @unlink($tmp);
+            throw new \Exception(esc_html__('Could not read any data from the feed sample.', 'content-egg'));
+        }
+
+        // Hand the downloaded file to the real import (prefetch reuse); else clean up.
         $kept = $onZipDownloaded !== null && (bool) $onZipDownloaded($tmp, $url);
         if (!$kept)
         {
             @unlink($tmp);
         }
 
-        return $body;
+        $result['head'] = $body;
+
+        return $result;
     }
 
     private static function estimateRows(string $head, string $format, array $settings, array $sample): int
@@ -1010,7 +1368,12 @@ class FeedDetector
             'gtin' => array('ggtin', 'gtin', 'eancode', 'ean', 'barcode', 'upc'),
             'brand' => array('gbrand', 'brandname', 'manufacturer', 'brand', 'vendor'),
             'category' => array('merchantcategory', 'gproducttype', 'categorypath', 'producttype', 'categoryname', 'category', 'googleproductcategory'),
-            'directlink' => array('merchantdeeplink', 'directlink', 'directurl', 'merchanturl'),
+            // 'link' last (lowest priority): in a Google Merchant Center feed
+            // 'affiliate link' is claimed first (from aw_deep_link etc.), so the
+            // plain GMC <link>/link column falls through to the direct URL. When a
+            // feed has only 'link', affiliate link takes it and direct link stays
+            // empty — both correct.
+            'directlink' => array('merchantdeeplink', 'directlink', 'directurl', 'merchanturl', 'link'),
             'shippingcost' => array('deliverycost', 'shippingcost', 'gshipping', 'shippingprice', 'shipping'),
             'additionalimagelink' => array('gadditionalimagelink', 'additionalimagelink', 'alternateimage', 'additionalimage', 'imageurl2'),
             'shortdescription' => array('shortdescription', 'summary'),

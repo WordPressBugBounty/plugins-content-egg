@@ -14,6 +14,9 @@ defined('\ABSPATH') || exit;
 class TextHelper
 {
 
+    /** Marker prefixing each list item when HTML is flattened to text. */
+    const BULLET = '• ';
+
     public static function truncate($string, $length = 80, $etc = '...', $charset = 'UTF-8', $break_words = false, $middle = false)
     {
         if ($length == 0)
@@ -209,6 +212,33 @@ class TextHelper
         }
 
         return $truncate;
+    }
+
+    /**
+     * Flatten (sanitized) HTML to readable plain text while preserving line structure.
+     * Each list item becomes a "• "-prefixed line and each block boundary / <br> becomes a
+     * newline, so items and paragraphs don't glue together when the remaining tags are stripped.
+     * Returns plain text with \n line breaks and no HTML (callers convert to <br> if they want HTML).
+     */
+    public static function htmlToText($html, $bullet = self::BULLET)
+    {
+        $html = (string) $html;
+
+        // Opening <li> → bulleted new line; trailing \s* keeps the bullet glued to the
+        // item text even when the source pads it (Amazon emits "<li>\nText"). Block
+        // closers and <br> → new line.
+        $html = preg_replace('~<li\b[^>]*>\s*~i', "\n" . $bullet, $html);
+        $html = preg_replace('~</(?:p|div|li|tr|td|th|h[1-6]|blockquote)>|<br\s*/?>~i', "\n", $html);
+
+        $text = \wp_strip_all_tags($html);
+
+        // Normalize whitespace: unify newlines, collapse runs, trim each line's edges.
+        $text = str_replace(array("\r\n", "\r"), "\n", $text);
+        $text = preg_replace('~[ \t]+~', ' ', $text);
+        $text = preg_replace('~ *\n *~', "\n", $text);
+        $text = preg_replace('~\n{2,}~', "\n", $text);
+
+        return trim($text);
     }
 
     public static function clear($str)

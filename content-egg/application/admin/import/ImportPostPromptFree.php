@@ -17,7 +17,7 @@ defined('\ABSPATH') || exit;
 class ImportPostPromptFree extends Prompt
 {
 
-    public static function titleMethods(): array
+    public static function titleMethods(array $customPromptNames = []): array
     {
         return [
             [
@@ -55,35 +55,10 @@ class ImportPostPromptFree extends Prompt
                 'label'  => __('Translate Product Title', 'content-egg'),
                 'method' => 'translateProductTitle',
             ],
-            [
-                'key'    => 'prompt1',
-                'label'  => __('Custom Prompt #1', 'content-egg'),
-                'method' => 'customPrompt1Title',
-            ],
-            [
-                'key'    => 'prompt2',
-                'label'  => __('Custom Prompt #2', 'content-egg'),
-                'method' => 'customPrompt2Title',
-            ],
-            [
-                'key'    => 'prompt3',
-                'label'  => __('Custom Prompt #3', 'content-egg'),
-                'method' => 'customPrompt3Title',
-            ],
-            [
-                'key'    => 'prompt4',
-                'label'  => __('Custom Prompt #4', 'content-egg'),
-                'method' => 'customPrompt4Title',
-            ],
-            [
-                'key'    => 'prompt5',
-                'label'  => __('Custom Prompt #5', 'content-egg'),
-                'method' => 'customPrompt5Title',
-            ],
         ];
     }
 
-    public static function descriptionMethods(): array
+    public static function descriptionMethods(array $customPromptNames = []): array
     {
         return [
             [
@@ -156,35 +131,10 @@ class ImportPostPromptFree extends Prompt
                 'label'  => __('Generate CTA Text', 'content-egg'),
                 'method' => 'ctaTextProductDescription',
             ],
-            [
-                'key'    => 'prompt1',
-                'label'  => __('Custom Prompt #1', 'content-egg'),
-                'method' => 'customPrompt1Description',
-            ],
-            [
-                'key'    => 'prompt2',
-                'label'  => __('Custom Prompt #2', 'content-egg'),
-                'method' => 'customPrompt2Description',
-            ],
-            [
-                'key'    => 'prompt3',
-                'label'  => __('Custom Prompt #3', 'content-egg'),
-                'method' => 'customPrompt3Description',
-            ],
-            [
-                'key'    => 'prompt4',
-                'label'  => __('Custom Prompt #4', 'content-egg'),
-                'method' => 'customPrompt4Description',
-            ],
-            [
-                'key'    => 'prompt5',
-                'label'  => __('Custom Prompt #5', 'content-egg'),
-                'method' => 'customPrompt5Description',
-            ],
         ];
     }
 
-    public static function shortDescriptionMethods(): array
+    public static function shortDescriptionMethods(array $customPromptNames = []): array
     {
         return [
             [
@@ -222,35 +172,10 @@ class ImportPostPromptFree extends Prompt
                 'label'  => __('Generate CTA Text', 'content-egg'),
                 'method' => 'ctaTextProductDescription',
             ],
-            [
-                'key'    => 'prompt1',
-                'label'  => __('Custom Prompt #1', 'content-egg'),
-                'method' => 'customPrompt1Description',
-            ],
-            [
-                'key'    => 'prompt2',
-                'label'  => __('Custom Prompt #2', 'content-egg'),
-                'method' => 'customPrompt2Description',
-            ],
-            [
-                'key'    => 'prompt3',
-                'label'  => __('Custom Prompt #3', 'content-egg'),
-                'method' => 'customPrompt3Description',
-            ],
-            [
-                'key'    => 'prompt4',
-                'label'  => __('Custom Prompt #4', 'content-egg'),
-                'method' => 'customPrompt4Description',
-            ],
-            [
-                'key'    => 'prompt5',
-                'label'  => __('Custom Prompt #5', 'content-egg'),
-                'method' => 'customPrompt5Description',
-            ],
         ];
     }
 
-    public static function getTitleMethodOptions(): array
+    public static function getTitleMethodOptions(array $customPromptNames = []): array
     {
         $options = [];
         foreach (self::titleMethods() as $method)
@@ -260,7 +185,7 @@ class ImportPostPromptFree extends Prompt
         return $options;
     }
 
-    public static function getDescriptionMethodOptions(): array
+    public static function getDescriptionMethodOptions(array $customPromptNames = []): array
     {
         $options = [];
         foreach (self::descriptionMethods() as $method)
@@ -270,7 +195,7 @@ class ImportPostPromptFree extends Prompt
         return $options;
     }
 
-    public static function getShortDescriptionMethodOptions(): array
+    public static function getShortDescriptionMethodOptions(array $customPromptNames = []): array
     {
         $options = [];
         foreach (self::shortDescriptionMethods() as $method)

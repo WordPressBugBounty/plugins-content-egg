@@ -8,12 +8,14 @@ use ContentEgg\application\admin\import\PresetRepository;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ContentManager;
+use ContentEgg\application\components\ProductDataService;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\components\ContentCoupon;
 use ContentEgg\application\components\ExtraData;
 use ContentEgg\application\components\LManager;
 use ContentEgg\application\helpers\ClickStatsHelper;
 use ContentEgg\application\Plugin;
+use ContentEgg\application\ProductManagerLoader;
 
 /**
  * EggMetabox class file
@@ -50,6 +52,14 @@ class EggMetabox
     public function addMetabox($post_type)
     {
         if (!in_array($post_type, GeneralConfig::getInstance()->option('post_types')))
+            return;
+
+        // One-writer rule: whenever a React presentation is active (sidebar or
+        // full workspace) the React Product Manager owns product management on
+        // every CE screen, so the Angular metabox does not register. Only the
+        // deprecated "metabox" mode (and any unrecognized/legacy value, which
+        // ProductManagerLoader::mode() normalizes to "metabox") renders Angular.
+        if (ProductManagerLoader::mode() !== 'metabox')
             return;
 
         if (!ModuleManager::getInstance()->getModules(true))
@@ -396,50 +406,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     private function dataPrepare($data): array
     {
-        if (!is_array($data) || empty($data))
-        {
-            return [];
-        }
-
-        foreach ($data as $i => &$row)
-        {
-            if (!is_array($row))
-            {
-                unset($data[$i]);
-                continue;
-            }
-
-            // dinamic fields
-            $row['aff_url'] = null;
-            $row['bridge_url'] = null;
-            $row['target_post_id'] = null;
-
-            if (isset($row['description']) && is_string($row['description']))
-            {
-                $desc = trim($row['description']);
-                if ($desc !== '' && !TextHelper::isHtmlTagDetected($desc))
-                {
-                    $desc = str_replace(["\r\n", "\r"], "\n", $desc);
-                    $row['description'] = TextHelper::nl2br($desc);
-                }
-                else
-                {
-                    $row['description'] = $desc;
-                }
-            }
-
-            if (array_key_exists('price', $row))
-            {
-                $row['price'] = (float)$row['price'];
-            }
-            if (array_key_exists('priceOld', $row))
-            {
-                $row['priceOld'] = (float)$row['priceOld'];
-            }
-        }
-        unset($row);
-
-        return $data;
+        return ProductDataService::prepareItems($data);
     }
 
     public function ajaxUpdateProducts()

@@ -14,10 +14,13 @@ use ContentEgg\application\components\Pattern;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\admin\import\AutoImportScheduler;
 use ContentEgg\application\blocks\productblock\ProductBlock;
+use ContentEgg\application\blocks\couponblock\CouponBlock;
+use ContentEgg\application\blocks\mediablock\MediaBlock;
 use ContentEgg\application\admin\import\ProductImportScheduler;
 use ContentEgg\application\admin\ProductMapMaintenance;
 use ContentEgg\application\components\LinkIndexIndexer;
 use ContentEgg\application\components\OfferCountService;
+use ContentEgg\application\components\PostSaveDataNotifier;
 use ContentEgg\application\components\TemplateManager;
 use ContentEgg\application\EggBlocks\EggBlocksLoader;
 use ContentEgg\application\licensing\LicenseGate;
@@ -31,8 +34,8 @@ use ContentEgg\application\licensing\LicenseGate;
  */
 class Plugin
 {
-    const version = '11.4.0';
-    const db_version = 91;
+    const version = '11.5.0';
+    const db_version = 94;
     const wp_requires = '6.0';
     const slug = 'content-egg';
     const short_slug = 'cegg';
@@ -90,6 +93,21 @@ class Plugin
             ShortcodePreprocessor::initAction();
             Pattern::initAction();
             ProductBlock::initAction();
+            CouponBlock::initAction();
+            MediaBlock::initAction();
+
+            // Group the four core data blocks (products, coupons, images, videos)
+            // under their own "Content Egg" inserter category, separate from the
+            // editorial "Egg Blocks". Priority 11 keeps it above Egg Blocks.
+            add_filter('block_categories_all', function (array $categories): array
+            {
+                array_unshift($categories, array(
+                    'slug'  => 'content-egg',
+                    'title' => 'Content Egg',
+                    'icon'  => null,
+                ));
+                return $categories;
+            }, 11);
             EggBlocksLoader::initAction();
             GalleryScheduler::initAction();
             ProductMapMaintenance::initAction();
@@ -111,23 +129,29 @@ class Plugin
             AutoblogScheduler::initAction();
             ModuleUpdateScheduler::initAction();
             ProductPrefillScheduler::initAction();
+            ImageOptimizeScheduler::initAction();
             ProductImportScheduler::initAction();
             AutoImportScheduler::initAction();
             LinkIndexScheduler::initAction();
             WooIntegrator::initAction();
             OfferCountService::initAction();
+            PostSaveDataNotifier::initAction();
             AmazonWooCheckout::initAction();
             ExternalFeaturedImage::initAction();
             AggregateOffer::initAction();
             AffiliateDisclaimer::initAction();
             ClicksRestController::getInstance()->init();
             BlockRenderRestController::getInstance()->init();
+            ModulesRestController::getInstance()->init();
+            PostProductsRestController::getInstance()->init();
+            AgentAccessRestController::getInstance()->init();
             if (!self::isFree())
             {
                 DataRestController::getInstance()->init();
             }
 
             CommandFactory::initAction();
+            abilities\AbilitiesRegistrar::initAction();
         }
 
         if (self::isPaidBuild())

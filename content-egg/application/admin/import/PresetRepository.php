@@ -91,6 +91,7 @@ class PresetRepository
         foreach ($ids as $pid)
         {
             $meta = get_post_meta($pid, self::META_KEY, true) ?: [];
+            $meta = PresetNormalizer::normalize($meta);
             $name = get_the_title($pid) ?: __('Untitled Preset', 'content-egg');
             $presets[$pid] = array_merge(['name' => $name], $meta);
         }
@@ -110,6 +111,12 @@ class PresetRepository
         }
 
         $meta = get_post_meta($id, self::META_KEY, true) ?: null;
+
+        if ($meta !== null)
+        {
+            $meta = PresetNormalizer::normalize($meta);
+        }
+
         $meta['title'] = get_the_title($id);
 
         // Warm the cache for subsequent calls inside the same request.
@@ -302,7 +309,7 @@ class PresetRepository
             $meta['author_id']       = $author_id;
             $meta['default_cat']     = absint(get_option('default_category', 1));
             $meta['default_woo_cat'] = absint(get_option('default_product_cat', 1));
-            $clean_meta = PresetForm::build_clean_array($meta);
+            $clean_meta = PresetForm::build_clean_array(PresetNormalizer::normalize($meta));
 
             // 4) Prepare post args
             $post_arr = [

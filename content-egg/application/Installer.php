@@ -5,6 +5,7 @@ namespace ContentEgg\application;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\Plugin;
+use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\admin\import\AutoImportScheduler;
 use ContentEgg\application\components\AffiliateFeedParserModule;
 use ContentEgg\application\components\feed\FeedImportPendingException;
@@ -70,7 +71,7 @@ class Installer
         self::requirements();
 
         \add_option(Plugin::slug . '_do_activation_redirect', true);
-        \add_option(Plugin::slug . '_first_activation_date', time());
+        $is_fresh_install = \add_option(Plugin::slug . '_first_activation_date', time());
         self::upgradeTables();
 
         MaintenanceScheduler::activate();
@@ -78,6 +79,14 @@ class Installer
         ProductPrefillScheduler::maybeAddScheduleEvent();
         ProductImportScheduler::maybeAddScheduleEvent();
         AutoImportScheduler::maybeAddScheduleEvent();
+
+        // Fresh installs get image optimization on by default; existing
+        // installs are seeded 'disabled' in upgrade_v94() (opt-in - we never
+        // silently start modifying files already on disk).
+        if ($is_fresh_install)
+            self::seedImageOptimizationDefault('enabled');
+
+        ImageOptimizeScheduler::maybeAddScheduleEvent();
         if (Plugin::isPaidBuild())
         {
             MaintenanceCron::schedule();
@@ -94,6 +103,7 @@ class Installer
         ProductPrefillScheduler::clearScheduleEvent();
         ProductImportScheduler::clearScheduleEvent();
         AutoImportScheduler::clearScheduleEvent();
+        ImageOptimizeScheduler::clearScheduleEvent();
         MaintenanceCron::clear();
         self::clearFeedSyncEvents();
     }
@@ -192,6 +202,7 @@ class Installer
 
         \delete_option(Plugin::slug . '_db_version');
         \delete_option(Plugin::slug . '_env_install');
+        \delete_option('cegg_pm_ui_prompt');
         \delete_option(Plugin::getShortSlug() . '_sys_status');
         \delete_option(Plugin::getShortSlug() . '_sys_deadline');
         if (Plugin::isPro())
@@ -232,6 +243,15 @@ class Installer
 
         if ($db_version < 91)
             self::upgrade_v91();
+
+        // Truthy $db_version ⇒ an EXISTING install being upgraded (a fresh
+        // install reaches this ladder with $db_version = 0/false and must keep
+        // the new "sidebar" default instead of being pinned).
+        if ($db_version && $db_version < 93)
+            self::upgrade_v93();
+
+        if ($db_version && $db_version < 94)
+            self::upgrade_v94();
 
         if (Plugin::isPaidBuild())
             MaintenanceCron::schedule();
@@ -312,6 +332,54 @@ class Installer
         \update_option(Plugin::getShortSlug() . '_sys_status', 'valid');
         \delete_option(Plugin::getShortSlug() . '_sys_deadline');
         \delete_option(Plugin::getShortSlug() . '_sys_last_email');
+    }
+
+    /**
+     * Product-manager interface default flipped to "sidebar" (the modern React
+     * UI). Pin EXISTING installs to the classic metabox they have been using so
+     * a plugin update never silently swaps their product UI. The setting did not
+     * exist before this version, so an absent key means "never chosen": write
+     * "metabox" for it. New installs skip this upgrade (see the truthy guard in
+     * upgrade()) and pick up the "sidebar" default from GeneralConfig.
+     */
+    private static function upgrade_v93()
+    {
+        $slug = 'contentegg_options'; // GeneralConfig::option_name()
+        $options = \get_option($slug, array());
+        if (!is_array($options))
+            $options = array();
+
+        if (!array_key_exists('product_manager_ui', $options))
+        {
+            $options['product_manager_ui'] = 'metabox';
+            \update_option($slug, $options);
+            // Flag a one-time admin notice inviting this existing install to try
+            // the new interface (ProductManagerUiNotice). Only set when we pinned.
+            \update_option('cegg_pm_ui_prompt', 1);
+        }
+    }
+
+    private static function upgrade_v94()
+    {
+        // Existing installs: image optimization is opt-in. Fresh installs
+        // are seeded 'enabled' in activate(). The worker only runs when the
+        // key is physically present in the saved options array.
+        self::seedImageOptimizationDefault('disabled');
+    }
+
+    private static function seedImageOptimizationDefault($value)
+    {
+        $option_name = GeneralConfig::getInstance()->option_name();
+        $options = \get_option($option_name);
+
+        if (!is_array($options))
+            $options = array();
+
+        if (isset($options['image_optimization']))
+            return;
+
+        $options['image_optimization'] = $value;
+        \update_option($option_name, $options);
     }
 
     public function redirect_after_activation()

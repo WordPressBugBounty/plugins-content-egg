@@ -3,6 +3,7 @@
 namespace ContentEgg\application\helpers;
 
 use ContentEgg\application\ImageProxy;
+use ContentEgg\application\libs\WpHttpClient;
 
 
 
@@ -20,14 +21,19 @@ class ImageHelper
 {
 
 	const DOWNLOAD_TIMEOUT = 10;
+
+	// Upper bound on source pixels (W*H) we will decode for resizing. A tiny
+	// "pixel-flood" file (e.g. 25000x25000 PNG, a few KB on disk) passes the
+	// cheap getimagesize() header check but needs ~W*H*4 bytes once GD/Imagick
+	// decodes it, OOM-killing the worker. An OOM fatal is not catchable, so it
+	// would also stall the backfill on that post forever; skip such files.
+	const MAX_DECODE_PIXELS = 40000000;
 	const USERAGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15';
 	const USERAGENT2 = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:139.0) Gecko/20100101 Firefox/139.0';
 
 	public static function saveImgLocaly($img_uri, $title = '', $check_image_type = true)
 	{
-		$newfilename = TextHelper::truncate($title);
-		$newfilename = preg_replace('/[^a-zA-Z0-9\-]/', '', $newfilename);
-		$newfilename = strtolower($newfilename);
+		$newfilename = self::slugifyTitle($title);
 		if (!$newfilename)
 		{
 			$newfilename = time();
@@ -45,6 +51,42 @@ class ImageHelper
 		}
 	}
 
+	/**
+	 * Build a readable, SEO-friendly filename slug from a product title.
+	 *
+	 * Produces a lowercase, hyphen-separated slug (accents transliterated),
+	 * e.g. "Nespresso Vertuo 30 Count" -> "nespresso-vertuo-30-count".
+	 * Returns '' for titles that yield no latin characters (e.g. CJK), so the
+	 * caller can fall back to a timestamp as before.
+	 */
+	public static function slugifyTitle($title, $max_length = 80)
+	{
+		$slug = \sanitize_title((string) $title);
+
+		// sanitize_title percent-encodes non-latin characters (CJK, etc.),
+		// which makes an unreadable filename; drop those sequences.
+		$slug = preg_replace('/%[0-9a-f]{2}/i', '', $slug);
+
+		// Hard whitelist: the result is used as a filename, so guarantee it
+		// contains ONLY [a-z0-9-] regardless of what sanitize_title (or a
+		// third-party 'sanitize_title' filter) returned. No dots, slashes,
+		// backslashes, null bytes or traversal sequences can survive this.
+		$slug = strtolower($slug);
+		$slug = preg_replace('/[^a-z0-9-]/', '', $slug);
+		$slug = trim(preg_replace('/-+/', '-', $slug), '-');
+
+		if ($max_length > 0 && strlen($slug) > $max_length)
+		{
+			$slug = substr($slug, 0, $max_length);
+			// Trim back to the last whole word so we don't cut mid-word.
+			if (strpos($slug, '-') !== false)
+				$slug = preg_replace('/-[^-]*$/', '', $slug);
+			$slug = trim($slug, '-');
+		}
+
+		return $slug;
+	}
+
 	static public function getUserAgent($img_uri)
 	{
 		if (strpos($img_uri, 'https://www.iciparisxl.nl/medias') !== false)
@@ -60,7 +102,7 @@ class ImageHelper
 		$response = \wp_remote_get($img_uri, array(
 			'timeout'     => self::DOWNLOAD_TIMEOUT,
 			'redirection' => 1,
-			'sslverify'   => false,
+			'sslverify'   => WpHttpClient::sslVerifyDefault(),
 			'user-agent'  => self::getUserAgent($img_uri),
 		));
 
@@ -202,5 +244,64 @@ class ImageHelper
 		}
 
 		return implode('/', $segments);
+	}
+
+	/**
+	 * Resize a locally saved image in place so its longest side fits $max_size.
+	 *
+	 * Same path, same format; the original file is replaced. Idempotent by
+	 * construction: a file already within $max_size is never touched, so
+	 * dimensions themselves mark the file as processed. GIFs are skipped
+	 * (GD would flatten animation).
+	 *
+	 * @return bool true only when the file was actually rewritten.
+	 */
+	public static function optimizeImage($full_path, $max_size, $quality)
+	{
+		$max_size = (int) $max_size;
+		$quality = (int) $quality;
+
+		if ($max_size < 1 || !$full_path || !@is_file($full_path))
+			return false;
+
+		$size = @getimagesize($full_path);
+		if (!$size || empty($size[0]) || empty($size[1]))
+			return false;
+
+		if (!empty($size[2]) && $size[2] === IMAGETYPE_GIF)
+			return false;
+
+		if (max($size[0], $size[1]) <= $max_size)
+			return false;
+
+		// Refuse to decode a decompression bomb: skip (return false) so the
+		// backfill cursor advances past it instead of re-OOMing every run.
+		if ((int) $size[0] * (int) $size[1] > self::MAX_DECODE_PIXELS)
+			return false;
+
+		if (function_exists('\wp_raise_memory_limit'))
+			\wp_raise_memory_limit('image');
+
+		try
+		{
+			$editor = \wp_get_image_editor($full_path);
+			if (\is_wp_error($editor))
+				return false;
+
+			if (\is_wp_error($editor->resize($max_size, $max_size, false)))
+				return false;
+
+			if ($quality >= 10 && $quality <= 100)
+				$editor->set_quality($quality);
+
+			$saved = $editor->save($full_path);
+
+			return !\is_wp_error($saved);
+		}
+		catch (\Throwable $e)
+		{
+			error_log('Content Egg: image optimization failed for ' . $full_path . ': ' . $e->getMessage());
+			return false;
+		}
 	}
 }

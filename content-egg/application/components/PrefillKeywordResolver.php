@@ -59,6 +59,9 @@ class PrefillKeywordResolver
                 $module_id = $config['source_module_title'] ?? '';
                 return $this->fromModuleData($post, $module_id, 'title');
 
+            case 'thirsty_link':
+                return $this->fromThirstyLink($post);
+
             case 'ai':
                 return $this->fromAI($post, $modules);
 
@@ -133,6 +136,76 @@ class PrefillKeywordResolver
 
         $this->logNotice(sprintf(__('Field "%s" not found in products for module "%s" on post ID %d.', 'content-egg'), $field, $module_id, $post->ID));
         return '';
+    }
+
+    /**
+     * Keyword = Affiliate URL stored in the product (e.g. a ThirstyAffiliates
+     * cloaked link). A local cloaked link is resolved to its destination URL;
+     * an external URL is used as-is. The resulting URL is passed to the module
+     * search — modules that support URL lookup (Amazon, Aliexpress, Ebay2, ...)
+     * turn it into an exact product match.
+     */
+    protected function fromThirstyLink(\WP_Post $post): string
+    {
+        $meta_key = apply_filters('cegg_prefill_thirsty_link_meta_key', '_product_url', $post);
+
+        $url = get_post_meta($post->ID, $meta_key, true);
+
+        if (!is_string($url) || trim($url) === '')
+        {
+            $this->logNotice(sprintf(__('No affiliate URL found in meta field "%s" for post ID %d.', 'content-egg'), $meta_key, $post->ID));
+            return '';
+        }
+
+        $url = trim($url);
+
+        return $this->resolveThirstyLink($url, $post);
+    }
+
+    /**
+     * Resolve a ThirstyAffiliates cloaked link to its destination URL.
+     *
+     * ThirstyAffiliates stores links as a "thirstylink" custom post type; the
+     * destination is kept in the "_ta_destination_url" post meta. The cloaked
+     * URL is a local link whose last path segment is the thirstylink slug.
+     * Non-local URLs are assumed to already be destination URLs and returned
+     * unchanged.
+     */
+    protected function resolveThirstyLink(string $url, \WP_Post $post): string
+    {
+        // Only local (same-site) links can be ThirstyAffiliates cloaks.
+        $home = trailingslashit(home_url());
+        if (strpos($url, $home) !== 0)
+        {
+            return $url;
+        }
+
+        $path = trim((string) wp_parse_url($url, PHP_URL_PATH), '/');
+        if ($path === '')
+        {
+            return $url;
+        }
+
+        $segments = explode('/', $path);
+        $slug     = end($segments);
+
+        $link = get_page_by_path($slug, OBJECT, 'thirstylink');
+        if (!$link)
+        {
+            $this->logNotice(sprintf(__('ThirstyAffiliates link not found for URL "%s" (post ID %d). Using the original URL.', 'content-egg'), $url, $post->ID));
+            return $url;
+        }
+
+        $destination_meta_key = apply_filters('cegg_prefill_ta_destination_meta_key', '_ta_destination_url', $link);
+        $destination          = get_post_meta($link->ID, $destination_meta_key, true);
+
+        if (!is_string($destination) || trim($destination) === '')
+        {
+            $this->logNotice(sprintf(__('ThirstyAffiliates destination is empty for link "%s" (post ID %d). Using the original URL.', 'content-egg'), $slug, $post->ID));
+            return $url;
+        }
+
+        return trim($destination);
     }
 
     /**

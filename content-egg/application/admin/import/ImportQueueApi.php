@@ -149,6 +149,37 @@ class ImportQueueApi
             wp_send_json_error(['message' => __('Preset not found', 'content-egg')], 404);
         }
 
+        // The edit_posts check above says nothing about what this job will do —
+        // the preset decides the post type and whether the result is published.
+        // Check the capabilities that outcome actually requires, otherwise a
+        // Contributor can queue a preset that publishes.
+        $post_type = ($preset['post_type'] ?? 'post') === 'product' ? 'product' : 'post';
+        $pto       = get_post_type_object($post_type);
+
+        if (!$pto)
+        {
+            wp_send_json_error(
+                ['message' => __('WooCommerce is not active. Please install and activate WooCommerce plugin.', 'content-egg')],
+                409
+            );
+        }
+
+        if (!current_user_can($pto->cap->create_posts))
+        {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'content-egg')], 403);
+        }
+
+        // 'future' cannot be stored on a preset, but a publish preset combined
+        // with scheduled_at becomes a scheduled post, so treat both alike.
+        if (in_array($preset['post_status'] ?? 'publish', ['publish', 'future'], true)
+            && !current_user_can($pto->cap->publish_posts))
+        {
+            wp_send_json_error(
+                ['message' => __('You do not have permission to publish. Use a preset that saves drafts, or ask an administrator.', 'content-egg')],
+                403
+            );
+        }
+
         $queue = ImportQueueModel::model();
 
         // If no payload provided at all: create a single keyword-based job.
