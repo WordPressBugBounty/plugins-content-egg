@@ -32,12 +32,13 @@ final class CreateFeedModuleAbility extends AbilityBase
 
     public function description(): string
     {
+        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
+        // "you only need feed_url" contract must be complete before the cut.
         return 'Creates a new product feed module from a feed URL and schedules the first '
-            . 'import. The feed format (CSV/XML/JSON), compression (none/zip/gz), encoding, '
-            . 'CSV delimiter, currency, merchant domain, a display name (from the feed\'s '
-            . 'advertiser/merchant or domain) and the XML product node are auto-detected from '
-            . 'a sample of the feed, so you normally only need feed_url; pass any of the others '
-            . 'to override a detection. The import runs '
+            . 'import. You normally only need feed_url: the format (CSV/XML/JSON), compression, '
+            . 'encoding, CSV delimiter, currency, merchant domain, display name and XML product '
+            . 'node are all auto-detected from a sample. Pass any of them to override a detection. '
+            . 'The import runs '
             . 'asynchronously — poll content-egg/get-feed-status with the returned module_id '
             . 'until its state is "completed" (or "failed"). With auto_mapping "enabled" '
             . '(default) the plugin maps feed columns to product fields by column-name match, '
@@ -51,7 +52,8 @@ final class CreateFeedModuleAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'feed_name' => array('type' => 'string', 'minLength' => 2, 'maxLength' => 60, 'description' => "Display name for the feed. Omit to auto-name it from the feed's advertiser/merchant (e.g. \"Andyanand US\") or its domain; only pass this when the user asks for a specific name."),
                 'feed_url' => array('type' => 'string', 'description' => 'http(s) URL of the product feed file.'),
@@ -62,7 +64,7 @@ final class CreateFeedModuleAbility extends AbilityBase
                 'domain' => array('type' => 'string', 'description' => 'Default merchant domain for the feed products. Auto-detected from the feed when omitted.'),
                 'auto_mapping' => array('type' => 'string', 'enum' => array('enabled', 'disabled'), 'default' => 'enabled'),
                 'mapping' => array(
-                    'type' => 'object',
+                    'type' => array('object', 'null'),
                     'description' => 'Explicit product-field => feed-column mapping (optional). '
                         . 'Keys are product fields (e.g. "title", "price", "affiliate link", '
                         . '"image link"); values are the matching feed column names.',

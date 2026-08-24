@@ -122,6 +122,42 @@ class PostProductsRestController extends \WP_REST_Controller
             )
         );
 
+        // Single-item write endpoint. The item identity travels in the BODY, not
+        // the path: unique_ids routinely contain "|" (eBay: v1|123|0), and hosts
+        // running a stock mod_security-style ruleset reject any request whose URL
+        // path contains one with a bare 403 before it ever reaches WordPress.
+        // Percent-encoding does not help — the rule matches the decoded path, so
+        // "%7C" (and "%25") are rejected too. Body params sidestep it entirely.
+        \register_rest_route(
+            $this->namespace,
+            '/posts/(?P<post_id>[\d]+)/products/item',
+            array(
+                array(
+                    'methods' => \WP_REST_Server::EDITABLE,
+                    'callback' => array($this, 'update_item'),
+                    'permission_callback' => array($this, 'permissions_check'),
+                    'args' => array(
+                        'module_id' => array('type' => 'string', 'required' => true),
+                        'unique_id' => array('type' => 'string', 'required' => true),
+                        'fields' => array('type' => 'object', 'default' => array()),
+                        'revision' => array('type' => 'string', 'default' => ''),
+                    ),
+                ),
+                array(
+                    'methods' => \WP_REST_Server::DELETABLE,
+                    'callback' => array($this, 'delete_item'),
+                    'permission_callback' => array($this, 'permissions_check'),
+                    'args' => array(
+                        'module_id' => array('type' => 'string', 'required' => true),
+                        'unique_id' => array('type' => 'string', 'required' => true),
+                        'revision' => array('type' => 'string', 'default' => ''),
+                    ),
+                ),
+            )
+        );
+
+        // Legacy path-param form of the same two operations, kept so existing
+        // integrations keep working. New callers should use /products/item above.
         \register_rest_route(
             $this->namespace,
             '/posts/(?P<post_id>[\d]+)/products/(?P<module_id>[a-zA-Z0-9_\-]+)/(?P<unique_id>[^/]+)',
@@ -362,6 +398,13 @@ class PostProductsRestController extends \WP_REST_Controller
             )
             : array();
 
+        // Bridge Pages map product items only — a coupon or a media item is never
+        // a bridge source, so the map is not queried for those families.
+        $bridgeModuleIds = ModuleManager::getInstance()->getParserModuleIdsByTypes(
+            array(ParserModule::PARSER_TYPE_PRODUCT),
+            true
+        );
+
         // Managed families (product + coupon): one store spans both, and the
         // client filters each family's roster by module type.
         foreach ($this->managed_module_ids() as $module_id)
@@ -372,6 +415,13 @@ class PostProductsRestController extends \WP_REST_Controller
                 continue;
 
             $items = array_values($data);
+
+            // Annotate target_post_id / is_canonical_bridge with the same call the
+            // metabox makes, so the manager can show which products already have a
+            // Bridge Page (per-post override wins over canonical; self-links skipped).
+            if (in_array($module_id, $bridgeModuleIds, true))
+                $items = ContentManager::applyBridgeMetaForModuleAdmin($items, $module_id, $post_id);
+
             foreach ($items as &$item)
             {
                 if (!is_array($item))
@@ -533,15 +583,39 @@ class PostProductsRestController extends \WP_REST_Controller
         return null;
     }
 
+    /**
+     * Resolve the (module_id, unique_id) pair an item write targets. Both arrive
+     * in the body on /products/item and in the path on the legacy route, so read
+     * the URL params first and fall back to the request's other sources.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function target($request)
+    {
+        $url = $request->get_url_params();
+
+        $module_id = isset($url['module_id'])
+            ? (string) $url['module_id']
+            : (string) $request->get_param('module_id');
+
+        // Decode the path form only: some setups deliver the route param still
+        // percent-encoded, so a unique_id containing e.g. "|" (eBay: v1|123|0)
+        // arrives as "v1%7C123%7C0" and never matches the stored id. A body value
+        // arrives verbatim and must not be decoded — it may hold a literal "%".
+        $unique_id = isset($url['unique_id'])
+            ? \rawurldecode((string) $url['unique_id'])
+            : (string) $request->get_param('unique_id');
+
+        return array(\sanitize_text_field($module_id), $unique_id);
+    }
+
     public function update_item($request)
     {
         $post_id = (int) $request['post_id'];
-        $module_id = \sanitize_text_field($request['module_id']);
-        // Decode the path segment: some setups deliver the route param still
-        // percent-encoded, so a unique_id containing e.g. "|" (eBay: v1|123|0)
-        // arrives as "v1%7C123%7C0" and never matches the stored id. Idempotent —
-        // these ids carry no literal "%".
-        $unique_id = \rawurldecode((string) $request['unique_id']);
+        list($module_id, $unique_id) = $this->target($request);
+
+        if ($unique_id === '')
+            return new \WP_Error('cegg_invalid_request', \__('A product id is required.', 'content-egg'), array('status' => 400));
 
         if (!$this->valid_module($module_id))
             return new \WP_Error('cegg_invalid_module', \__('Unknown or inactive module.', 'content-egg'), array('status' => 404));
@@ -579,10 +653,10 @@ class PostProductsRestController extends \WP_REST_Controller
     public function delete_item($request)
     {
         $post_id = (int) $request['post_id'];
-        $module_id = \sanitize_text_field($request['module_id']);
-        // See update_item: decode the path param so percent-encoded ids (e.g. "|")
-        // match the stored unique_id.
-        $unique_id = \rawurldecode((string) $request['unique_id']);
+        list($module_id, $unique_id) = $this->target($request);
+
+        if ($unique_id === '')
+            return new \WP_Error('cegg_invalid_request', \__('A product id is required.', 'content-egg'), array('status' => 400));
 
         if (!$this->valid_module($module_id))
             return new \WP_Error('cegg_invalid_module', \__('Unknown or inactive module.', 'content-egg'), array('status' => 404));

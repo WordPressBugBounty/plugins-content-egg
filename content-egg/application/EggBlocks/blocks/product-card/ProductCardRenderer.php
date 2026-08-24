@@ -151,10 +151,33 @@ class ProductCardRenderer
             $cta_label = 'Check price';
         }
 
+        // Block copy wins; a field the block leaves blank falls back to the
+        // product record, which is where update-product's overrides live.
+        // Only title used to fall back here, so a badge set on the product
+        // showed on quick-picks and vanished on product-card — same product,
+        // same override, two answers. Mirrors QuickPicksRenderer.
         $title = trim((string) ($attributes['title'] ?? ''));
         if ($title === '' && !empty($product_item['title']))
         {
             $title = trim((string) $product_item['title']);
+        }
+
+        $badge = trim((string) ($attributes['badge'] ?? ''));
+        if ($badge === '')
+        {
+            $badge = trim((string) ($product_item['badge'] ?? ''));
+        }
+
+        $subtitle = (string) ($attributes['subtitle'] ?? '');
+        if (trim($subtitle) === '')
+        {
+            $subtitle = (string) ($product_item['subtitle'] ?? '');
+        }
+
+        $merchant = trim((string) ($attributes['merchant'] ?? ''));
+        if ($merchant === '')
+        {
+            $merchant = trim((string) ($product_item['merchant'] ?? $product_item['domain'] ?? ''));
         }
 
         $heading_tag_raw = (string) ($attributes['heading_tag'] ?? 'h2');
@@ -171,14 +194,14 @@ class ProductCardRenderer
             'rank' => $rank,
             'has_rank' => $rank > 0,
             'rank_display' => $rank > 0 ? str_pad((string) $rank, 2, '0', STR_PAD_LEFT) : '',
-            'badge' => trim((string) ($attributes['badge'] ?? '')),
+            'badge' => $badge,
             'score' => $score_value,
             'score_denom' => '/ 10',
-            'subtitle' => self::sanitizeRichText((string) ($attributes['subtitle'] ?? '')),
+            'subtitle' => self::sanitizeRichText($subtitle),
             'chips' => $chips,
             'description' => $description,
             'featured_text' => $featured_text,
-            'merchant' => trim((string) ($attributes['merchant'] ?? '')),
+            'merchant' => $merchant,
             'cta_label' => $cta_label,
         ];
     }

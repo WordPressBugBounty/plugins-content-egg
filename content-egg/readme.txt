@@ -1,22 +1,25 @@
 === Content Egg – Affiliate Product Importer & Price Comparison ===
 Contributors: keywordrush
-Tags: affiliate marketing, price comparison, csv import, ai content generation, gutenberg blocks
+Tags: affiliate marketing, price comparison, csv import, affiliate links, gutenberg blocks
 Requires at least: 6.9
-Tested up to: 7.0.3
+Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 11.5.0
+Stable tag: 11.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Import affiliate products, compare prices, and publish structured product reviews with 25+ editorial Gutenberg blocks — all in one affiliate toolkit.
+Import affiliate products, compare prices, and publish product reviews with 25+ editorial Gutenberg blocks.
 
 == Description ==
 
-Content Egg is an affiliate marketing plugin for WordPress and WooCommerce. Import products from multiple networks, compare prices, sync with WooCommerce, and generate SEO-friendly content with AI to boost traffic and affiliate sales.
+Content Egg is an affiliate marketing plugin for WordPress and WooCommerce. It pulls live product data — prices, availability, images, offers — from affiliate networks, supplier feeds and almost any online store, keeps it current on a schedule, and publishes it in your posts as editorial blocks, comparison tables and price lists.
 
-Built for sites that turn structured content into trust, clicks, and conversions — with 25+ editorial Gutenberg blocks, the blocks AI search actually cites.
+Two things make it more than a shortcode-and-table plugin:
 
-Connect your own AI assistant — ChatGPT, Claude, or any agent that can call an API — and work with Content Egg in plain language, secured with a WordPress application password. In the free version the assistant can research your networks and preview a complete Egg Blocks page; saving it to your site needs Content Egg PRO.
+* **25+ Egg Blocks** — labelled, schema-ready article sections (FAQ, pros & cons, methodology, comparison table, verdict) wired straight to your product data. These are the self-contained chunks AI search engines quote.
+* **AI Agents** — connect ChatGPT, Claude, or any assistant that can call an API, then work in plain language: *"Add a live price list of the Ninja air fryer to my review."*
+
+Every feature is in the free version. PRO adds more affiliate networks, more feed slots, and write access for AI agents.
 
 = What is this plugin for? =
 
@@ -26,80 +29,9 @@ Connect your own AI assistant — ChatGPT, Claude, or any agent that can call an
 ✔ WooCommerce listings
 ✔ Daily deals & coupons
 
-Official website: [www.keywordrush.com/contentegg](https://www.keywordrush.com/contentegg "Content Egg Pro WP Plugin")
-Egg Blocks demo: [best-noise-cancelling-headphones](https://demo.keywordrush.com/best-noise-cancelling-headphones/ "Egg Blocks demo article")
-Product templates demo: [content-egg-pro-output-demo](https://demo.keywordrush.com/content-egg-pro-output-demo/ "Content Egg product templates demo")
-Documentation: [ce-docs.keywordrush.com](https://ce-docs.keywordrush.com/ "Content Egg Documentation")
-Video Guides: [YouTube Playlist](https://www.youtube.com/playlist?list=PLGL4BDiCFIaoOUj8DrbjOF1q3u5Xct5_a "Content Egg Video Tutorials")
-AI Power: [www.keywordrush.com/toomuchniche](https://www.keywordrush.com/toomuchniche "Too Much Niche WP Plugin")
+[Official website](https://www.keywordrush.com/contentegg "Content Egg WP Plugin") · [Egg Blocks demo article](https://demo.keywordrush.com/best-noise-cancelling-headphones/ "Egg Blocks demo article") · [Documentation](https://ce-docs.keywordrush.com/ "Content Egg Documentation")
 
-= How It Works =
-
-* **Activate the modules** you need
-* **Add or import products** from supported networks and stores
-* **Publish content and start earning** affiliate commissions
-
-= Plugin Features =
-
-* One-click feed import for full supplier catalogs
-* Scheduled auto-import at custom intervals
-* Bulk keyword import to create product posts
-* WooCommerce sync and autoblogging
-* Automatic price updates with tracker & alerts
-* Monetize existing posts with product prefill
-* Clicks statistics reports
-* Add offers by keyword or product URL
-* Auto-insert affiliate IDs in links
-* 25+ Egg Blocks — editorial Gutenberg blocks for product reviews, roundups, and buying guides
-* Agent Access — drive the plugin from ChatGPT, Claude, or your own AI assistant
-* Price comparison blocks with multiple offers
-* High-conversion templates (ready-made or custom)
-* Create custom templates with ChatGPT
-* Works with any WordPress theme
-* Shortcode support for flexible placement
-* Enrich posts with videos, images, and news
-* Import via CSV, XML, or JSON feeds
-* Integration with Affiliate Egg
-* Uses official APIs for reliability
-* Multi-language support
-
-= Import products in WooCommerce from CSV =
-
-Content Egg includes a special module to work with product feeds.
-
-[youtube https://www.youtube.com/watch?v=jYOmV3vXu0Y]
-
-= Content Egg PRO Version =
-
-**Unlock More Power with Content Egg PRO**
-Get access to advanced modules, integrations, and automation tools that take your affiliate workflow to the next level.
-
-**Free Version:**
-Includes `CSV-XML Feed`, `CJ Links`, `Coupon`, `GdeSlon`, `Google Images`, `Offer`, `Pexels`, `Pexels Videos`, `Pixabay`, `Related Keywords`, `RSS Fetcher`, `Skimlinks Coupons`, `Sovrn`, `Unsplash`, `YouTube`.
-
-**PRO Adds Even More:**
-Includes `Aliexpress`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`, `Billigerde`, `Bol.com`, `CJ Products`, `CityAds.com`, `Coupang`, `Clickbank`, `Daisycon`, `eBay`, `Envato`, `Flipkart`, `Geizhalsde`, `Impact Radius`, `Kelkoogroup`, `Kieskeurig.nl`, `Linkwise`, `Lomadee.com`, `Paytm.com`, `Pepperjam`, `Rakuten (LinkShare)`, `Shopee`, `Walmart`, `Webgains`.
-
-**Agent Access — Free Version:**
-Your AI assistant can research and preview, but not save. It can check your setup, modules and feed status, search products across your networks, find images, videos and coupons, read the products and blocks already on a post, and compose, validate and preview a complete Egg Blocks page before you build it.
-
-**Agent Access — PRO Adds:**
-Your assistant can also do the work, not just plan it: attach products (including custom ones you describe), edit, reorder and remove them, refresh prices, add images, videos and coupons to a post, insert blocks, create a full draft page, set the featured image, publish or schedule it, and manage modules, settings, feeds and new affiliate shops.
-
-▶ [Run Content Egg with ChatGPT: Build Affiliate Articles with AI Agents](https://www.youtube.com/watch?v=E_7tw4ACbH0)
-▶ [Claude Scheduled Tasks for WordPress: Automate Article Publishing](https://www.youtube.com/watch?v=du__HYrMnuU)
-
-Both videos show the PRO workflow end to end, including the steps the free version cannot save.
-
-➡️ Visit us at [www.keywordrush.com/contentegg](https://www.keywordrush.com/contentegg "Content Egg PRO")
-
-= One-Click AI Product Import =
-
-No more copy-pasting product details. With Content Egg, you can import supplier data in one click and instantly turn it into SEO-friendly articles or WooCommerce products — ready to publish and monetize.
-
-[youtube https://www.youtube.com/watch?v=4EI_WLQaWPc]
-
-= Egg Blocks — 25+ Editorial Gutenberg Blocks =
+= Egg Blocks — 25+ Editorial Gutenberg Blocks for Affiliate Content =
 
 Stop building product reviews from generic paragraphs and shortcodes. Egg Blocks are 25+ purpose-built Gutenberg blocks designed for affiliate content — each one semantically labelled, schema-ready, and wired directly to your Content Egg products.
 
@@ -117,9 +49,69 @@ Stop building product reviews from generic paragraphs and shortcodes. Egg Blocks
 
 **EggBlocks Writer:** a free external skill you paste into ChatGPT, Claude, or any capable AI chat. Ask for a full article and the AI outputs ready-to-paste Gutenberg markup using real Egg Blocks. Copy, paste into the WordPress Code Editor, assign your Content Egg products, publish.
 
-[youtube https://www.youtube.com/watch?v=szeXafqiS3I]
+= AI Agents — Run Content Egg from ChatGPT or Claude =
 
-Docs: [AI Generation & FAQ](https://ce-docs.keywordrush.com/egg-blocks/ai-generation-and-faq)
+Connect ChatGPT, Claude, Claude Code, Cursor, or anything that can call an API, then just ask in plain language. Your assistant talks to your site directly over the WordPress REST API — no middleman service, no API keys to manage. Set-up is a WordPress application password, and every action your assistant takes is logged. Requires WordPress 6.9 or newer.
+
+**Free version** — your assistant can research, compose and preview. Content Egg's own write actions are PRO:
+
+* "Which modules are active, and did my CSV feed import last night?"
+* "Search my feeds for robot vacuums under $300."
+* "Find 3 YouTube videos and 5 images for my air fryer post."
+* "What products and blocks are already on 'Best Air Fryers'?"
+* "Compose a roundup of the 5 best countertop blenders with Egg Blocks and show me a preview."
+
+You get the rendered preview plus the finished block markup — paste it into the editor yourself, or let your assistant create the draft through WordPress's own REST API. Editorial blocks land ready to publish; blocks that display products stay empty until products are attached, which is a PRO action.
+
+**PRO** — your assistant does the work on your site, from one message:
+
+* "Create a full roundup article of the 5 best countertop blenders."
+* "Add an FAQ section to my post 'Best Air Fryers'."
+* "Drop a live price list of the Ninja air fryer into my review."
+* "Rewrite this post with Egg Blocks."
+* "Refresh the prices on my Ninja review and set its featured image."
+* "Connect this feed to my site: example.com/products.csv"
+* "Activate the Amazon module and set price updates every 24 hours."
+
+Behind those prompts: attach products (including custom ones you describe), edit, reorder and remove them, refresh prices, add images, videos and coupons, insert blocks, create a full draft page, publish or schedule it, and manage modules, settings, feeds and new affiliate shops.
+
+[youtube https://www.youtube.com/watch?v=E_7tw4ACbH0]
+
+▶ [Claude Scheduled Tasks for WordPress: Automate Article Publishing](https://www.youtube.com/watch?v=du__HYrMnuU)
+
+Both videos show the PRO workflow end to end. Full set-up guide: [AI Agents](https://ce-docs.keywordrush.com/ai-agents).
+
+= Import Products from CSV, XML and JSON Feeds =
+
+Paste a supplier feed URL and the setup wizard detects the format, encoding, currency and CSV settings, lets you map fields against real sample data, then imports in the background with live progress. Feeds are cached between syncs and re-import on the schedule you set — including into WooCommerce.
+
+[youtube https://www.youtube.com/watch?v=jYOmV3vXu0Y]
+
+= Create Product Posts and WooCommerce Products =
+
+No more copy-pasting product details. Turn imported data into posts or WooCommerce products in one click — ready to publish and monetize. Bulk keyword import creates a post per keyword, and product prefill monetizes the posts you already have.
+
+[youtube https://www.youtube.com/watch?v=4EI_WLQaWPc]
+
+= Price Comparison for WordPress =
+
+* **Price Blocks**: Combine offers from multiple networks into one block.
+* **Historical Price Data**: Display past prices to help users find the best purchase times.
+* **Dynamic Charts**: Create charts showing price changes over time.
+* **Price Drop Alerts**: Email alerts for price drops.
+* **EAN Search**: Merge products into a single comparison list using EANs.
+
+= AI Content Generation for Product Reviews =
+
+Write from the product data you imported — title, specs, offers, attributes — instead of from a blank prompt. One click per section:
+
+* Product reviews
+* How-to-use instructions
+* Buyer’s guides
+* Product descriptions
+* Translations, summaries and rewrites
+
+Every prompt is editable and takes dynamic variables for product fields. Works with the current OpenAI (GPT-5.x) and Anthropic (Claude) models.
 
 = Bridge Pages =
 
@@ -131,28 +123,47 @@ Create clean, product-focused landing pages on your site before sending visitors
 
 ▶ [Watch Bridge Pages in action](https://www.youtube.com/watch?v=N4QbbYcBu_k)
 
-= Price Comparison Features =
+= How It Works =
 
-* **Price Blocks**: Combine offers from multiple networks into one block.
-* **Historical Price Data**: Display past prices to help users find the best purchase times.
-* **Dynamic Charts**: Create charts showing price changes over time.
-* **Price Drop Alerts**: Email alerts for price drops.
-* **EAN Search**: Merge products into a single comparison list using EANs.
+* **Activate the modules** you need
+* **Add or import products** from supported networks and stores
+* **Publish content and start earning** affiliate commissions
 
-= AI Content Generation =
+= Plugin Features =
 
-Enhance your affiliate product content effortlessly with our advanced AI integration! Generate unique and valuable content with just one click:
+**Import & sync:** one-click feed import for full supplier catalogs · scheduled auto-import at custom intervals · bulk keyword import to create product posts · CSV, XML and JSON feeds · WooCommerce sync and autoblogging · Affiliate Egg integration for stores without an API · official network APIs
 
-* Product Reviews
-* How-to-Use Instructions
-* Buyer’s Guides
-* Product Descriptions
-* Text Translations
-* Summarizations
-* Rewrites
-* And More...
+**Prices & offers:** automatic price updates with tracker & alerts · price comparison blocks with multiple offers · historical prices and charts · add offers by keyword or product URL · EAN matching · auto-insert affiliate IDs in links
 
-Customize prompts with dynamic variables for tailored content creation.
+**Publish:** 25+ Egg Blocks for reviews, roundups and buying guides · high-conversion product templates (ready-made or custom) · create custom templates with ChatGPT · shortcodes for flexible placement · images, videos, news and coupons · works with any WordPress theme · multi-language
+
+**Automate & measure:** AI Agents (ChatGPT, Claude, MCP) · AI content generation · product prefill for existing posts · Bridge Pages · clicks statistics reports
+
+= Free Version vs Content Egg PRO =
+
+Every feature is in the free version — feed imports, price comparison and price history, AI content generation, Egg Blocks, Bridge Pages, clicks statistics, WooCommerce sync and autoblogging. PRO widens the reach rather than unlocking the basics:
+
+* **28 more network modules** — Amazon, eBay, AliExpress, Walmart, AWIN, CJ, Rakuten and more
+* **50 feed modules** instead of 3
+* **Write access for AI agents** — your assistant builds and edits pages instead of only researching them
+* **Fully automatic AI prefill** — monetize existing posts unattended, start to finish
+
+**Free version modules:**
+Includes `CSV-XML Feed`, `CJ Links`, `Coupon`, `GdeSlon`, `Google Images`, `Offer`, `Pexels`, `Pexels Videos`, `Pixabay`, `Related Keywords`, `RSS Fetcher`, `Skimlinks Coupons`, `Sovrn`, `Unsplash`, `YouTube`.
+
+**PRO adds:**
+Includes `Aliexpress`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`, `Billigerde`, `Bol.com`, `CJ Products`, `CityAds.com`, `Coupang`, `Clickbank`, `Daisycon`, `eBay`, `Envato`, `Flipkart`, `Geizhalsde`, `Impact Radius`, `Kelkoogroup`, `Kieskeurig.nl`, `Linkwise`, `Lomadee.com`, `Paytm.com`, `Pepperjam`, `Rakuten (LinkShare)`, `Shopee`, `Walmart`, `Webgains`.
+
+➡️ Visit us at [www.keywordrush.com/contentegg](https://www.keywordrush.com/contentegg "Content Egg PRO")
+
+= Demos & Guides =
+
+Official website: [www.keywordrush.com/contentegg](https://www.keywordrush.com/contentegg "Content Egg Pro WP Plugin")
+Egg Blocks demo: [best-noise-cancelling-headphones](https://demo.keywordrush.com/best-noise-cancelling-headphones/ "Egg Blocks demo article")
+Product templates demo: [content-egg-pro-output-demo](https://demo.keywordrush.com/content-egg-pro-output-demo/ "Content Egg product templates demo")
+Documentation: [ce-docs.keywordrush.com](https://ce-docs.keywordrush.com/ "Content Egg Documentation")
+Video Guides: [YouTube Playlist](https://www.youtube.com/playlist?list=PLGL4BDiCFIaoOUj8DrbjOF1q3u5Xct5_a "Content Egg Video Tutorials")
+AI Power: [www.keywordrush.com/toomuchniche](https://www.keywordrush.com/toomuchniche "Too Much Niche WP Plugin")
 
 == Installation ==
 
@@ -169,6 +180,20 @@ Installation Instructions
 1. For detailed configuration instructions, refer to the [Content Egg User Guide](https://ce-docs.keywordrush.com/)
 
 == Frequently Asked Questions ==
+
+= What's in the free version? =
+
+Every feature: feed and product import, price comparison and price history, AI content generation, all 25+ Egg Blocks, Bridge Pages, WooCommerce sync, autoblogging, clicks statistics, and AI Agents.
+
+PRO adds 28 more affiliate network modules (Amazon, eBay, AliExpress, Walmart and others), 50 feed modules instead of 3, write access for AI agents, and fully automatic AI prefill.
+
+= Can I use ChatGPT or Claude to run the plugin? =
+
+Yes. Turn on AI Agents, create a WordPress application password, and connect your assistant — the screen gives you the guide text, an OpenAPI profile for ChatGPT Custom GPT actions, and an MCP endpoint for Claude Desktop, Cursor and similar tools. Claude Code, scripts and any HTTP client need no set-up beyond the guide link and your credentials.
+
+Your assistant calls your own site over the WordPress REST API, so no third-party service sits in between, and every Content Egg action is logged on the AI Agents screen. Requires WordPress 6.9 or newer.
+
+In the free version your assistant can read everything and compose a complete page, but Content Egg's write actions — attaching products, inserting blocks, changing modules, settings and feeds — need PRO. An application password is a WordPress credential, so the assistant still has whatever core REST access that user has, including creating and editing posts. Read the [AI Agents guide](https://ce-docs.keywordrush.com/ai-agents).
 
 = What if my advertiser is not yet supported? =
 
@@ -191,7 +216,7 @@ Additionally, you can use merged feeds for multiple merchants, as many affiliate
 
 Amazon is supported in the Pro version with two available modules:
 
-* **Amazon via Official PA API**: Integrate directly with Amazon's Product Advertising API.
+* **Amazon via official API**: Connect with the Amazon Creators API — the current integration, created in Associates Central → Tools → Creators API.
 * **NoAPI Module**: Designed for beginners, this module allows you to make your first sales and gain API access.
 
 = Can I create custom output templates? =
@@ -213,7 +238,7 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 
 1. Modules dashboard
 2. Product import tools
-3. Product search in the Content Egg metabox
+3. Product search — add products by keyword or URL
 4. Product block demo — product card
 5. Product block demo — price comparison
 6. Egg Blocks demo — product card, pros & cons, verdict
@@ -222,11 +247,32 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 9. Egg Blocks demo — quick picks, conclusion
 
 
-== Changelog ==
+== Upgrade Notice ==
 
 = 11.5.0 =
 
-* New: Agent Access — connect your own AI assistant (ChatGPT, Claude, and others) and work with Content Egg in plain language: search products across your networks, find images, videos and coupons, review the products and blocks already on a post, and compose, validate and preview a complete Egg Blocks page. The free version is read-only: the assistant can research and show you the finished page, but saving products, blocks or settings to your site needs Content Egg Pro. Secured with WordPress application passwords; [Guide](https://ce-docs.keywordrush.com/ai-agents).
+Products, coupons, images and videos are now managed in the editor instead of the metabox. Adds AI Agents: run Content Egg from ChatGPT or Claude. Requires WordPress 6.9.
+
+== Changelog ==
+
+= 11.6.0 =
+
+* New: Shops — one screen for every shop in your product data. Give a shop a display name or a logo, or attach a coupon code that shows up beside that shop's offers in your product blocks.
+* New: Shop coupons — set a start and end date, and limit a coupon to chosen categories so it only appears on the posts it applies to. One click copies the code and opens the shop.
+* New: Shop coupons — limit a coupon to specific products, for time-limited per-product promotions like a free bonus item with one product. The offer retires itself on its end date.
+* New: Products — "Copy product reference" in a product row's menu, for binding a coupon to that product.
+* New: Feed modules — import only the products you need from a huge catalog. Filter by category, title or brand, and the rest is skipped before it ever reaches your database.
+* New: All Products — "Bridge Mappings" creates the missing canonical Bridge Page links for product pages you imported earlier, so those products link to your pages site-wide.
+* New: Cashback Tracker integration — the cashback rate now appears in every product template that shows coupons, and reads as a sentence: "Plus 4.5% Cash Back".
+* New: Image Optimization — resize oversized locally saved product images in the background for faster pages. Configurable max size and quality; existing images included.
+* Improved: Egg Blocks could be wrecked by plugins that rewrite post content, such as internal linking tools — a link inserted into a block's stored settings broke the block and left its raw code showing in the article. Content Egg now refuses such a save and keeps the working version.
+* Improved: Shop logos — a shop can now use a logo you choose, instead of whatever the logo provider returns.
+* Improved: Locally saved images get readable, SEO-friendly file names from the product title.
+* Fixed: Feed — sync state was lost with a persistent object cache (Redis, LiteSpeed Cache 7.8+), causing repeated re-imports.
+
+= 11.5.0 =
+
+* New: AI Agents — connect your own AI assistant (ChatGPT, Claude, and others) and work with Content Egg in plain language: search products across your networks, find images, videos and coupons, review the products and blocks already on a post, and compose, validate and preview a complete Egg Blocks page. In the free version the assistant can research and show you the finished page; saving products, blocks or settings to your site needs Content Egg Pro. Secured with WordPress application passwords; [Guide](https://ce-docs.keywordrush.com/ai-agents).
 * New: Product Manager — manage products inside the editor instead of the metabox below: a Content Egg sidebar in the block editor, or inline on Classic/WooCommerce/other post types. Search, add, edit (rich-text), reorder, group, refresh prices, and insert blocks without leaving the editor. Default for new installs; pick your interface under Settings. The classic metabox is now deprecated.
 * New: Coupons manager — manage vouchers and deals in the editor: search coupon networks or add coupons by hand, then list, reorder, edit, and insert them.
 * New: Coupons block — display coupons on the page: all coupons on the post, narrowed by module or group, or specific ones. Aggregates every coupon source into one list.

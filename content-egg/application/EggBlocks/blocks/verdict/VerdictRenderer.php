@@ -107,7 +107,11 @@ class VerdictRenderer
             'score' => trim((string) ($attributes['score'] ?? '')),
             'score_denom' => trim((string) ($attributes['score_denom'] ?? '/ 10')),
             'score_label' => trim((string) ($attributes['score_label'] ?? 'Score')),
-            'title' => trim((string) ($attributes['title'] ?? '')),
+            // Blank title falls back to the bound product, as product-card and
+            // quick-picks do — the block owns its copy, the product fills gaps.
+            'title' => trim((string) ($attributes['title'] ?? '')) !== ''
+                ? trim((string) $attributes['title'])
+                : trim((string) ($resolved_product['title'] ?? '')),
             'award_label' => trim((string) ($attributes['award_label'] ?? '')),
             'chips' => $chips,
             'product_item' => $resolved_product,

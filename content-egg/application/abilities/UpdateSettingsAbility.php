@@ -37,12 +37,10 @@ final class UpdateSettingsAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
-                'settings' => array(
-                    'type' => 'object',
-                    'description' => 'Option key => new value map (partial).',
-                ),
+                'settings' => self::freeFormObject('Option key => new value map (partial).'),
             ),
             'required' => array('settings'),
             'additionalProperties' => false,

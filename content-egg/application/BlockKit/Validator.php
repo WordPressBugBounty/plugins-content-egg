@@ -262,6 +262,7 @@ final class Validator
             }
 
             $attrs = $this->checkAttrs($attrs, $descriptor, $path, $result);
+            $attrs = $this->checkArrayElements($attrs, $descriptor, $path, $result);
             $attrs = $this->sanitizeRichText($attrs, $descriptor);
             $attrs = $this->checkItems($attrs, $descriptor, $path, $result, $post_id, $payload_keys);
 
@@ -403,6 +404,86 @@ final class Validator
         return $attrs;
     }
 
+    /**
+     * Enforce the element kind of every eggb array attribute.
+     *
+     * The one silent failure left in the block path: a wrong element kind
+     * validated clean and rendered nothing. eggb/key-takeaways items as plain
+     * strings returned valid:true with no warning and produced 92 bytes of
+     * empty wrapper; eggb/intro points as objects fatalled inside the renderer
+     * and produced an empty string. Both stamped as success, so the agent had
+     * nothing to self-correct from — the same reasoning that already makes
+     * unknown node keys and unknown attributes fail closed one level up.
+     *
+     * Only the element KIND is enforced, and nothing is ever dropped: the
+     * published shapes are hand-maintained guidance that lags the renderers,
+     * so anything stricter would reject content that renders correctly.
+     */
+    private function checkArrayElements(array $attrs, array $descriptor, string $path, ValidationResult $result): array
+    {
+        if ($descriptor['family'] !== 'eggb')
+        {
+            return $attrs;
+        }
+
+        $slug = substr($descriptor['type'], strlen('eggb/'));
+        $kinds = Hints::ARRAY_ELEMENTS[$slug] ?? array();
+
+        foreach ($kinds as $attr => $kind)
+        {
+            if (!isset($attrs[$attr]) || !is_array($attrs[$attr]))
+            {
+                continue;
+            }
+
+            $wants_object = ($kind !== 'string');
+            $allowed = $wants_object ? self::shapeKeys($slug, $attr, $kind, $descriptor) : array();
+
+            foreach (array_values($attrs[$attr]) as $i => $element)
+            {
+                $epath = $path . '/attrs/' . $attr . '/' . $i;
+
+                if ($wants_object && !is_array($element))
+                {
+                    $result->error($epath, 'bad_item_type',
+                        "Each element of '{$attr}' must be an object, not a " . gettype($element) . '. '
+                            . ($allowed
+                                ? 'Keys: ' . implode(', ', $allowed) . '.'
+                                : "See this block's hint in content-egg/list-blocks for the keys."));
+                    continue;
+                }
+
+                if (!$wants_object && is_array($element))
+                {
+                    $result->error($epath, 'bad_item_type',
+                        "Each element of '{$attr}' must be a plain string, not an object.");
+                    continue;
+                }
+
+                // Deliberately NO unknown-key check inside an element. The
+                // published shapes are agent guidance, not complete key lists:
+                // validating 47 posts of real editor-written content against
+                // them produced 360 complaints about keys that render fine
+                // (key-takeaways items[].title among them). A rule that tells
+                // an agent to delete working content is worse than no rule.
+            }
+        }
+
+        return $attrs;
+    }
+
+    /** Documented keys for one object array, for the error message; [] when undeclared. */
+    private static function shapeKeys(string $slug, string $attr, string $kind, array $descriptor): array
+    {
+        $meta = array(
+            'item_shape' => $descriptor['item_shape'] ?? null,
+            'criteria_shape' => $descriptor['criteria_shape'] ?? null,
+        );
+        $shape = Catalog::elementShape($slug, $attr, $kind, $meta);
+
+        return $shape ? array_keys($shape) : array();
+    }
+
     private function sanitizeRichText(array $attrs, array $descriptor): array
     {
         foreach ($descriptor['rich_text'] as $field)
@@ -444,7 +525,10 @@ final class Validator
             $ipath = $path . '/attrs/items/' . $k;
             if (!is_array($item))
             {
-                $result->error($ipath, 'bad_item', 'Each item must be an object.');
+                // checkArrayElements() already reported this one, with the
+                // block's actual item keys attached; every product_binding=items
+                // block is registered in Hints::ARRAY_ELEMENTS. Reporting it
+                // again just prints two errors for one mistake.
                 continue;
             }
             $ref = is_array($item['product_ref'] ?? null) ? $item['product_ref'] : array();

@@ -61,6 +61,107 @@ final class Hints
         . 'supports # headings, - lists, **bold**, *italic*, [links](url), `code`.';
 
     /**
+     * What the elements of each eggb array attribute have to be.
+     *
+     * block.json declares these attributes as bare arrays, so nothing in the
+     * schema said whether an element is a plain string or an object — and the
+     * answer is per block and not guessable: eggb/intro's `points` takes
+     * strings while eggb/key-takeaways' `items` takes {text} objects. Get it
+     * wrong and the renderer produces an empty block (some fatal on the type
+     * error, some skip every element), which the validator used to stamp
+     * valid:true with no warning — a blank section shipped as a success. This
+     * registry is what lets both the catalog publish the element kind and the
+     * validator reject the wrong one.
+     *
+     * Kinds: 'string', 'object', or 'object:item'/'object:criteria' when the
+     * allowed keys are the item_shape/criteria_shape published below. Each was
+     * read off the block's own renderer, not inferred from the attribute name.
+     *
+     * Nested arrays inside an item (quick-picks items[].chips, comparison-table
+     * criteria[].values) are not covered here; their shape is in the hint.
+     */
+    /**
+     * Element shapes for the object arrays that no item_shape/criteria_shape
+     * covers, because their block has more than one of them.
+     *
+     * Their keys previously lived only in prose hints, which had drifted from
+     * the renderers: the pricing hint promised snake_case `cta_label` where the
+     * renderer reads `ctaLabel`, called `promotions` a string list when it
+     * reads {title, description}, and trust-signals advertised an `icon` on
+     * metrics that sanitizeMetrics() drops. Each entry below was read off the
+     * renderer that consumes it.
+     */
+    const ARRAY_SHAPES = array(
+        'conclusion' => array(
+            'next_steps' => array(
+                'text' => array('type' => 'string'),
+                'url' => array('type' => 'string', 'description' => 'Optional link target.'),
+            ),
+        ),
+        'pricing' => array(
+            'items' => array(
+                'name' => array('type' => 'string', 'description' => 'Tier name, e.g. "Pro".'),
+                'description' => array('type' => 'string'),
+                'price' => array('type' => 'string', 'description' => 'Exact price, e.g. "$9". Leave empty to use priceFrom/priceTo.'),
+                'priceFrom' => array('type' => 'string', 'description' => 'Lower bound; alone renders "From X".'),
+                'priceTo' => array('type' => 'string', 'description' => 'Upper bound; with priceFrom renders a range.'),
+                'billingPeriod' => array('type' => 'string', 'description' => 'e.g. "per month".'),
+                'featuresSummary' => array('type' => 'array', 'description' => 'Feature lines — plain strings.'),
+                'isFeatured' => array('type' => 'boolean', 'description' => 'Highlights this tier.'),
+                'ctaLabel' => array('type' => 'string', 'description' => 'Button text. camelCase — not cta_label.'),
+                'ctaUrl' => array('type' => 'string', 'description' => 'Button link; needed for the button to show.'),
+            ),
+            'promotions' => array(
+                'title' => array('type' => 'string'),
+                'description' => array('type' => 'string'),
+            ),
+        ),
+        'trust-signals' => array(
+            'metrics' => array(
+                'value' => array('type' => 'string', 'description' => 'The figure, e.g. "50k". Required — an empty value drops the metric.'),
+                'label' => array('type' => 'string'),
+            ),
+            'badges' => array(
+                'label' => array('type' => 'string'),
+                'icon' => array('type' => 'string', 'description' => 'Icon key; defaults to shield-check.'),
+            ),
+        ),
+        'toc' => array(
+            'items' => array(
+                'text' => array('type' => 'string', 'description' => 'Entry label. Required — an empty text drops the entry.'),
+                'anchor' => array('type' => 'string'),
+                'sub_items' => array('type' => 'array', 'description' => 'Nested entries, same {text, anchor} shape.'),
+            ),
+        ),
+    );
+
+    const ARRAY_ELEMENTS = array(
+        'comparison-table' => array('items' => 'object:item', 'criteria' => 'object:criteria'),
+        'conclusion' => array('points' => 'string', 'next_steps' => 'object'),
+        'criteria' => array('criteria' => 'object:item'),
+        'definitions' => array('items' => 'object:item'),
+        'faq' => array('items' => 'object:item'),
+        'intro' => array('points' => 'string'),
+        'key-takeaways' => array('items' => 'object:item'),
+        'methodology' => array('items' => 'object:item'),
+        'myth-fact' => array('items' => 'object:item'),
+        'pricing' => array('items' => 'object', 'promotions' => 'object'),
+        'product-card' => array('chips' => 'string'),
+        'pros-cons' => array('pros' => 'string', 'cons' => 'string', 'best_for' => 'string', 'not_for' => 'string'),
+        'quick-picks' => array('items' => 'object:item'),
+        'rating-breakdown' => array('categories' => 'object:item'),
+        'related-posts' => array('items' => 'object:item'),
+        'section-header' => array('chips' => 'string'),
+        'specifications' => array('specs' => 'object:item'),
+        'step-list' => array('steps' => 'object:item'),
+        'testimonial' => array('items' => 'object:item'),
+        'toc' => array('items' => 'object'),
+        'trust-signals' => array('metrics' => 'object', 'badges' => 'object'),
+        'verdict' => array('chips' => 'string'),
+        'where-to-buy' => array('items' => 'object:item'),
+    );
+
+    /**
      * Per-eggb-slug agent guidance. item_shape entries follow block.json
      * attribute style; rich_text lists attrs (or "items[].field") that accept
      * limited HTML via EggbSanitizer::basicRichText.
@@ -81,7 +182,7 @@ final class Hints
         'myth-fact' => array('hint' => 'Myth vs fact pairs; each item may carry an optional verdict badge.', 'rich_text' => array('items[].fact_text', 'items[].why_text'), 'item_shape' => array('myth_text' => array('type' => 'string'), 'fact_text' => array('type' => 'string'), 'why_text' => array('type' => 'string'), 'verdict' => array('type' => 'string', 'description' => 'Optional short verdict badge, e.g. "Mostly false".'), 'verdict_text' => array('type' => 'string', 'description' => 'Optional one-line verdict explanation.'), 'verdict_tone' => array('type' => 'string', 'description' => 'Badge colour cue: true|false|partial.'))),
         'methodology' => array('hint' => 'How-we-tested/reviewed methodology section.', 'rich_text' => array('description', 'note', 'items[].description'), 'item_shape' => array('title' => array('type' => 'string'), 'description' => array('type' => 'string'), 'icon' => array('type' => 'string', 'description' => 'Optional icon key.'))),
         'criteria' => array('hint' => 'Buying criteria/what-to-look-for list.', 'rich_text' => array(), 'item_shape' => array('title' => array('type' => 'string'), 'description' => array('type' => 'string'), 'importance' => array('type' => 'string', 'enum' => array('high', 'medium', 'low'), 'default' => 'medium'), 'look_for' => array('type' => 'string', 'description' => 'What good looks like.'), 'avoid' => array('type' => 'string', 'description' => 'Red flags to avoid.'))),
-        'key-takeaways' => array('hint' => 'TL;DR takeaway bullets near the top of an article.', 'rich_text' => array('note'), 'item_shape' => array('text' => array('type' => 'string'))),
+        'key-takeaways' => array('hint' => 'TL;DR takeaway bullets near the top of an article.', 'rich_text' => array('note'), 'item_shape' => array('text' => array('type' => 'string'), 'title' => array('type' => 'string', 'description' => 'Optional bold lead-in above the text.'))),
         'step-list' => array('hint' => 'Numbered how-to steps.', 'rich_text' => array('note', 'steps[].description'), 'item_shape' => array('title' => array('type' => 'string'), 'description' => array('type' => 'string'))),
         'section-header' => array('hint' => 'Standalone section heading with optional label; TOC-eligible.', 'rich_text' => array(), 'item_shape' => null),
         'rating-breakdown' => array('hint' => 'Per-criterion rating bars (categories).', 'rich_text' => array(), 'item_shape' => array('label' => array('type' => 'string', 'description' => 'Category name, e.g. "Battery".'), 'score' => array('type' => 'string', 'description' => '0–10 scale, e.g. "8.5".'))),
@@ -90,8 +191,8 @@ final class Hints
         'contextual-cta' => array('hint' => 'Inline call-to-action banner.', 'rich_text' => array('text'), 'item_shape' => null),
         // pricing and trust-signals each carry TWO object arrays, so their
         // per-array field lists live in the hint rather than a single item_shape.
-        'pricing' => array('hint' => 'Pricing tiers/plans table (editorial, not product-bound). Two arrays: `items` are tiers — each {name, price, description, cta_label}; `promotions` is a separate string list.', 'rich_text' => array(), 'item_shape' => null),
+        'pricing' => array('hint' => 'Pricing tiers/plans table (editorial, not product-bound). Two arrays, both objects: `items` are tiers, `promotions` is a separate list. The keys of each are on the attribute itself in content-egg/list-blocks.', 'rich_text' => array(), 'item_shape' => null),
         'testimonial' => array('hint' => 'Quote/testimonial cards.', 'rich_text' => array(), 'item_shape' => array('quote' => array('type' => 'string'), 'author' => array('type' => 'string'), 'attribution' => array('type' => 'string', 'description' => 'Role/company under the author. Optional.'), 'rating' => array('type' => 'number', 'description' => '0–5 stars. Optional.'))),
-        'trust-signals' => array('hint' => 'Trust badges/metrics strip (aggregate rating, counts). Two arrays: `metrics` — each {value, label, icon}; `badges` — each {label, icon}. Aggregate rating fields are block-level.', 'rich_text' => array(), 'item_shape' => null),
+        'trust-signals' => array('hint' => 'Trust badges/metrics strip (aggregate rating, counts). Two arrays of objects, `metrics` and `badges`; their keys are on the attribute itself in content-egg/list-blocks. Aggregate rating fields are block-level.', 'rich_text' => array(), 'item_shape' => null),
     );
 }

@@ -62,6 +62,13 @@ defined('\ABSPATH') || exit;
             case 'merchant':
                 TemplateHelper::merchant($item);
                 break;
+            case 'coupon':
+                // Opt-in by field name, like every other case here - this
+                // template renders exactly what the author lists and nothing
+                // more, so the chip must be asked for.
+                if ($coupon = $this->couponChip())
+                    TemplateHelper::couponChip($item, $coupon, $params);
+                break;
             default:
                 break;
         }

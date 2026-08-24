@@ -138,18 +138,25 @@ final class OpenApiGenerator
         foreach ($abilities as $a)
         {
             $description = (string) $a['description'];
-            if (!empty($a['destructive']))
-            {
-                $description .= ' WARNING: destructive operation — confirm with the user before calling.';
-            }
+            $warning = !empty($a['destructive'])
+                ? ' WARNING: destructive operation — confirm with the user before calling.'
+                : '';
+
             // ChatGPT Custom GPT Actions cap each operation description at 300 chars.
             // The full text is served to MCP/REST/Claude; the compact (chatgpt) spec
             // trims it — the rich workflow context lives in the agent guide the user
             // pastes into the GPT's Instructions.
+            //
+            // The warning is appended AFTER trimming, against a budget reserved for
+            // it. Appending first meant the cap ate it off the end: the one line
+            // that tells the agent an operation destroys content was the line most
+            // reliably dropped from the profile that needed it most.
             if ($compact)
             {
-                $description = self::truncate($description, 300);
+                $description = self::truncate($description, 300 - mb_strlen($warning));
             }
+
+            $description .= $warning;
 
             $op = array(
                 'operationId' => str_replace(array('/', '-'), '_', (string) $a['name']),
@@ -182,13 +189,25 @@ final class OpenApiGenerator
             }
             else
             {
+                // $post_all targets the Content Egg proxy, which takes arguments
+                // at the top level; the canonical wp-abilities route this spec
+                // otherwise documents takes them under "input", and that is core's
+                // contract, not ours to flatten. Publishing the flat shape here
+                // means a Custom GPT has no envelope to omit — the failure mode
+                // that made whole-article writes unreliable.
+                $body_schema = self::objectBranch((array) $a['input_schema']);
+                if (!$post_all)
+                {
+                    $body_schema = array(
+                        'type' => 'object',
+                        'properties' => array('input' => $body_schema),
+                        'required' => array('input'),
+                    );
+                }
+
                 $op['requestBody'] = array(
                     'required' => true,
-                    'content' => array('application/json' => array('schema' => array(
-                        'type' => 'object',
-                        'properties' => array('input' => self::objectBranch((array) $a['input_schema'])),
-                        'required' => array('input'),
-                    ))),
+                    'content' => array('application/json' => array('schema' => $body_schema)),
                 );
                 $method = 'post';
             }
@@ -205,7 +224,7 @@ final class OpenApiGenerator
                     . 'WordPress Abilities API. Authenticate with a WordPress application password '
                     . '(HTTP Basic).'
                     . ($post_all
-                        ? ' Each operation is a POST with a JSON body: {"input": { ... }}.'
+                        ? ' Each operation is a POST whose JSON body holds the arguments at the top level, e.g. {"post_id": 12, "mode": "append"}.'
                         : ' Discover all abilities at GET {server}/abilities.')
                     . ' Full agent guide (workflows, block-choice rules): GET {server-site}/wp-json/content-egg/v1/agent-guide.',
             ),
@@ -234,10 +253,6 @@ final class OpenApiGenerator
     }
 
     /**
-     * Input schemas use type ['object','null'] (null = bare GET); OpenAPI
-     * parameters/bodies document the object branch.
-     */
-    /**
      * Shorten to at most $max characters, preferring a clean boundary: end on the
      * last full sentence when one sits past ~60% of the budget, else cut on a word
      * boundary and append an ellipsis. Result is always <= $max.
@@ -251,8 +266,8 @@ final class OpenApiGenerator
 
         $cut = mb_substr($text, 0, $max - 1);
 
-        $period = mb_strrpos($cut, '. ');
-        if ($period !== false && $period > (int) ($max * 0.6))
+        $period = self::lastSentenceEnd($cut, (int) ($max * 0.6));
+        if ($period !== false)
         {
             return mb_substr($cut, 0, $period + 1); // ends on a sentence, no ellipsis
         }
@@ -265,9 +280,66 @@ final class OpenApiGenerator
         return rtrim($cut) . '…';
     }
 
+    /** Periods that end an abbreviation, not a sentence. */
+    const NOT_SENTENCE_END = array('e.g.', 'i.e.', 'etc.', 'vs.');
+
+    /**
+     * Offset of the rightmost sentence-ending ". " sitting past $min, or false.
+     *
+     * Plain strrpos('. ') treats "e.g. " as a sentence end, so a description
+     * truncated there came back reading as a COMPLETE sentence that stops right
+     * where its example was about to start — and with no ellipsis, nothing told
+     * the reader anything had been dropped. Skip those and keep looking left.
+     *
+     * @return int|false
+     */
+    private static function lastSentenceEnd(string $text, int $min)
+    {
+        $offset = mb_strlen($text);
+
+        while ($offset > 0)
+        {
+            $pos = mb_strrpos(mb_substr($text, 0, $offset), '. ');
+            if ($pos === false || $pos <= $min)
+            {
+                return false;
+            }
+
+            $start = max(0, $pos - 3);
+            $window = mb_strtolower(mb_substr($text, $start, $pos - $start + 1));
+
+            $is_abbr = false;
+            foreach (self::NOT_SENTENCE_END as $abbr)
+            {
+                if (mb_substr($window, -mb_strlen($abbr)) === $abbr)
+                {
+                    $is_abbr = true;
+                    break;
+                }
+            }
+
+            if (!$is_abbr)
+            {
+                return $pos;
+            }
+
+            $offset = $pos; // keep searching to the left of this abbreviation
+        }
+
+        return false;
+    }
+
     private static function objectBranch(array $schema): array
     {
         $schema['type'] = 'object';
+        // The root "default" is a server-side device: it lets a call carrying no
+        // input at all validate, because WP_Ability::execute() substitutes it for
+        // null before validating. On the wire it is only harmful — PHP serializes
+        // array() as [], so it would document an array default on an object
+        // schema, which is exactly the kind of type-inconsistency a strict
+        // OpenAPI/JSON-Schema consumer rejects. Callers omit the parameter
+        // instead, so drop it.
+        unset($schema['default']);
         // ChatGPT (and strict OpenAPI validators) reject an object schema with no
         // "properties" key — no-input abilities have none, so emit an empty object
         // (stdClass so it serializes as {} rather than []).

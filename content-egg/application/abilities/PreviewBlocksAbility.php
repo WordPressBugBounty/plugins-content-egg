@@ -29,10 +29,12 @@ final class PreviewBlocksAbility extends AbilityBase
 
     public function description(): string
     {
+        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
+        // post_id/products contract must be complete before the cut.
         return 'Validates a block tree, serializes it, and renders it to HTML exactly as the '
-            . 'frontend would (dynamic blocks execute their render callbacks). Send it as a POST '
-            . 'with a JSON body. Pass post_id when the tree references that post\'s products so '
-            . 'hydration works; pass "products" to let refs validate for a not-yet-created post. '
+            . 'frontend would. Send it as a POST with a JSON body. Pass post_id when the tree '
+            . 'references that post\'s products, or "products" to let refs validate for a post that '
+            . 'does not exist yet. Dynamic blocks execute their render callbacks. '
             . 'Live prices/images/links only hydrate once products are ATTACHED to a real post, so '
             . 'a product-bound block whose ref came only from the "products" payload renders as an '
             . 'empty container — the response then carries an unhydrated_product_ref warning naming '
@@ -52,16 +54,17 @@ final class PreviewBlocksAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
-                'blocks' => array('type' => 'array', 'minItems' => 1, 'items' => array('type' => 'object')),
+                'blocks' => array('type' => 'array', 'minItems' => 1, 'items' => self::blockNodeSchema()),
                 'post_id' => array('type' => 'integer'),
-                'products' => array(
-                    'type' => 'object',
-                    'description' => 'Optional product payload (module_id => items from content-egg/search-products) so '
-                        . 'product_refs validate for a post that does not exist yet.',
-                    'additionalProperties' => array('type' => 'array', 'items' => array('type' => 'object')),
+                'products' => self::productsPayloadSchema(
+                    'Optional product payload (module_id => items from content-egg/search-products, or '
+                        . 'unique_id strings when search_tokens is set) so product_refs validate for a '
+                        . 'post that does not exist yet.'
                 ),
+                'search_tokens' => self::searchTokensSchema(),
             ),
             'required' => array('blocks'),
             'additionalProperties' => false,
@@ -102,7 +105,10 @@ final class PreviewBlocksAbility extends AbilityBase
         }
 
         $post_id = (int) ($input['post_id'] ?? 0);
-        $products = is_array($input['products'] ?? null) ? $input['products'] : array();
+        $products = self::resolveProductSearchTokens(
+            is_array($input['products'] ?? null) ? $input['products'] : array(),
+            is_array($input['search_tokens'] ?? null) ? $input['search_tokens'] : array()
+        );
         $result = (new Validator())->validate($blocks, $post_id, $products);
 
         if (!$result->valid)

@@ -56,7 +56,10 @@ final class Catalog
                 'family' => 'eggb',
                 'title' => (string) ($json['title'] ?? $slug),
                 'hint' => $meta['hint'],
-                'attributes' => (array) ($json['attributes'] ?? array()),
+                'attributes' => self::annotateArrayElements(
+                    self::annotateProductRef((array) ($json['attributes'] ?? array())),
+                    $slug
+                ),
                 'product_binding' => $binding,
                 'rich_text' => $meta['rich_text'],
                 'item_shape' => $meta['item_shape'],
@@ -197,6 +200,120 @@ final class Catalog
     {
         $all = self::all($products_templates);
         return $all[$type] ?? null;
+    }
+
+    /**
+     * Describe the product_ref attribute the way the write path actually reads it.
+     *
+     * It is a registered block attribute, so block.json lists it here — but the
+     * Validator accepts it at the node top level too, and normalizes to that.
+     * Reporting only the attribute location made agents believe the two were in
+     * conflict when both work; every agent that used the catalog asked about it.
+     * Say so, and give the shape, which block.json's bare object never did.
+     *
+     * @param array<string,mixed> $attributes
+     * @return array<string,mixed>
+     */
+    private static function annotateProductRef(array $attributes): array
+    {
+        if (!isset($attributes['product_ref']) || !is_array($attributes['product_ref']))
+        {
+            return $attributes;
+        }
+
+        $attributes['product_ref'] = array(
+            'type' => 'object',
+            'description' => 'Binds the block to one attached product: {module_id, unique_id}. '
+                . 'It appears in two places because the two layers differ, not because one is '
+                . 'legacy: the post STORES it as this block attribute, while the block tree the '
+                . 'abilities speak carries it as a product_ref property at the node top level — '
+                . 'which is what get-post-blocks returns, and the form to write. Sending it here '
+                . 'also validates; the tree is normalized to the top-level form either way.',
+            'properties' => array(
+                'module_id' => array('type' => 'string'),
+                'unique_id' => array('type' => 'string'),
+            ),
+        );
+
+        return $attributes;
+    }
+
+    /**
+     * Say what an array attribute's ELEMENTS are, on the attribute itself.
+     *
+     * block.json declares every one of them as {"type":"array","default":[]},
+     * which is the same schema for eggb/intro's `points` (plain strings) and
+     * eggb/key-takeaways' `items` ({text} objects) — so the catalog described
+     * two incompatible payloads identically and an agent had to infer the
+     * difference from item_shape, prose, or a blank block. A block-level
+     * item_shape also cannot describe a block with two object arrays
+     * (comparison-table, pricing, trust-signals). Attach the element schema to
+     * each array instead; item_shape stays for compatibility.
+     *
+     * @param array<string,mixed> $attributes
+     * @return array<string,mixed>
+     */
+    private static function annotateArrayElements(array $attributes, string $slug): array
+    {
+        $kinds = Hints::ARRAY_ELEMENTS[$slug] ?? array();
+        $meta = Hints::DATA[$slug] ?? array();
+
+        foreach ($kinds as $attr => $kind)
+        {
+            if (!isset($attributes[$attr]) || !is_array($attributes[$attr]))
+            {
+                continue;
+            }
+
+            if ($kind === 'string')
+            {
+                $attributes[$attr]['items'] = array('type' => 'string');
+                $attributes[$attr]['description'] = 'A list of plain strings — NOT objects.';
+                continue;
+            }
+
+            $shape = self::elementShape($slug, $attr, $kind, $meta);
+
+            $items = array('type' => 'object');
+            if (is_array($shape) && $shape)
+            {
+                $items['properties'] = $shape;
+                $attributes[$attr]['description'] = 'A list of objects with these keys — NOT plain strings.';
+            }
+            else
+            {
+                $attributes[$attr]['description'] = 'A list of objects — NOT plain strings. See this block\'s hint for the keys.';
+            }
+            $attributes[$attr]['items'] = $items;
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * The element shape for one object array: the block-level item_shape /
+     * criteria_shape, or the per-array entry for blocks that hold several
+     * object arrays. Null when the block publishes none.
+     *
+     * @param array<string,mixed> $meta Hints::DATA entry for this slug.
+     * @return array<string,mixed>|null
+     */
+    public static function elementShape(string $slug, string $attr, string $kind, array $meta): ?array
+    {
+        if ($kind === 'object:item')
+        {
+            $shape = $meta['item_shape'] ?? null;
+        }
+        elseif ($kind === 'object:criteria')
+        {
+            $shape = $meta['criteria_shape'] ?? null;
+        }
+        else
+        {
+            $shape = Hints::ARRAY_SHAPES[$slug][$attr] ?? null;
+        }
+
+        return is_array($shape) && $shape ? $shape : null;
     }
 
     /** Block attributes from a *Block class, or [] when the class isn't loaded (CLI/tests). */

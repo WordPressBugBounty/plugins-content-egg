@@ -28,6 +28,9 @@ defined('\ABSPATH') || exit;
                                 <?php TemplateHelper::merchant($item); ?>
                             </div>
                             <?php TemplateHelper::closeATag(); ?>
+                            <?php if ($coupon = $this->couponChip()): ?>
+                                <div class="cegg-coupon-wrap"><?php TemplateHelper::couponChip($item, $coupon, $params); ?></div>
+                            <?php endif; ?>
                         </td>
                     <?php endif; ?>
                     <td class="col-4 text-center align-middle">

@@ -68,6 +68,10 @@ class ShortcodeAtts
             'link_target' => '',
             'async' => 0,
             'lazy' => 0,
+            // Empty means "use the Shops settings"; an explicit value overrides
+            // them for this block only.
+            'coupons_display' => '',
+            'coupons_limit' => 0,
         );
 
         $allowed_atts = \apply_filters('cegg_block_shortcode_atts', $allowed_atts);
@@ -128,6 +132,15 @@ class ShortcodeAtts
         $a['link_target'] = strtolower(\sanitize_text_field($a['link_target']));
         $a['async'] = self::toBoolInt($a['async']);
         $a['lazy'] = self::toBoolInt($a['lazy']);
+
+        // An unknown value falls back to the setting rather than silently
+        // hiding every coupon, which is what an empty string would do if it
+        // reached the comparison unchecked.
+        $a['coupons_display'] = strtolower(\sanitize_text_field($a['coupons_display']));
+        if (!in_array($a['coupons_display'], array('inline', 'attached', 'attached_before', 'cards', 'off'), true))
+            $a['coupons_display'] = '';
+
+        $a['coupons_limit'] = abs((int) $a['coupons_limit']);
 
         if (is_numeric($a['border']))
             $a['border'] = abs($a['border']);

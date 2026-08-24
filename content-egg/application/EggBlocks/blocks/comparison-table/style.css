@@ -388,6 +388,245 @@
   color: var(--eggb-text-muted);
 }
 
+/* Own the alignment instead of relying on the Bootstrap utilities (.text-center
+   is !important, so it cannot be overridden per breakpoint). */
+.eggb-ct--product-list .eggb-ct-pl-media {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.eggb-ct--product-list .eggb-ct-pl-value,
+.eggb-ct--product-list .eggb-ct-pl-cta-cell {
+  text-align: center;
+}
+
+/*
+ * Stacked layout: one card per product.
+ * [ thumb + title ] / [ price ] / [ label -> value rows ] / [ full-width CTA ]
+ *
+ * Selectors carry `.eggb-ct-table td` so they outrank the shared
+ * `.eggb-ct--product-list .eggb-ct-table td { border: none }` rule above.
+ */
+@media (max-width: 767.98px) {
+  .eggb-ct--product-list .eggb-ct-table,
+  .eggb-ct--product-list .eggb-ct-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .eggb-ct--product-list .eggb-ct-table thead {
+    display: none;
+  }
+
+  .eggb-ct--product-list .eggb-ct-table tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 1rem;
+  }
+
+  .eggb-ct--product-list .eggb-ct-table tbody tr + tr {
+    border-top: var(--eggb-border-w) solid var(--eggb-border);
+  }
+
+  .eggb-ct--product-list .eggb-ct-table td {
+    display: block;
+    padding: 0;
+    border: none;
+  }
+
+  .eggb-ct--product-list .eggb-ct-thumb {
+    width: 56px;
+    height: 56px;
+  }
+
+  .eggb-ct--product-list .eggb-ct-table td.eggb-ct-pl-product-cell {
+    order: 1;
+    flex: 1 1 100%;
+  }
+
+  /* Criteria rows: label left, value right, one per line. */
+  .eggb-ct--product-list .eggb-ct-table td.eggb-ct-pl-value {
+    order: 3;
+    flex: 1 1 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.7rem;
+    padding-top: 0.7rem;
+    text-align: start;
+    border-top: var(--eggb-border-w) solid var(--eggb-border);
+  }
+
+  .eggb-ct--product-list .eggb-ct-table td.eggb-ct-pl-value[data-label]::before {
+    content: attr(data-label);
+    flex: 0 1 auto;
+    letter-spacing: 0.1em;
+    font-size: var(--eggb-text-xs);
+    text-transform: uppercase;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--eggb-text-muted);
+  }
+
+  .eggb-ct--product-list .eggb-ct-table td.eggb-ct-pl-value .eggb-ct-pl-val {
+    flex: 0 1 auto;
+    min-width: 0;
+    text-align: end;
+  }
+
+  /* Price is promoted out of the criteria list, up under the title. */
+  .eggb-ct--product-list .eggb-ct-table td.eggb-ct-pl-value[data-type="price"] {
+    order: 2;
+    justify-content: flex-start;
+    margin-top: 0.6rem;
+    padding-top: 0;
+    font-size: var(--eggb-text-md);
+    font-weight: 700;
+    border-top: none;
+  }
+
+  .eggb-ct--product-list .eggb-ct-table td.eggb-ct-pl-value[data-type="price"] .eggb-ct-pl-val {
+    text-align: start;
+  }
+
+  /* CTA closes the card, full width for a real tap target. */
+  .eggb-ct--product-list .eggb-ct-table td.eggb-ct-pl-cta-cell {
+    order: 4;
+    flex: 1 1 100%;
+    margin-top: 0.9rem;
+  }
+
+  .eggb-ct--product-list .eggb-ct-table td.eggb-ct-pl-cta-cell .eggb-btn {
+    width: 100%;
+  }
+}
+
+/*
+ * Stay a table while the columns still fit: 3 or fewer criteria above 600px,
+ * 2 or fewer above 480px. Only undoes what the stacked block above changed;
+ * `order` and `flex` are inert in table layout, so they need no reverting.
+ */
+@media (min-width: 600px) and (max-width: 767.98px) {
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-table {
+    display: table;
+  }
+
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-table tbody {
+    display: table-row-group;
+  }
+
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-table thead {
+    display: table-header-group;
+  }
+
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-table tbody tr {
+    display: table-row;
+    padding: 0;
+  }
+
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-table tbody tr + tr {
+    border-top: none;
+  }
+
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-table td {
+    display: table-cell;
+    padding: 0.5rem 0.75rem;
+    border-bottom: var(--eggb-border-w) solid var(--eggb-border);
+  }
+
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-thumb {
+    width: 40px;
+    height: 40px;
+  }
+
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-table td.eggb-ct-pl-value {
+    display: table-cell;
+    margin-top: 0;
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    border-top: none;
+  }
+
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-table td.eggb-ct-pl-value[data-label]::before {
+    content: none;
+  }
+
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-table td.eggb-ct-pl-value[data-type="price"] {
+    font-size: var(--eggb-text-sm);
+    font-weight: inherit;
+  }
+
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-table td.eggb-ct-pl-cta-cell {
+    margin-top: 0;
+  }
+
+  .eggb-ct--product-list:is(.eggb-ct-stack--sm, .eggb-ct-stack--md) .eggb-ct-table td.eggb-ct-pl-cta-cell .eggb-btn {
+    width: auto;
+  }
+}
+
+@media (min-width: 480px) and (max-width: 599.98px) {
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-table {
+    display: table;
+  }
+
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-table tbody {
+    display: table-row-group;
+  }
+
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-table thead {
+    display: table-header-group;
+  }
+
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-table tbody tr {
+    display: table-row;
+    padding: 0;
+  }
+
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-table tbody tr + tr {
+    border-top: none;
+  }
+
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-table td {
+    display: table-cell;
+    padding: 0.5rem 0.75rem;
+    border-bottom: var(--eggb-border-w) solid var(--eggb-border);
+  }
+
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-thumb {
+    width: 40px;
+    height: 40px;
+  }
+
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-table td.eggb-ct-pl-value {
+    display: table-cell;
+    margin-top: 0;
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    border-top: none;
+  }
+
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-table td.eggb-ct-pl-value[data-label]::before {
+    content: none;
+  }
+
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-table td.eggb-ct-pl-value[data-type="price"] {
+    font-size: var(--eggb-text-sm);
+    font-weight: inherit;
+  }
+
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-table td.eggb-ct-pl-cta-cell {
+    margin-top: 0;
+  }
+
+  .eggb-ct--product-list.eggb-ct-stack--sm .eggb-ct-table td.eggb-ct-pl-cta-cell .eggb-btn {
+    width: auto;
+  }
+}
+
 .eggb-ct .eggb-ct-star {
   color: var(--eggb-warning);
 }

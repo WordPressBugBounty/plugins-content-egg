@@ -29,22 +29,22 @@ final class UpdateModuleSettingsAbility extends AbilityBase
     {
         return 'Updates settings of one Content Egg module (partial patch: only the '
             . 'keys you send change). Get valid keys, current values and allowed '
-            . 'choices from content-egg/get-module-settings. Credential fields accept '
-            . 'full values on write even though reads show them masked — never send a '
-            . 'masked ••••… value back. Use activate-module/deactivate-module to change '
+            . 'choices from content-egg/get-module-settings. Never send a '
+            . 'masked ••••… value back. '
+            . 'Credential fields accept '
+            . 'full values on write even though reads show them masked. '
+            . 'Use activate-module/deactivate-module to change '
             . 'the active state, not this ability.';
     }
 
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'module_id' => array('type' => 'string'),
-                'settings' => array(
-                    'type' => 'object',
-                    'description' => 'Option key => new value map (partial).',
-                ),
+                'settings' => self::freeFormObject('Option key => new value map (partial).'),
             ),
             'required' => array('module_id', 'settings'),
             'additionalProperties' => false,

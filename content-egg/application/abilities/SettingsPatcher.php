@@ -5,6 +5,7 @@ namespace ContentEgg\application\abilities;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\Config;
+use ContentEgg\application\components\ShopMigration;
 
 /**
  * SettingsPatcher class file
@@ -26,6 +27,23 @@ final class SettingsPatcher
     /**
      * @return array{applied: string[], values: array}
      */
+    /**
+     * Folds the legacy shop options into ShopStore when - and only when - the
+     * row about to be rewritten still carries them.
+     */
+    private static function maybeMigrateShops($option_name)
+    {
+        $existing = \get_option($option_name);
+
+        if (!is_array($existing))
+            return;
+
+        if (!isset($existing['merchants']) && !isset($existing['merchant_names']))
+            return;
+
+        ShopMigration::maybeRun();
+    }
+
     public static function apply(Config $config, array $patch, array $rejected_keys = array()): array
     {
         if (!$patch)
@@ -34,6 +52,16 @@ final class SettingsPatcher
         }
 
         $meta = (array) $config->getOptionsMeta();
+        // getOptionValues() returns only DEFINED options and the result replaces
+        // the whole row, so this path drops merchant_names/merchants exactly the
+        // way Config::validate() does - and REST never fires admin_init, where
+        // the upgrade ladder lives. Fold them into ShopStore first, or an agent
+        // editing one unrelated setting destroys every shop.
+        //
+        // Gated on the row actually holding them: a module config has no such
+        // keys, so this neither runs nor drags GeneralConfig in for those.
+        self::maybeMigrateShops($config->option_name());
+
         $values = (array) $config->getOptionValues();
         $applied = array();
 
@@ -153,6 +181,16 @@ final class SettingsPatcher
      */
     public static function maskedValues(Config $config): array
     {
+        // getOptionValues() returns only DEFINED options and the result replaces
+        // the whole row, so this path drops merchant_names/merchants exactly the
+        // way Config::validate() does - and REST never fires admin_init, where
+        // the upgrade ladder lives. Fold them into ShopStore first, or an agent
+        // editing one unrelated setting destroys every shop.
+        //
+        // Gated on the row actually holding them: a module config has no such
+        // keys, so this neither runs nor drags GeneralConfig in for those.
+        self::maybeMigrateShops($config->option_name());
+
         $values = (array) $config->getOptionValues();
 
         $options = array();

@@ -58,6 +58,19 @@ use ContentEgg\application\helpers\TemplateHelper;
                         </div>
                     <?php endif; ?>
 
+                    <?php if ($this->isVisible('cashback') && TemplateHelper::getCashbackStr($item)): ?>
+                        <div class="cegg-card-cashback text-success small">
+                            <?php TemplateHelper::cashback($item); ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php // The title column, not the logo column: that one is capped at
+                          // 130px, and since the code never shrinks the discount label
+                          // was pushed out and clipped. Promos already live here. ?>
+                    <?php if ($coupon = $this->couponChip()): ?>
+                        <div class="cegg-coupon-wrap"><?php TemplateHelper::couponChip($item, $coupon, $params); ?></div>
+                    <?php endif; ?>
+
                     <?php if ($this->isVisible('description', false)): ?>
                         <div class="cegg-desc-small card-text small lh-sm  pt-2"><?php echo \wp_kses_post($item['description']); ?></div>
                     <?php endif; ?>
@@ -120,6 +133,11 @@ use ContentEgg\application\helpers\TemplateHelper;
                 <div class="cegg-merchant small fs-6 text-body-secondary text-truncate">
                     <small><?php TemplateHelper::merchant($item); ?></small>
                 </div>
+            <?php endif; ?>
+            <?php // Fallback only: with no title column there is nowhere else to
+                  // put it, and compact drops the discount label that does not fit. ?>
+            <?php if (!$this->isVisible('title') && ($coupon = $this->couponChip())): ?>
+                <div class="cegg-coupon-wrap"><?php TemplateHelper::couponChip($item, $coupon, $params, true); ?></div>
             <?php endif; ?>
             <?php if ($this->isVisible('coupons', false)) : ?>
                 <div class="position-relative fs-6 z-3 small text-truncate">

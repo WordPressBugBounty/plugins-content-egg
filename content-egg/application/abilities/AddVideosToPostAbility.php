@@ -27,11 +27,14 @@ final class AddVideosToPostAbility extends AbilityBase
 
     public function description(): string
     {
-        return 'Attaches videos to a post under one active VIDEO module so a '
-            . 'content-egg/videos block (or the [content-egg-block] shortcode) can render '
-            . 'them. Preferred flow: run content-egg/search-videos, then pass its search_token plus the '
-            . 'chosen unique_ids as items — the server attaches its stored copy of each result, so '
-            . 'full objects never need to be echoed back. (Passing full item objects from '
+        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
+        // search_token contract must be complete before the cut.
+        return 'Attaches videos to a post under one active VIDEO module. '
+            . 'Preferred flow: run content-egg/search-videos, then pass its search_token plus the '
+            . 'chosen unique_ids as items — the server attaches its own stored copy, so '
+            . 'full objects are never echoed back. '
+            . 'A content-egg/videos block (or the [content-egg-block] shortcode) renders them. '
+            . '(Passing full item objects from '
             . 'fields="full" without a token still works.) The module_id must be '
             . 'an active video module (see content-egg/list-modules). Pass a revision to '
             . 'guard against concurrent edits (409 cegg_conflict on mismatch). Returns the '
@@ -41,7 +44,8 @@ final class AddVideosToPostAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'post_id' => array('type' => 'integer', 'minimum' => 1),
                 'module_id' => array('type' => 'string'),
@@ -59,10 +63,6 @@ final class AddVideosToPostAbility extends AbilityBase
                             . 'Without: a full video object from content-egg/search-videos (fields="full"), '
                             . 'passed unchanged.',
                     ),
-                ),
-                'keyword' => array(
-                    'type' => 'string',
-                    'description' => 'Stored as the module search keyword for later auto-updates.',
                 ),
                 'revision' => array('type' => 'string'),
             ),
@@ -104,7 +104,6 @@ final class AddVideosToPostAbility extends AbilityBase
             trim((string) ($input['module_id'] ?? '')),
             ParserModule::PARSER_TYPE_VIDEO,
             is_array($input['items'] ?? null) ? $input['items'] : array(),
-            \sanitize_text_field((string) ($input['keyword'] ?? '')),
             (string) ($input['revision'] ?? ''),
             trim((string) ($input['search_token'] ?? ''))
         );

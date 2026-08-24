@@ -14,6 +14,9 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\libs\amazon\AmazonLocales;
 use ContentEgg\application\models\LinkIndexModel;
 use ContentEgg\application\Translator;
+use ContentEgg\application\components\ShopStore;
+use ContentEgg\application\components\ShopCoupons;
+use ContentEgg\application\components\ShopMigration;
 
 /**
  * TemplateHelper class file
@@ -33,8 +36,15 @@ class TemplateHelper
     const IMG_ORIGINAL = 'original';
 
     static $global_id = 0;
-    static $shop_info = null;
-    static $shop_coupons = null;
+    static $shop_info = array();
+    static $shop_coupons = array();
+
+    /**
+     * The current block's resolved coupons, domain => coupons, set by
+     * TemplateManager::setCoupons(). isVisible() is static and has no manager
+     * reference, so this is how it learns a structured coupon exists.
+     */
+    public static $block_coupons = array();
     static $merchnat_info = null;
     static $star_svg_definited = false;
     static $product_fields = null;
@@ -1341,15 +1351,128 @@ class TemplateHelper
         }
     }
 
+    /**
+     * Whether a rate printed here would be a rate the READER can earn.
+     *
+     * Cashback Tracker can be run in two shapes where it cannot: a coupon-only
+     * site has no cashback programme at all, and a site set to credit the post
+     * author sends every commission to the operator whoever is reading. In
+     * both, a rate beside the offer promises the reader money that will never
+     * reach them - which is the one thing the integration must not do.
+     *
+     * Every call is class_exists-guarded rather than assumed: SiteMode arrived
+     * in Cashback Tracker 3.0 and this has to stay harmless on 2.x.
+     */
+    public static function isCashbackForReader()
+    {
+        if (!self::isCashbackTrakerActive())
+            return false;
+
+        if (class_exists('\CashbackTracker\application\components\SiteMode')
+            && \CashbackTracker\application\components\SiteMode::couponsOnly())
+            return false;
+
+        if (class_exists('\CashbackTracker\application\admin\GeneralConfig')
+            && \CashbackTracker\application\admin\GeneralConfig::getInstance()->option('force_author_id'))
+            return false;
+
+        return true;
+    }
+
     public static function getCashbackStr(array $product)
     {
-        if (GeneralConfig::getInstance()->option('cashback_integration') != 'enabled')
+        if (GeneralConfig::getInstance()->option('cashback_badge') != 'enabled')
             return '';
 
-        if (!self::isCashbackTrakerActive())
+        if (!self::isCashbackForReader())
             return '';
 
-        return \CashbackTracker\application\components\DeeplinkGenerator::getCashbackStrByUrl($product['url']);
+        foreach (self::cashbackUrlCandidates($product) as $url)
+        {
+            if ($rate = self::rateForUrl($url))
+                return $rate;
+        }
+
+        return '';
+    }
+
+    /**
+     * The links worth asking Cashback Tracker about, best first.
+     *
+     * Neither field is right on its own, because the two features that rewrite
+     * a product link move it in opposite directions:
+     *
+     *   cloaked links    'url' becomes a URL on THIS site, and the affiliate
+     *                    link moves to 'aff_url'
+     *   link conversion  'url' becomes the network deeplink, and 'aff_url'
+     *                    keeps the untracked original
+     *
+     * So 'url' is asked first, being what the reader actually clicks, and
+     * 'aff_url' second, for the cloaked case where 'url' leads somewhere no
+     * network would recognise. Pure.
+     */
+    public static function cashbackUrlCandidates(array $product)
+    {
+        $out = array();
+
+        foreach (array('url', 'aff_url') as $key)
+        {
+            if (empty($product[$key]) || !is_string($product[$key]))
+                continue;
+
+            if (!in_array($product[$key], $out, true))
+                $out[] = $product[$key];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Memoized by URL: a row asks once to decide whether it is worth printing
+     * and again to print it, and the lookup behind this walks every module and
+     * then queries for an advertiser.
+     */
+    private static function rateForUrl($url)
+    {
+        static $memo = array();
+
+        if (!array_key_exists($url, $memo))
+            $memo[$url] = (string) \CashbackTracker\application\components\DeeplinkGenerator::getCashbackStrByUrl($url);
+
+        return $memo[$url];
+    }
+
+    /**
+     * What the rate says, which depends on whether the reader is the one who
+     * would earn it.
+     *
+     * DeeplinkGenerator::maybeAddTracking() stamps a link only for a signed-in
+     * user, so a guest who buys from this page earns nothing at all. The rate
+     * on its own reads as a promise either way, and printing the member's
+     * wording at a guest is exactly the "a product link is not a cashback
+     * link" complaint the Cashback Tracker documentation warns about.
+     *
+     * $is_member is injectable so the wording is provable without a session.
+     * Pure.
+     */
+    public static function cashbackLabel($cashback_str, $is_member = null)
+    {
+        $cashback_str = trim((string) $cashback_str);
+
+        if ($cashback_str === '')
+            return '';
+
+        if ($is_member === null)
+            $is_member = (bool) \get_current_user_id();
+
+        // 'Plus %s Cash Back' was already a registered frontend text and is
+        // word-for-word what Cashback Tracker's own WooCommerce notice says,
+        // so sites that have already translated it keep their translation and
+        // the two plugins read the same on one page.
+        /* translators: %s is a cashback rate, e.g. "4.5%" or "2% - 8%". */
+        return $is_member
+            ? sprintf(self::__('Plus %s Cash Back'), $cashback_str)
+            : sprintf(self::__('Sign in to earn %s Cash Back'), $cashback_str);
     }
 
     public static function prepareParamHideVisible($param)
@@ -1371,6 +1494,7 @@ class TemplateHelper
             'badge',
             'merchant',
             'promo',
+            'cashback',
             'rating',
             'disclaimer',
             'price_update',
@@ -1922,57 +2046,100 @@ class TemplateHelper
 
     public static function getShopInfo(array $item)
     {
-        if (!isset($item['domain']))
-            return;
+        if (empty($item['domain']))
+            return '';
 
-        $domain = $item['domain'];
+        $domain = ShopStore::normalizeDomain($item['domain']);
 
-        if (self::$shop_info === null)
+        if ($domain === '')
+            return '';
+
+        if (!isset(self::$shop_info[$domain]))
         {
-            $merchants = GeneralConfig::getInstance()->option('merchants');
-            if (!$merchants)
-                $merchants = array();
-            foreach ($merchants as $merchant)
-            {
+            $shop = ShopStore::get($domain);
+            // A stored record is authoritative, INCLUDING an empty value - that
+            // is how the operator expresses a deletion. Falling back whenever
+            // the value is empty makes the field impossible to clear: the
+            // archive puts it straight back on the next render.
+            $info = $shop !== null ? $shop['info'] : self::legacyShopField($domain, 'shop_info');
 
-                $d = \apply_filters('cegg_shop_info', \do_shortcode($merchant['shop_info']), $domain);
-                self::$shop_info[$merchant['name']] = $d;
-            }
+            self::$shop_info[$domain] = $info === ''
+                ? ''
+                : \apply_filters('cegg_shop_info', \do_shortcode($info), $domain);
         }
 
-        if (isset(self::$shop_info[$domain]))
-            return self::$shop_info[$domain];
-        else
-            return '';
+        return self::$shop_info[$domain];
     }
 
     public static function getShopCoupons(array $item)
     {
-        if (!isset($item['domain']))
+        if (empty($item['domain']))
             return '';
 
-        $domain = $item['domain'];
+        $domain = ShopStore::normalizeDomain($item['domain']);
 
-        if (self::$shop_coupons === null)
+        if ($domain === '')
+            return '';
+
+        if (!isset(self::$shop_coupons[$domain]))
         {
-            $merchants = GeneralConfig::getInstance()->option('merchants');
-            if (!$merchants)
-                $merchants = array();
+            $shop = ShopStore::get($domain);
+            // See getShopInfo(): the fallback is for a shop with no record at
+            // all, not for a record whose value has been cleared.
+            $html = $shop !== null ? $shop['coupons_html'] : self::legacyShopField($domain, 'shop_coupons');
 
-            foreach ($merchants as $merchant)
+            self::$shop_coupons[$domain] = $html === ''
+                ? ''
+                : \apply_filters('cegg_shop_coupons', \do_shortcode($html), $domain);
+        }
+
+        return self::$shop_coupons[$domain];
+    }
+
+    /**
+     * A legacy merchants[] field, read from the archive rather than the live
+     * option.
+     *
+     * Config::validate() rebuilds the option from the keys still defined in
+     * options(); once the merchants definition is gone the next settings save
+     * deletes the stored value, so reading it live would eventually read
+     * nothing. ShopMigration writes the archive for exactly this.
+     */
+    private static function legacyShopField($domain, $field)
+    {
+        static $map = null;
+
+        if ($map === null)
+        {
+            $map = array();
+            $legacy = ShopMigration::legacy();
+            $rows = isset($legacy['merchants']) && is_array($legacy['merchants'])
+                ? $legacy['merchants']
+                : array();
+
+            foreach ($rows as $row)
             {
-                if (!isset($merchant['shop_coupons']))
+                if (!is_array($row) || empty($row['name']))
                     continue;
 
-                $d = \apply_filters('cegg_shop_coupons', \do_shortcode($merchant['shop_coupons']), $domain);
-                self::$shop_coupons[$merchant['name']] = $d;
+                // merchants[].name is a DOMAIN - formatMerchantFields() ran
+                // getHostName() on it before storing.
+                $key = ShopStore::normalizeDomain($row['name']);
+
+                if ($key === '')
+                    continue;
+
+                foreach (array('shop_info', 'shop_coupons') as $f)
+                {
+                    if (isset($map[$key][$f]) && $map[$key][$f] !== '')
+                        continue;
+
+                    $map[$key][$f] = isset($row[$f]) ? (string) $row[$f] : '';
+                }
             }
         }
 
-        if (isset(self::$shop_coupons[$domain]))
-            return self::$shop_coupons[$domain];
-        else
-            return '';
+        return isset($map[$domain][$field]) ? $map[$domain][$field] : '';
     }
 
     public static function printMerchantInfo($item)
@@ -2769,10 +2936,13 @@ class TemplateHelper
         if (!$cashback_str = TemplateHelper::getCashbackStr($item))
             return;
 
+        if (!$label = self::cashbackLabel($cashback_str))
+            return;
+
         if ($display_icon)
             echo '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bag-plus" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 7.5a.5.5 0 0 1 .5.5v1.5H10a.5.5 0 0 1 0 1H8.5V12a.5.5 0 0 1-1 0v-1.5H6a.5.5 0 0 1 0-1h1.5V8a.5.5 0 0 1 .5-.5"/><path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/></svg>' . ' ';
 
-        echo esc_html($cashback_str);
+        echo esc_html($label);
     }
 
     public static function number($item, array $params, $number, $variant = 'primary')
@@ -2978,6 +3148,41 @@ class TemplateHelper
         return self::isVisibleDisclaimer($params, $items) || self::isVisiblePriceUpdate($params, $items);
     }
 
+    /**
+     * Whether the current block resolved a coupon for this item's shop.
+     *
+     * Empty on any path that does not go through a block, which is correct -
+     * there is nothing resolved to show there.
+     */
+    /**
+     * Whether a coupon chip should render in this row.
+     *
+     * Separate from isVisible('coupons') on purpose. That flag is opt-in and
+     * means the legacy HTML popup; a coupon the operator just typed has to
+     * appear without also editing a shortcode, or the feature reads as broken.
+     * hide="coupons" still suppresses both.
+     */
+    public static function isCouponChipVisible(array $item, array $params = array())
+    {
+        if (!empty($params['hide']) && in_array('coupons', $params['hide']))
+            return false;
+
+        if (ShopCoupons::displayMode($params) !== 'inline')
+            return false;
+
+        return self::hasBlockCoupons($item);
+    }
+
+    public static function hasBlockCoupons(array $item)
+    {
+        if (!self::$block_coupons || empty($item['domain']))
+            return false;
+
+        $domain = ShopStore::normalizeDomain($item['domain']);
+
+        return $domain !== '' && !empty(self::$block_coupons[$domain]);
+    }
+
     public static function isVisible(array $item, $field, array $params, array $items = array(), $default = true)
     {
         if ($default == false && isset($params['visible']) && !in_array($field, $params['visible']))
@@ -2989,6 +3194,10 @@ class TemplateHelper
         if ($field == 'price_update')
             return self::isVisiblePriceUpdate($params, $items);
 
+        // Deliberately still the legacy-HTML check. A structured coupon has its
+        // own guard in isCouponChipVisible(): satisfying this one instead would
+        // render an offcanvas link whose panel couponsOffcanvas() refuses to
+        // build, because there is no HTML to put in it.
         if ($field == 'coupons' && !self::getShopCoupons($item))
             return false;
 
@@ -3085,6 +3294,518 @@ class TemplateHelper
             echo esc_attr(' ' . $class1);
         else
             echo esc_attr(' ' . $class2);
+    }
+
+    /**
+     * The coupon chip: discount label, the code, and how long it has left, as
+     * one control that copies the code AND opens the shop.
+     *
+     * Built through linkAttr(), never a hand-rolled <a>: that is what adds rel,
+     * target, the gtag handler, buildDirectClickBeaconAttrs() and the
+     * cegg-click class. Rebuilding the anchor here would drop every coupon
+     * click out of Clicks Stats and the slot would look like it converts
+     * nothing.
+     */
+    public static function couponChip(array $item, $coupon, array $params = array(), $compact = false)
+    {
+        if (!$coupon)
+            return;
+
+        $code = isset($coupon['code']) ? (string) $coupon['code'] : '';
+        $title = isset($coupon['title']) ? (string) $coupon['title'] : '';
+
+        if ($code === '' && $title === '')
+            return;
+
+        \wp_enqueue_script('cegg-products-view');
+
+        $attrs = array('class' => 'cegg-coupon' . ($compact ? ' cegg-coupon-compact' : ''));
+
+        if ($code !== '')
+        {
+            $attrs['data-cegg-coupon-code'] = $code;
+
+            $attrs['title'] = self::couponTooltip($coupon);
+        }
+        elseif (($tip = self::couponTooltip($coupon)) !== '')
+        {
+            $attrs['title'] = $tip;
+        }
+
+        // A coupon carrying its own deeplink brings its own tracking; a
+        // hand-typed one rides the offer's URL. $custom_tag_params wins on
+        // conflicts, so this overrides href cleanly.
+        if (!empty($coupon['link']))
+            $attrs['href'] = $coupon['link'];
+
+        echo '<a ';
+        self::linkAttr($item, $params, $attrs);
+        echo '>';
+
+        if (!$compact && !empty($coupon['discount']))
+            echo '<span class="cegg-coupon-discount">' . \esc_html($coupon['discount']) . '</span>';
+
+        if ($code !== '')
+            echo '<span class="cegg-coupon-code">' . \esc_html($code) . '</span>';
+        else
+            echo '<span class="cegg-coupon-title">' . \esc_html($title) . '</span>';
+
+        echo '</a>';
+
+        // Outside the anchor, on its own line. Inside it the note competed with
+        // the code for a narrow column and pushed the chip past its container -
+        // and the code is the only part the reader cannot do without.
+        if (!$compact && ($note = self::couponExpiryNote($coupon)))
+            echo '<span class="cegg-coupon-ends">' . \esc_html($note) . '</span>';
+    }
+
+    /**
+     * What the chip says on hover.
+     *
+     * The description is the only place a coupon states what it actually
+     * applies to, and neither the chip nor the strip has room to print it -
+     * without this the field is collected and never seen. A deal shows its
+     * description as the chip text, but CSS truncates it, so the tooltip
+     * carries the whole thing there too.
+     */
+    public static function couponTooltip($coupon)
+    {
+        $code = isset($coupon['code']) ? trim((string) $coupon['code']) : '';
+        $description = isset($coupon['title']) ? trim((string) $coupon['title']) : '';
+
+        if ($code === '')
+            return $description;
+
+        if ($description === '')
+        {
+            /* translators: %s = a coupon code */
+            return \sprintf(TemplateHelper::__('Copy %s and open the shop'), $code);
+        }
+
+        /* translators: 1: what the coupon applies to, 2: a coupon code */
+        return \sprintf(TemplateHelper::__('%1$s — copy %2$s and open the shop'), $description, $code);
+    }
+
+    /**
+     * The end date for a coupon card.
+     *
+     * Urgency when the end is close, the plain date otherwise. couponExpiryNote()
+     * alone is wrong here: it is deliberately silent outside its window, and on
+     * a real imported corpus 79% of dated coupons expire more than a week out -
+     * so the card showed no date at all for four in five of them.
+     */
+    /**
+     * The shop-coupon card stylesheet, printed at most once per request.
+     *
+     * A method, not a function declared in the template: template files are NOT
+     * namespaced, so a function declared there lands in the global namespace -
+     * and the card partial is now included in a loop, where a bare declaration
+     * would fatal on the second card.
+     *
+     * Printed inline, NOT hooked on wp_footer. The block editor renders through
+     * the REST endpoint, where wp_footer never fires - a footer hook left every
+     * coupon unstyled in the editor while looking correct on the front end.
+     */
+    public static function shopCouponCss()
+    {
+        static $done = false;
+
+        if ($done)
+            return;
+
+        $done = true;
+
+        ?>
+    <style>
+        .cegg-shop-coupons {
+            display: flex;
+            flex-direction: column;
+            gap: .75rem;
+            margin: 1rem 0;
+        }
+
+        /* The torn-ticket notch, punched with a radial-gradient mask at the
+           perforation. Borrowed from block_coupons_ticket so a coupon looks
+           like a coupon wherever it renders.
+
+           The mask clips any border or box-shadow along the notch curve,
+           which is why this card sits on a flat fill and has neither -
+           adding one back would show as a bitten-off edge. --stub must stay
+           equal to the stub column's width or the notch drifts off the
+           dashed line. */
+        .cegg-shop-coupon {
+            --stub: 150px;
+            --notch: 12px;
+            display: flex;
+            align-items: stretch;
+            background: var(--bs-tertiary-bg, #f6f7f9);
+            border-radius: .5rem;
+            overflow: hidden;
+            -webkit-mask:
+                radial-gradient(var(--notch) at calc(100% - var(--stub)) 0, #0000 98%, #000) top / 100% 51% no-repeat,
+                radial-gradient(var(--notch) at calc(100% - var(--stub)) 100%, #0000 98%, #000) bottom / 100% 51% no-repeat;
+            mask:
+                radial-gradient(var(--notch) at calc(100% - var(--stub)) 0, #0000 98%, #000) top / 100% 51% no-repeat,
+                radial-gradient(var(--notch) at calc(100% - var(--stub)) 100%, #0000 98%, #000) bottom / 100% 51% no-repeat;
+        }
+
+        .cegg-shop-coupon__image {
+            flex: 0 0 96px;
+            width: 96px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: .6rem;
+        }
+
+        .cegg-shop-coupon__image img {
+            max-width: 100%;
+            max-height: 84px;
+            object-fit: contain;
+        }
+
+        .cegg-shop-coupon__body {
+            flex: 1 1 auto;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: .35rem;
+            padding: .85rem 1.1rem;
+        }
+
+        .cegg-shop-coupon__head {
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+            min-width: 0;
+        }
+
+        /* min-width:0 or the nowrap shop name reports its ENTIRE width as the
+           card's minimum, which is what decides whether a column can hold the
+           card or has to wrap it onto its own line. */
+        .cegg-shop-coupon__shop {
+            min-width: 0;
+        }
+
+        .cegg-shop-coupon__logo {
+            display: inline-flex;
+            flex: 0 0 auto;
+            width: 36px;
+            height: 36px;
+        }
+
+        .cegg-shop-coupon__logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .cegg-shop-coupon__shop {
+            font-size: .8125rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Wraps rather than truncates: on an imported corpus the title
+           averages 39 characters and is the whole offer when there is no
+           code. Two lines is the ceiling, so one long entry cannot push the
+           rest of the list off the screen. */
+        .cegg-shop-coupon__title {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
+            line-height: 1.35;
+        }
+
+        .cegg-shop-coupon__details {
+            font-size: .8125rem;
+        }
+
+        /* Scoped to beat `.cegg5-container summary{display:list-item}` in the
+           isolated Bootstrap - (0,1,1) outranks a bare class, so the marker
+           stayed and the caret rendered beside a list bullet instead of
+           inside a flex row. */
+        .cegg-shop-coupon__summary,
+        .cegg5-container .cegg-shop-coupon__summary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            list-style: none;
+            cursor: pointer;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .cegg-shop-coupon__summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .cegg-shop-coupon__summary:after {
+            content: "";
+            width: 5px;
+            height: 5px;
+            margin-top: -3px;
+            border-right: 1.5px solid currentColor;
+            border-bottom: 1.5px solid currentColor;
+            transform: rotate(45deg);
+            transition: transform .18s ease;
+        }
+
+        .cegg-shop-coupon__details[open] .cegg-shop-coupon__summary:after {
+            transform: rotate(-135deg);
+            margin-top: 1px;
+        }
+
+        /* Not clamped: it is behind a toggle now, so opening it should show
+           the whole thing rather than two lines and a dead end. */
+        .cegg-shop-coupon__desc {
+            margin-top: .4rem;
+            line-height: 1.55;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .cegg-shop-coupon__meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .35rem .75rem;
+        }
+
+        /* The date pill and its clock. Scoped to this card rather than left to
+           .cegg-coupon-date from the coupon-module templates: those only load
+           when a coupon MODULE block is on the same page, so on a page with
+           only product blocks the svg had no size and rendered at its natural
+           height, pushing the card apart. */
+        .cegg-shop-coupon .cegg-coupon-date {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            padding: .25rem .6rem;
+            border-radius: 50rem;
+            font-size: .8125rem;
+            background: var(--cegg-secondary-bg, rgba(0, 0, 0, .05));
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .cegg-shop-coupon .cegg-coupon-date svg {
+            width: .9em;
+            height: .9em;
+            flex: 0 0 auto;
+        }
+
+        .cegg-shop-coupon__stub {
+            flex: 0 0 var(--stub);
+            width: var(--stub);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: .85rem;
+            border-left: 2px dashed var(--bs-border-color, rgba(0, 0, 0, .18));
+            text-align: center;
+        }
+
+        /* Once revealed the button stops being a button and becomes the
+           code: dashed, monospace, and carrying a copy glyph so it still
+           reads as something you can act on. */
+        .cegg-shop-coupon__reveal.cegg-coupon-revealed {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .4rem;
+            border-style: dashed;
+            background: transparent;
+            color: inherit;
+            font-weight: 700;
+            letter-spacing: .02em;
+        }
+
+        .cegg-coupon-code-text {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            min-width: 0;
+            word-break: break-all;
+        }
+
+        .cegg-coupon-copy-icon {
+            width: .95em;
+            height: .95em;
+            flex: 0 0 auto;
+            opacity: .7;
+        }
+
+        /* The in-row variant, for a card rendered in a product's own column
+           rather than across the page.
+
+           Measured, not guessed: at full size the card's min-content is 460px -
+           150px stub, 96px image and the rest body - against roughly 486px of
+           usable column beside a 400px product image. That is close enough that
+           the flex row wraps, dropping the product image above the text and
+           breaking the two-column card. Halving the two fixed columns brings the
+           minimum down with room to spare. */
+        /* No stub, so no perforation: the notch is punched at the fold and
+           without one it just bites a chunk out of the right edge. */
+        .cegg-shop-coupon--nostub {
+            -webkit-mask: none;
+            mask: none;
+        }
+
+        .cegg-shop-coupon--compact {
+            --stub: 116px;
+            /* Wrappable, which is the whole fix. A flex row that cannot wrap
+               reports the SUM of its columns as its minimum width, and that sum
+               is what forces the product column wide enough to wrap the card
+               onto its own line. Allowed to wrap, the card's minimum becomes its
+               widest single column instead, and the button simply drops under
+               the text in a narrow theme. */
+            flex-wrap: wrap;
+        }
+
+        /* A query container, so the card can restyle itself against the width it
+           actually gets rather than the viewport - a product column is narrow on
+           a wide screen. It also settles the wrapping question for good:
+           containment means the card no longer contributes to the column's
+           minimum width at all, so no card, however wide its contents, can push
+           the product image onto its own line. */
+        .cegg-bound-coupon {
+            container-type: inline-size;
+        }
+
+        @container (max-width: 420px) {
+            /* Stacked: the notch is punched at the vertical perforation, which
+               is no longer where the fold is, and the stub's left border now
+               separates nothing. Same treatment as the mobile layout.
+
+               420px, because the image and the button take a fixed 160px of it:
+               below that the text column falls under about 230px and the shop
+               name drops out of the head while the date wraps in its pill. The
+               button on its own line is the better trade. */
+            .cegg-shop-coupon--compact {
+                -webkit-mask: none;
+                mask: none;
+            }
+
+            .cegg-shop-coupon--compact .cegg-shop-coupon__stub {
+                flex: 1 1 100%;
+                width: 100%;
+                border-left: 0;
+                border-top: 2px dashed var(--bs-border-color, rgba(0, 0, 0, .18));
+            }
+        }
+
+        /* The stub becomes a column: artwork on top, button under it. Widening
+           the stub a little pays for itself - the image no longer takes a
+           column of its own, so the text still ends up with more room than
+           before. */
+        .cegg-shop-coupon--compact .cegg-shop-coupon__stub {
+            flex-direction: column;
+            gap: .5rem;
+            padding: .6rem .5rem;
+        }
+
+        .cegg-shop-coupon--compact .cegg-shop-coupon__image--stub {
+            flex: 0 0 auto;
+            width: 100%;
+            padding: 0;
+        }
+
+        .cegg-shop-coupon--compact .cegg-shop-coupon__image--stub img {
+            width: 100%;
+            max-height: 56px;
+            border-radius: .25rem;
+        }
+
+        .cegg-shop-coupon--compact .cegg-shop-coupon__body {
+            padding: .6rem .8rem;
+            gap: .25rem;
+            /* basis 0, not auto: with auto the body asks for its content width,
+               overflows the row and wraps under the image, which looks like a
+               bug at every width between "comfortable" and "stacked". At 0 it
+               simply takes what is left and the layout stays deliberate. */
+            flex: 1 1 0;
+        }
+
+        .cegg-shop-coupon--compact .cegg-shop-coupon__logo {
+            width: 26px;
+            height: 26px;
+        }
+
+        .cegg-shop-coupon--compact .cegg-shop-coupon__stub > .btn {
+            width: 100%;
+        }
+
+        .cegg-shop-coupon--compact .cegg-shop-coupon__title {
+            font-size: .9375rem;
+        }
+
+        .cegg-shop-coupon--compact .btn {
+            --bs-btn-padding-x: .5rem;
+            --bs-btn-font-size: .8125rem;
+        }
+
+        @media (max-width: 575.98px) {
+            /* Stacked, so the perforation is horizontal and the vertical
+               notch would land in open space. Dropped rather than
+               repositioned: the dashed fold already reads as a tear. */
+            .cegg-shop-coupon {
+                flex-direction: column;
+                -webkit-mask: none;
+                mask: none;
+            }
+
+            .cegg-shop-coupon__image {
+                flex: 0 0 auto;
+                width: 100%;
+            }
+
+            .cegg-shop-coupon__stub {
+                flex: 0 0 auto;
+                width: 100%;
+                border-left: 0;
+                border-top: 2px dashed var(--bs-border-color, rgba(0, 0, 0, .18));
+            }
+        }
+    </style>
+        <?php
+    }
+
+    public static function couponDateNote($coupon)
+    {
+        if (($note = self::couponExpiryNote($coupon)) !== '')
+            return $note;
+
+        if (empty($coupon['end']))
+            return '';
+
+        /* translators: %s = a date */
+        return \sprintf(TemplateHelper::__('Valid until %s'), self::formatDate((int) $coupon['end']));
+    }
+
+    /**
+     * "ends in 3 days", but only when the end is close. A permanent code should
+     * not wear a date.
+     */
+    public static function couponExpiryNote($coupon)
+    {
+        if (empty($coupon['end']))
+            return '';
+
+        $days = (int) GeneralConfig::getInstance()->option('coupons_expiry_notice_days');
+
+        if ($days < 1)
+            return '';
+
+        $left = (int) $coupon['end'] - time();
+
+        if ($left < 0 || $left > $days * DAY_IN_SECONDS)
+            return '';
+
+        $left_days = (int) ceil($left / DAY_IN_SECONDS);
+
+        if ($left_days <= 1)
+            return TemplateHelper::__('ends today');
+
+        /* translators: %s = number of days */
+        return sprintf(TemplateHelper::__('ends in %s days'), \number_format_i18n($left_days));
     }
 
     public static function couponsOffcanvas(array $item)

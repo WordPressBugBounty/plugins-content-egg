@@ -44,7 +44,8 @@ abstract class AbstractSearchAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'module_id' => array(
                     'type' => 'string',
@@ -66,11 +67,9 @@ abstract class AbstractSearchAbility extends AbilityBase
                     'enum' => array('lean', 'full'),
                     'default' => 'lean',
                 ),
-                'filters' => array(
-                    'type' => 'object',
-                    'description' => 'Module-specific query parameters, passed through to the module '
-                        . '(same keys the Content Egg search UI sends).',
-                    'additionalProperties' => true,
+                'filters' => self::freeFormObject(
+                    'Module-specific query parameters, passed through to the module '
+                        . '(same keys the Content Egg search UI sends).'
                 ),
             ),
             'required' => array('module_id', 'keyword'),

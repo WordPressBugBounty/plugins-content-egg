@@ -89,7 +89,7 @@ use function ContentEgg\prnx;
                 </div>
             <?php endif; ?>
 
-            <?php if ($this->isVisible('cashback')): ?>
+            <?php if ($this->isVisible('cashback') && TemplateHelper::getCashbackStr($item)): ?>
                 <div class="cegg-card-cashback text-success small pt-1">
                     <?php TemplateHelper::cashback($item); ?>
                 </div>
@@ -123,7 +123,26 @@ use function ContentEgg\prnx;
                     <?php endif; ?>
 
                 </div>
+
+                <?php // NOT compact: this is the roomiest layout in the plugin, a
+                      // single product across the full card. Dropping the discount
+                      // label and the expiry note here threw away the space rather
+                      // than using it. ?>
+                <?php // Skipped when a bound card is rendering below: the card already
+                      // carries the code, the dates and the button, so a chip would say
+                      // the same thing twice. ?>
+                <?php if (!$this->cardCoupons() && $coupon = $this->couponChip()): ?>
+                    <div class="cegg-coupon-wrap"><?php TemplateHelper::couponChip($item, $coupon, $params); ?></div>
+                <?php endif; ?>
             <?php endif; ?>
+            <?php // OUTSIDE the merchant guard: a bonus bound to this product is not
+                  // a property of the shop line, and hiding the merchant must not hide
+                  // it. This is the roomiest layout in the plugin, so the coupon gets
+                  // the full card rather than the chip. ?>
+            <?php foreach ($this->cardCoupons() as $row): ?>
+                <div class="cegg-bound-coupon pt-3"><?php include __DIR__ . '/coupon_card.php'; ?></div>
+            <?php endforeach; ?>
+
             <?php if ($this->isVisible('description', false)): ?>
                 <div class="cegg-desc-small small lh-sm pt-3"><?php TemplateHelper::description($item); ?></div>
             <?php endif; ?>

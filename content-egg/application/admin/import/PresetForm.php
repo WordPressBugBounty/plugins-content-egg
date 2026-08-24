@@ -159,6 +159,24 @@ class PresetForm
         // longer exists — generating nothing and yielding an empty title/body.
         $clean = PresetNormalizer::pruneDanglingSinks($clean, $builtInKeys);
 
+        // Detected on $clean, after renames and pruning, so the graph reflects
+        // the names that are actually stored. A cycle cannot be resolved at
+        // import time — one reference in the loop is left empty. This never
+        // blocks the save: presets suffix name collisions rather than refuse
+        // them, and the same rule applies here.
+        $cycles = PresetNormalizer::detectCycles(
+            PresetNormalizer::collectPromptDependencies($clean)
+        );
+
+        foreach ($cycles as $cycle)
+        {
+            $promptResult['notices'][] = sprintf(
+                /* translators: %s: quoted, comma-separated list of custom prompt names */
+                __('Custom prompts %s reference each other in a loop. During import, one reference in the loop will be left empty.', 'content-egg'),
+                '"' . join('", "', $cycle) . '"'
+            );
+        }
+
         self::$lastPromptNotices = $promptResult['notices'];
 
         return $clean;

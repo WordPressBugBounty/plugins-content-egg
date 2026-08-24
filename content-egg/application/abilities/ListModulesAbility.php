@@ -29,10 +29,13 @@ final class ListModulesAbility extends AbilityBase
 
     public function description(): string
     {
+        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
+        // field list it returns must be complete before the cut.
         return 'Lists Content Egg modules: id, name, whether it is active, type '
             . '(product/coupon/image/video/other), whether it is a feed instance (is_feed), '
-            . 'whether it is an Affiliate Egg integration shop (is_ae — a store connected via the '
-            . 'Affiliate Egg plugin, e.g. through content-egg/connect-shop), and display priority. '
+            . 'whether it is an Affiliate Egg integration shop (is_ae), and display priority. '
+            . 'An is_ae module is a store connected via the Affiliate Egg plugin, e.g. through '
+            . 'content-egg/connect-shop. '
             . 'Module families: product modules — including feed modules (is_feed=true) and '
             . 'Affiliate Egg shop modules (is_ae=true), which share the product workflow; '
             . 'coupon modules; and media modules (image + video). Use module_id with the matching '
@@ -43,7 +46,8 @@ final class ListModulesAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'only_active' => array(
                     'type' => 'boolean',

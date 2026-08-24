@@ -47,7 +47,8 @@ final class GetStatusAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'additionalProperties' => false,
         );
     }

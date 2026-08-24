@@ -28,36 +28,38 @@ final class UpdateProductAbility extends AbilityBase
 
     public function description(): string
     {
-        return 'Edits fields of one product attached to a post. Editable fields: title, '
+        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
+        // editing rules must land first; the long field list is deliberately last, so the
+        // clean sentence cut falls just before it rather than mid-list.
+        return 'Edits fields of one product attached to a post. Unknown fields are REJECTED '
+            . 'with the valid list, so a typo cannot look like success; an empty title is '
+            . 'ignored (titles cannot be blanked). Pass the revision from '
+            . 'content-egg/get-post-products to detect concurrent edits. '
+            . 'Editable fields: title, '
             . 'subtitle, description, short_description, price, priceOld, currencyCode, '
             . 'merchant, domain, manufacturer, url, orig_url, img, rating, ratingDecimal, '
             . 'reviewsCount, badge, badge_color, promo, availability, stock_status, '
             . 'shipping_cost, ean, upc, sku, isbn, group, order_num, features, and '
-            . 'extra.priceXpath / extra.deeplink. Unknown fields are REJECTED with the '
-            . 'valid list, so a typo cannot look like success; an empty title is ignored '
-            . '(titles cannot be blanked). badge_color takes a named color '
+            . 'extra.priceXpath / extra.deeplink. badge_color takes a named color '
             . '(primary, secondary, success, danger, warning, info, light or dark), not a '
             . 'hex value — a hex value is cleared to empty. NOTE: on API modules '
             . '(Amazon, eBay) the commerce fields (price, priceOld, currencyCode, '
             . 'availability, stock_status, url, img) are refreshed automatically, so '
             . 'hand-edits to them are transient; editorial fields (title, subtitle, '
             . 'description, badge, rating, reviewsCount…) persist. Feed re-imports may '
-            . 'overwrite mapped columns. Pass the revision from '
-            . 'content-egg/get-post-products to detect concurrent edits.';
+            . 'overwrite mapped columns.';
     }
 
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'post_id' => array('type' => 'integer', 'minimum' => 1),
                 'module_id' => array('type' => 'string'),
                 'unique_id' => array('type' => 'string'),
-                'fields' => array(
-                    'type' => 'object',
-                    'description' => 'Field => new value map.',
-                ),
+                'fields' => self::freeFormObject('Field => new value map.'),
                 'revision' => array('type' => 'string'),
             ),
             'required' => array('post_id', 'module_id', 'unique_id', 'fields'),

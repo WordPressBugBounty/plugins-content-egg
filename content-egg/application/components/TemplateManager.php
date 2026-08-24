@@ -29,6 +29,14 @@ abstract class TemplateManager
     protected $params = array();
     protected $item;
     protected $current_i;
+    protected $coupons = array();
+    protected $coupon_strip_done = false;
+
+    /** item key => built card rows, so item_row can ask more than once. */
+    protected $card_coupons = array();
+
+    /** coupon id => true, for coupons already said inside a row. */
+    protected $coupons_in_row = array();
 
     abstract public function getTempatePrefix();
 
@@ -194,6 +202,12 @@ abstract class TemplateManager
 
         if (!isset($data['i']))
             $data['i'] = $this->current_i;
+
+        // Before the disclaimer, not after the whole block - see
+        // renderCouponStrip(). Runs even when the disclaimer itself renders
+        // nothing, because the strip does not depend on it.
+        if ($view_name === 'disclaimer')
+            $this->renderCouponStrip();
 
         $file = $this->getPartialViewPath($view_name, true);
 
@@ -451,6 +465,217 @@ abstract class TemplateManager
     {
         $this->item = $item;
         $this->current_i = $i;
+    }
+
+    /**
+     * The coupons ShopCoupons::resolve() found for this block, keyed by domain.
+     *
+     * Also mirrored onto TemplateHelper because isVisible() is static and has
+     * no manager to ask - without it the coupons slot short-circuits on the
+     * legacy HTML check and a structured coupon never renders.
+     */
+    public function setCoupons(array $coupons)
+    {
+        $this->coupons = $coupons;
+        $this->coupon_strip_done = false;
+        $this->card_coupons = array();
+        $this->coupons_in_row = array();
+        TemplateHelper::$block_coupons = $coupons;
+    }
+
+    /**
+     * The attached strip, emitted just before the disclaimer.
+     *
+     * Appending it to the finished block output put it after the disclaimer,
+     * after the price-update line and outside the block's bottom margin, so it
+     * read as belonging to the NEXT block. Every template ends by calling
+     * renderBlock('disclaimer') - including any a site copied into
+     * content-egg-templates/ - which makes that one call the only place this
+     * needs to hook.
+     */
+    public function renderCouponStrip()
+    {
+        if ($this->coupon_strip_done)
+            return;
+
+        $this->coupon_strip_done = true;
+
+        // Below-the-block only. The above-the-block placement is prepended to
+        // the finished output in ModuleViewer, where "before the block" is
+        // exactly what prepending means - no partial to hook at the top.
+        if (ShopCoupons::displayMode($this->params) !== 'attached')
+            return;
+
+        echo ShopCoupons::strip($this->coupons, $this->items); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in strip()
+    }
+
+    public function couponStripRendered()
+    {
+        return $this->coupon_strip_done;
+    }
+
+    /**
+     * The coupons resolved for this item's shop, already gated and ranked.
+     */
+    public function coupons($item = null)
+    {
+        if ($item === null)
+            $item = $this->item;
+
+        if (!$item || empty($item['domain']))
+            return array();
+
+        $d = ShopStore::normalizeDomain($item['domain']);
+
+        if (empty($this->coupons[$d]))
+            return array();
+
+        // The resolved map is the union over the block's items, so it can hold a
+        // coupon bound to a different product. Re-filter and re-rank for THIS
+        // row, then apply the per-item limit.
+        $out = array();
+        foreach ($this->coupons[$d] as $c)
+        {
+            if (ShopCoupon::matchesProduct($c, $item))
+                $out[] = $c;
+        }
+
+        if (!$out)
+            return array();
+
+        // postTerms() memoizes, so this costs one query per request, not one per
+        // row.
+        $out = ShopCoupon::sort($out, ShopCoupons::postTerms(), $item);
+
+        $limit = ShopCoupons::limitFor($this->params);
+
+        return $limit > 0 ? array_slice($out, 0, $limit) : $out;
+    }
+
+    /**
+     * The one coupon a row should show, or null.
+     */
+    public function coupon($item = null)
+    {
+        $coupons = $this->coupons($item);
+
+        return $coupons ? $coupons[0] : null;
+    }
+
+    /**
+     * The coupons this row renders as cards INSIDE itself.
+     *
+     * Two placements end up here - a coupon bound to this product in the
+     * inline placement, and the lone coupon of a single-product block in the
+     * cards placement. See ShopCoupons::inRowCoupons() for why those two and
+     * nothing else.
+     *
+     * Whatever this returns is recorded as spoken for, and ModuleViewer drops
+     * it from the cards below the block. Rendering here without that said the
+     * same coupon twice on one page.
+     */
+    public function cardCoupons($item = null)
+    {
+        if ($item === null)
+            $item = $this->item;
+
+        if (!$item || empty($item['domain']))
+            return array();
+
+        // item_row asks twice - once to decide whether a chip belongs, once to
+        // render - and building the rows twice would also mark them consumed
+        // twice.
+        $key = (isset($item['module_id']) ? (string) $item['module_id'] : '') . ':'
+            . (isset($item['unique_id']) ? (string) $item['unique_id'] : '');
+
+        if (isset($this->card_coupons[$key]))
+            return $this->card_coupons[$key];
+
+        $picked = ShopCoupons::inRowCoupons(
+            $this->coupons($item),
+            ShopCoupons::displayMode($this->params),
+            count($this->items)
+        );
+
+        if (!$picked)
+            return $this->card_coupons[$key] = array();
+
+        $domain = ShopStore::normalizeDomain($item['domain']);
+
+        // Named after the shop, not the product: the product's title is the
+        // heading immediately above this card.
+        $rows = ShopCoupons::cardRows(array($domain => $picked), array($item), $this->params, false);
+
+        // The card sits in a column beside the product image, not across the
+        // page. At full size its minimum width is wider than that column can
+        // give, and the row wraps - the product image ends up above the text
+        // instead of beside it.
+        $own_button = $this->isVisible('button');
+
+        foreach ($rows as $i => $row)
+        {
+            $rows[$i]['compact'] = true;
+
+            $c = $row['coupon'];
+
+            // A code-less deal with no Link of its own resolves to this
+            // product's URL - the same place the row's own button already
+            // points, a few pixels above it. Two buttons, one destination.
+            //
+            // Both exceptions keep their button: a coupon with a CODE needs
+            // one, because Show Code reveals and copies (which the product
+            // button cannot do), and a coupon with an explicit Link goes
+            // somewhere the product button does not. So does a row that hides
+            // its own button, or dropping this one would leave nothing to
+            // click at all.
+            $rows[$i]['hide_button'] = $own_button
+                && trim((string) $c['code']) === ''
+                && trim((string) $c['link']) === '';
+        }
+
+        foreach ($picked as $c)
+        {
+            if (!empty($c['id']))
+                $this->coupons_in_row[(string) $c['id']] = true;
+        }
+
+        return $this->card_coupons[$key] = $rows;
+    }
+
+    /**
+     * Coupon ids already rendered inside a row, so the cards below the block
+     * can leave them out.
+     */
+    public function couponsRenderedInRow()
+    {
+        return array_keys($this->coupons_in_row);
+    }
+
+    /**
+     * Kept for templates copied into content-egg-templates/ before cardCoupons
+     * existed. Those keep the behaviour they were written against.
+     */
+    public function boundCoupons($item = null)
+    {
+        if (ShopCoupons::displayMode($this->params) !== 'inline')
+            return array();
+
+        return $this->cardCoupons($item);
+    }
+
+    /**
+     * The coupon this row should render as a chip, or null. Combines the
+     * visibility rules with the pick so a template is one call, not three.
+     */
+    public function couponChip($item = null)
+    {
+        if ($item === null)
+            $item = $this->item;
+
+        if (!$item || !TemplateHelper::isCouponChipVisible($item, $this->params))
+            return null;
+
+        return $this->coupon($item);
     }
 
     public function setParams(array $params)

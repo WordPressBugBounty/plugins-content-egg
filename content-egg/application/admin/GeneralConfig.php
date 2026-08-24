@@ -15,6 +15,8 @@ use ContentEgg\application\components\TemplateManager;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\LocalRedirector;
+use ContentEgg\application\components\ShopStore;
+use ContentEgg\application\components\ShopMigration;
 
 /**
  * GeneralConfig class file
@@ -53,6 +55,8 @@ class GeneralConfig extends Config
             'in stock' => __('in stock', 'content-egg-tpl'),
             'out of stock' => __('out of stock', 'content-egg-tpl'),
             'Show Code' => __('Show Code', 'content-egg-tpl'),
+            'See details' => __('See details', 'content-egg-tpl'),
+            'Get deal' => __('Get deal', 'content-egg-tpl'),
             'Coupons' => __('Coupons', 'content-egg-tpl'),
             'Last updated on %s' => __('Last updated on %s', 'content-egg-tpl'),
             'as of %s' => __('as of %s', 'content-egg-tpl'),
@@ -61,6 +65,7 @@ class GeneralConfig extends Config
             'Free shipping' => __('Free shipping', 'content-egg-tpl'),
             'OFF' => __('OFF', 'content-egg-tpl'),
             'Plus %s Cash Back' => __('Plus %s Cash Back', 'content-egg-tpl'),
+            'Sign in to earn %s Cash Back' => __('Sign in to earn %s Cash Back', 'content-egg-tpl'),
             'Price' => __('Price', 'content-egg-tpl'),
             'Features' => __('Features', 'content-egg-tpl'),
             'Specifications' => __('Specifications', 'content-egg-tpl'),
@@ -75,6 +80,10 @@ class GeneralConfig extends Config
             'Valid until %s' => __('Valid until %s', 'content-egg-tpl'),
             'Copy code' => __('Copy code', 'content-egg-tpl'),
             'Copied!' => __('Copied!', 'content-egg-tpl'),
+            'Copy %s and open the shop' => __('Copy %s and open the shop', 'content-egg-tpl'),
+            '%1$s — copy %2$s and open the shop' => __('%1$s — copy %2$s and open the shop', 'content-egg-tpl'),
+            'ends today' => __('ends today', 'content-egg-tpl'),
+            'ends in %s days' => __('ends in %s days', 'content-egg-tpl'),
             'Set Alert for' => __('Set Alert for', 'content-egg-tpl'),
             'Price History' => __('Price History', 'content-egg-tpl'),
             'Create Your Free Price Drop Alert!' => __('Create Your Free Price Drop Alert!', 'content-egg-tpl'),
@@ -277,9 +286,31 @@ class GeneralConfig extends Config
                 'default' => array('post', 'page', 'product'),
                 'section' => __('General settings', 'content-egg'),
             ),
-            'cashback_integration' => array(
-                'title' => __('Cashback Tracker Integration', 'content-egg'),
-                'description' => sprintf(__('Enable integration with the %s plugin to automatically convert affiliate links into trackable cashback links where applicable.', 'content-egg'), '<a target="_blanl" href="https://www.keywordrush.com/cashbacktracker">Cashback Tracker</a>'),
+            // Two settings, not one, mirroring Cashback Tracker's own pair
+            // under WooCommerce: a catalogue whose links are already network
+            // deeplinks needs no stamping for the rate to be worth printing,
+            // and a site that stamps links may not want a rate in every card.
+            //
+            // Dropdowns, NOT checkboxes: get_current() returns false for a
+            // checkbox missing from a non-empty stored row and never reaches
+            // its default, so every existing install would silently upgrade
+            // with both switched off. Same reason as coupons_use_cashback_tracker.
+            'cashback_tracking' => array(
+                'title' => __('Credit purchases to your members', 'content-egg'),
+                'description' => sprintf(__('Turn product links into %s tracking links, so a purchase is credited to the signed-in member&rsquo;s cashback account.', 'content-egg'), '<a target="_blank" href="https://www.keywordrush.com/cashbacktracker">Cashback Tracker</a>')
+                    . '<p class="description">' . __('A link that already goes through one of your affiliate networks gets the member&rsquo;s tracking id added. A link to any other shop Cashback Tracker knows is replaced with its tracking link &mdash; which means that shop&rsquo;s commission goes through that network instead of any affiliate ID the link carried before. Links to shops it does not know are left exactly as they are.', 'content-egg') . '</p>',
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'enabled' => __('Enabled', 'content-egg'),
+                    'disabled' => __('Disabled', 'content-egg'),
+                ),
+                'default' => 'enabled',
+                'section' => __('General settings', 'content-egg'),
+            ),
+            'cashback_badge' => array(
+                'title' => __('Show the cashback rate', 'content-egg'),
+                'description' => __('Print the rate beside offers from shops Cashback Tracker knows &mdash; &ldquo;Plus 4.5% Cash Back&rdquo;. Visitors who are not signed in are told what they would earn instead.', 'content-egg')
+                    . '<p class="description">' . __('Nothing is shown when your site has cashback features switched off, or when Cashback Tracker is set to credit the post author rather than the reader.', 'content-egg') . '</p>',
                 'callback' => array($this, 'render_dropdown'),
                 'dropdown_options' => array(
                     'enabled' => __('Enabled', 'content-egg'),
@@ -1317,33 +1348,128 @@ class GeneralConfig extends Config
 
     private function getShopsOptions()
     {
-        return array(
+        $section = __('Shops', 'content-egg');
 
-            'merchant_names' => array(
-                'title' => __('Merchant Names', 'content-egg'),
-                'callback' => array($this, 'render_merchant_names_block'),
-                'description' => __('Map a shop domain to a display name (e.g. amazon.com → Amazon). Used for the %MERCHANT% tag and the merchant label in templates.', 'content-egg'),
-                'validator' => array(
-                    array(
-                        'call' => array($this, 'formatMerchantNames'),
-                        'type' => 'filter',
-                    ),
-                ),
-                'default' => array(),
-                'section' => __('Shops', 'content-egg'),
-            ),
-            'merchants' => array(
+        return array(
+            'shops_pointer' => array(
                 'title' => __('Shops', 'content-egg'),
-                'callback' => array($this, 'render_merchants_block'),
+                'callback' => array($this, 'render_shops_pointer'),
+                'default' => '',
+                'section' => $section,
+            ),
+            'coupons_display' => array(
+                'title' => __('Coupons in product blocks', 'content-egg'),
+                'description' => __('Where a shop coupon appears next to that shop&rsquo;s offer.', 'content-egg')
+                    . '<p class="description">' . __('Templates with no room for it &mdash; and any template you copied into content-egg-templates/ &mdash; fall back to the strip.', 'content-egg') . '</p>',
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'inline' => __('Inside the offer row', 'content-egg'),
+                    'attached' => __('In a strip below the block', 'content-egg'),
+                    'attached_before' => __('In a strip above the block', 'content-egg'),
+                    'cards' => __('As coupon cards below the block', 'content-egg'),
+                    'off' => __('Do not show coupons', 'content-egg'),
+                ),
+                'default' => 'inline',
+                'section' => $section,
+            ),
+            'coupon_types' => array(
+                'title' => __('Which coupons in the row and strip', 'content-egg'),
+                'description' => __('A deal has no code. Next to a buy button that already links to the shop it adds a line and nothing the reader could not get by clicking, so codes only is the default.', 'content-egg')
+                    . '<p class="description">' . __('Coupon cards always show both &mdash; there a deal is the whole offer, with its own title and button, rather than a redundant line beside one.', 'content-egg') . '</p>',
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'codes' => __('Codes only', 'content-egg'),
+                    'codes_and_deals' => __('Codes and deals', 'content-egg'),
+                ),
+                'default' => 'codes',
+                'section' => $section,
+            ),
+            'coupons_limit' => array(
+                'title' => __('Coupons per shop', 'content-egg'),
+                'description' => __('How many coupons render beside one shop&rsquo;s offer.', 'content-egg'),
+                'callback' => array($this, 'render_input'),
+                'default' => 1,
                 'validator' => array(
+                    'trim',
                     array(
-                        'call' => array($this, 'formatMerchantFields'),
+                        'call' => array($this, 'couponsLimitFilter'),
                         'type' => 'filter',
                     ),
                 ),
-                'default' => array(),
-                'section' => __('Shops', 'content-egg'),
+                'section' => $section,
             ),
+            'coupons_expiry_notice_days' => array(
+                'title' => __('Show &ldquo;ends in N days&rdquo; within', 'content-egg'),
+                'description' => __('Days. A permanent code should not wear a date, so this only appears when the end is close. Set 0 to never show it.', 'content-egg'),
+                'callback' => array($this, 'render_input'),
+                'default' => 7,
+                'validator' => array(
+                    'trim',
+                    array(
+                        'call' => 'absint',
+                        'type' => 'filter',
+                    ),
+                ),
+                'section' => $section,
+            ),
+            // A dropdown, NOT a checkbox. get_current() returns false for a
+            // checkbox missing from a non-empty stored row and never reaches its
+            // default, so every existing install would silently upgrade with
+            // this switched off - and a missing coupon looks like a bug, not a
+            // setting. A dropdown falls through to get_default().
+            'coupons_use_cashback_tracker' => array(
+                'title' => __('Cashback Tracker coupons', 'content-egg'),
+                'description' => __('Pour the coupons Cashback Tracker imports from your affiliate networks into the same slots. Your own coupons always win.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'enabled' => __('Use them', 'content-egg'),
+                    'disabled' => __('Ignore them', 'content-egg'),
+                ),
+                'default' => 'enabled',
+                'section' => $section,
+            ),
+        );
+    }
+
+    public function couponsLimitFilter($value)
+    {
+        $value = (int) $value;
+
+        if ($value < 1)
+            $value = 1;
+        if ($value > 10)
+            $value = 10;
+
+        return $value;
+    }
+
+    public function render_shops_pointer($args)
+    {
+        $shops = ShopStore::all();
+        $count = count($shops);
+
+        $coupons = 0;
+        foreach ($shops as $shop)
+            $coupons += isset($shop['coupons']) ? count($shop['coupons']) : 0;
+
+        echo '<p>';
+        printf(
+            /* translators: 1: number of shops, 2: number of coupons */
+            \esc_html__('%1$s shops, %2$s coupons.', 'content-egg'),
+            '<strong>' . \esc_html(\number_format_i18n($count)) . '</strong>',
+            '<strong>' . \esc_html(\number_format_i18n($coupons)) . '</strong>'
+        );
+        echo '</p>';
+
+        echo '<p><a class="button" href="' . \esc_url(\admin_url('admin.php?page=content-egg-shops')) . '">'
+            . \esc_html__('Manage shops and coupons', 'content-egg') . '</a></p>';
+
+        echo '<p class="description">' . \esc_html__('Content Egg finds shops in your product data automatically. That screen is where you customize one — its display name, its logo, or a coupon code shown beside its offers.', 'content-egg') . '</p>';
+    }
+
+    private function getDeprecatedOptions()
+    {
+        return array(
             'popup_type' => array(
                 'title' => __('Popup type', 'content-egg') . ' (' . __('Deprecated', 'content-egg') . ')',
                 'callback' => array($this, 'render_dropdown'),
@@ -1352,14 +1478,8 @@ class GeneralConfig extends Config
                     'modal' => __('Modal', 'content-egg'),
                 ),
                 'default' => 'popover',
-                'section' => __('Shops', 'content-egg'),
+                'section' => __('Deprecated', 'content-egg'),
             ),
-        );
-    }
-
-    private function getDeprecatedOptions()
-    {
-        return array(
             'button_color' => array(
                 'title' => __('Button Color', 'content-egg'),
                 'description' => __('Please use the "Button Variant" and "Colors" options instead.', 'content-egg'),
@@ -1815,38 +1935,66 @@ class GeneralConfig extends Config
      */
     public static function getMappedMerchantName($domain)
     {
+        if (!$domain)
+            return '';
+
+        $shop = ShopStore::get($domain);
+
+        // A stored record wins even when its name is empty - that is a cleared
+        // display name, not a missing one. Falling back on empty would make the
+        // field impossible to clear.
+        if ($shop !== null)
+            return $shop['name'];
+
+        // The archive, not the live merchant_names option: once that field
+        // definition leaves options(), Config::validate() stops carrying it and
+        // the next settings save deletes it. See ShopMigration.
+        return self::legacyMerchantName(ShopStore::normalizeDomain($domain));
+    }
+
+    private static function legacyMerchantName($domain)
+    {
         static $map = null;
 
         if ($map === null)
         {
             $map = array();
-            $rows = self::getInstance()->option('merchant_names');
-            if (is_array($rows))
+            $legacy = ShopMigration::legacy();
+            $rows = isset($legacy['merchant_names']) && is_array($legacy['merchant_names'])
+                ? $legacy['merchant_names']
+                : array();
+
+            foreach ($rows as $row)
             {
-                foreach ($rows as $row)
-                {
-                    if (empty($row['domain']) || !isset($row['name']) || $row['name'] === '')
-                        continue;
-                    $map[$row['domain']] = $row['name'];
-                }
+                if (!is_array($row) || empty($row['domain']) || !isset($row['name']) || $row['name'] === '')
+                    continue;
+
+                $key = ShopStore::normalizeDomain($row['domain']);
+
+                if ($key !== '' && !isset($map[$key]))
+                    $map[$key] = $row['name'];
             }
         }
-
-        if (!$domain)
-            return '';
 
         return isset($map[$domain]) ? $map[$domain] : '';
     }
 
     public static function isShopInfoAvailable()
     {
-        $merchants = GeneralConfig::getInstance()->option('merchants');
-        if (!$merchants)
+        foreach (ShopStore::all() as $shop)
+        {
+            if (!empty($shop['info']))
+                return true;
+        }
+
+        $legacy = ShopMigration::legacy();
+
+        if (empty($legacy['merchants']) || !is_array($legacy['merchants']))
             return false;
 
-        foreach ($merchants as $merchant)
+        foreach ($legacy['merchants'] as $merchant)
         {
-            if ($merchant['shop_info'])
+            if (!empty($merchant['shop_info']))
                 return true;
         }
 

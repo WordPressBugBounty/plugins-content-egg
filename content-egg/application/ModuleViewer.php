@@ -15,6 +15,7 @@ use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\components\ProductBindingFilter;
 use ContentEgg\application\components\ShortcodeAtts;
 use ContentEgg\application\helpers\TemplateHelper;
+use ContentEgg\application\components\ShopCoupons;
 
 /**
  * ModuleViewer class file
@@ -434,7 +435,42 @@ class ModuleViewer
         $tpl_manager->setParams($params);
         $tpl_manager->setItems($items);
 
-        return $tpl_manager->render($params['template'], array('data' => $data, 'items' => $items, 'post_id' => $post_id, 'params' => $params, 'title' => $title, 'cols' => $cols, 'sort' => $params['sort'], 'order' => $params['order'], 'groups' => $params['groups'], 'btn_text' => $params['btn_text'], 'atts' => $params, 'content' => $content));
+        // The only point where the final $items and the post are both known.
+        // Resolving per row would cost one store read and one source call per
+        // merchant in the block.
+        $coupons = ShopCoupons::resolve($items, $params);
+        $tpl_manager->setCoupons($coupons);
+
+        $out = $tpl_manager->render($params['template'], array('data' => $data, 'items' => $items, 'post_id' => $post_id, 'params' => $params, 'title' => $title, 'cols' => $cols, 'sort' => $params['sort'], 'order' => $params['order'], 'groups' => $params['groups'], 'btn_text' => $params['btn_text'], 'atts' => $params, 'content' => $content));
+
+        $coupons_display = ShopCoupons::displayMode($params);
+
+        if ($out && $coupons_display === 'cards')
+        {
+            // A coupon the template already rendered inside a product row is
+            // spoken for. Without this the single-coupon card appears in the
+            // row AND below the block, saying the same thing twice a few
+            // pixels apart.
+            $coupons = ShopCoupons::without($coupons, $tpl_manager->couponsRenderedInRow());
+
+            // After the product render has finished, never inside it: the
+            // coupon templates drive setItem() and the manager is a singleton.
+            $out .= ShopCoupons::cards($coupons, $items, $params);
+        }
+        elseif ($out && $coupons_display === 'attached_before')
+        {
+            $out = ShopCoupons::strip($coupons, $items) . $out;
+        }
+        elseif ($out && $coupons_display === 'attached' && !$tpl_manager->couponStripRendered())
+        {
+            // Below-the-block normally renders inside the block, just before
+            // the disclaimer - see TemplateManager::renderCouponStrip(). This
+            // is the fallback for a template that never calls that partial;
+            // appending is worse placement, but better than losing the coupons.
+            $out .= ShopCoupons::strip($coupons, $items);
+        }
+
+        return $out;
     }
 
     private function getSourcedBlockData(array $module_ids, array $sources, array $params)

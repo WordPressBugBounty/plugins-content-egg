@@ -4,6 +4,7 @@ namespace ContentEgg\application\helpers;
 
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\components\ShopStore;
 
 
 
@@ -74,13 +75,16 @@ class LogoHelper
     /** Build remote URL based on chosen provider or explicit logo. */
     private static function resolveRemoteLogoUrl(array $item)
     {
-        // Explicit logo URL takes absolute priority as remote source.
-        /*
-        if (!empty($item['logo']) && filter_var($item['logo'], FILTER_VALIDATE_URL))
+        // A per-shop override wins outright. Until the Shops screen existed
+        // there was no way to set one, and the default provider (Clearbit) no
+        // longer returns images - so a broken logo had no manual fix at all.
+        if (!empty($item['domain']))
         {
-            return $item['logo'];
+            $shop = ShopStore::get($item['domain']);
+
+            if ($shop && $shop['logo'] !== '' && filter_var($shop['logo'], FILTER_VALIDATE_URL))
+                return $shop['logo'];
         }
-        */
 
         // Need domain for provider‑based logo.
         if (empty($item['domain']))

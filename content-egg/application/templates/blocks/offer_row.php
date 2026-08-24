@@ -34,6 +34,11 @@ use ContentEgg\application\helpers\TemplateHelper;
                         <small><?php TemplateHelper::shopInfo($item); ?></small>
                     </div>
                 <?php endif; ?>
+                <?php // Fallback only: with no title column there is nowhere else to
+                      // put it, and compact drops the discount label that does not fit. ?>
+                <?php if (!$this->isVisible('title') && ($coupon = $this->couponChip())): ?>
+                    <div class="cegg-coupon-wrap"><?php TemplateHelper::couponChip($item, $coupon, $params, true); ?></div>
+                <?php endif; ?>
                 <?php if ($this->isVisible('coupons', false)) : ?>
                     <div class="position-relative fs-6 z-3 small text-truncate">
                         <small><?php TemplateHelper::coupons($item); ?></small>
@@ -66,6 +71,19 @@ use ContentEgg\application\helpers\TemplateHelper;
                         <div class="cegg-card-promo text-success small">
                             <?php TemplateHelper::promo($item); ?>
                         </div>
+                    <?php endif; ?>
+
+                    <?php if ($this->isVisible('cashback') && TemplateHelper::getCashbackStr($item)): ?>
+                        <div class="cegg-card-cashback text-success small">
+                            <?php TemplateHelper::cashback($item); ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php // The title column, not the logo column: that one is capped at
+                          // 130px, and since the code never shrinks the discount label
+                          // was pushed out and clipped. Promos already live here. ?>
+                    <?php if ($coupon = $this->couponChip()): ?>
+                        <div class="cegg-coupon-wrap"><?php TemplateHelper::couponChip($item, $coupon, $params); ?></div>
                     <?php endif; ?>
 
                     <?php if ($this->isVisible('description', false)): ?>

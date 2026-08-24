@@ -3,6 +3,7 @@
 namespace ContentEgg\application\EggBlocks;
 
 use ContentEgg\application\admin\GeneralConfig;
+use ContentEgg\application\EggBlocks\shared\EggbBlockGuard;
 use ContentEgg\application\EggBlocks\shared\EggbSchemaCollector;
 use ContentEgg\application\EggBlocks\shared\PriceFormatBridge;
 
@@ -42,6 +43,10 @@ class EggBlocksLoader
 
     public static function initAction(): void
     {
+        // Refuses writes that would corrupt eggb/* block markup. Registered
+        // first so it is active regardless of what happens below.
+        EggbBlockGuard::initAction();
+
         // Must be added BEFORE register_block_type() so each eggb/* block
         // gets the active theme CSS attached at registration time. This is
         // the only style-loading path that reaches the iframed editor canvas

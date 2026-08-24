@@ -58,6 +58,19 @@ use ContentEgg\application\helpers\TemplateHelper;
                     </div>
                 <?php endif; ?>
 
+                <?php if ($this->isVisible('cashback') && TemplateHelper::getCashbackStr($item)): ?>
+                    <div class="cegg-card-cashback text-success small pt-1">
+                        <?php TemplateHelper::cashback($item); ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php // The wide column, beside the promo - the price column it used
+                      // to sit in is the narrowest part of the row while this one has
+                      // room to spare. ?>
+                <?php if ($coupon = $this->couponChip()): ?>
+                    <div class="cegg-coupon-wrap"><?php TemplateHelper::couponChip($item, $coupon, $params); ?></div>
+                <?php endif; ?>
+
                 <?php if ($this->isVisible('description', false)): ?>
                     <div class="cegg-desc-small card-text small lh-sm  pt-3"><?php echo \wp_kses_post($item['description']); ?></div>
                 <?php endif; ?>
@@ -137,6 +150,10 @@ use ContentEgg\application\helpers\TemplateHelper;
                 </div>
             <?php endif; ?>
 
+            <?php // Fallback only: with no title column there is nowhere else. ?>
+            <?php if (!$this->isVisible('title') && ($coupon = $this->couponChip())): ?>
+                <div class="cegg-coupon-wrap"><?php TemplateHelper::couponChip($item, $coupon, $params, true); ?></div>
+            <?php endif; ?>
             <?php if ($this->isVisible('coupons', false)) : ?>
                 <div class="position-relative fs-6 z-3 small text-truncate">
                     <small><?php TemplateHelper::coupons($item); ?></small>

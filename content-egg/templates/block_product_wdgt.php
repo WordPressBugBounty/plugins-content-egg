@@ -123,6 +123,11 @@ TemplateHelper::addShopInfoOffcanvases($items, $params);
                             <small><?php TemplateHelper::merchant($item); ?></small>
                         </div>
                     <?php endif; ?>
+
+                    <?php // Compact: a widget column has no room for a discount label. ?>
+                    <?php if ($coupon = $this->couponChip()): ?>
+                        <div class="cegg-coupon-wrap align-self-center"><?php TemplateHelper::couponChip($item, $coupon, $params, true); ?></div>
+                    <?php endif; ?>
                 </div>
             </div>
 

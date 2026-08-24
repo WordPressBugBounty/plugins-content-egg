@@ -37,6 +37,14 @@ $message = '';
                 class="page-title-action">
                 <?php esc_html_e('Scan Products', 'content-egg'); ?>
             </a>
+            <?php if (current_user_can('manage_options')) : ?>
+                <a
+                    href="<?php echo esc_url(admin_url('admin.php?page=content-egg-product&action=bridge-backfill')); ?>"
+                    title="<?php echo esc_attr__('Create missing Bridge Page links for product pages you imported earlier', 'content-egg'); ?>"
+                    class="page-title-action">
+                    <?php esc_html_e('Bridge Mappings', 'content-egg'); ?>
+                </a>
+            <?php endif; ?>
 
             <p class="description">
                 <?php

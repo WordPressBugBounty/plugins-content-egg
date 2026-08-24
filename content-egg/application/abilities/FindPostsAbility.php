@@ -40,22 +40,32 @@ final class FindPostsAbility extends AbilityBase
 
     public function description(): string
     {
-        return 'Finds existing posts to edit with the other abilities (get-post-blocks, '
-            . 'add-products-to-post, set-featured-image, set-post-status). Read-only. '
-            . 'Filter by search (title/keyword), id, status (draft/pending/publish/future/'
-            . 'private), post_type, has_module (only posts that already carry that product '
-            . "module's data), and limit. Defaults to the post types Content Egg is enabled "
-            . 'on. Returns id, title, status, type and edit_url for each match.';
+        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
+        // filter list and return shape must be complete before the cut.
+        return 'Finds existing posts to edit with the other abilities. Read-only. '
+            . 'Filter by search (keyword over title AND body, substring, relevance-ordered), '
+            . 'id, status (draft/pending/publish/future/'
+            . 'private), post_type, has_module and limit. '
+            . 'Returns id, title, status, type and edit_url for each match. '
+            . 'has_module selects only posts that already carry that product '
+            . "module's data. Defaults to the post types Content Egg is enabled "
+            . 'on. Pairs with get-post-blocks, add-products-to-post, set-featured-image '
+            . 'and set-post-status.';
     }
 
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'search' => array(
                     'type' => 'string',
-                    'description' => 'Keyword matched against post title and content.',
+                    'description' => 'WordPress keyword search over title, excerpt AND body, matching '
+                        . 'each word as a SUBSTRING — "test" also matches "latest", "api" also matches '
+                        . '"rapid" — so unrelated posts can match on body text alone. Results are '
+                        . 'ordered by relevance, which puts title matches first. To find one known '
+                        . 'post, search a distinctive phrase from its title rather than common words.',
                 ),
                 'id' => array(
                     'type' => 'integer',
@@ -174,6 +184,13 @@ final class FindPostsAbility extends AbilityBase
         if ($search !== '')
         {
             $args['s'] = $search;
+            // Date order is right for browsing and wrong for searching: WP's 's'
+            // matches each word as a substring across title, excerpt and body,
+            // so "API Test" also matches "rapid"/"latest" in someone's article
+            // body — and under date DESC those drowned the actual title matches,
+            // which reads exactly like search being ignored. Relevance puts full
+            // title matches first, then title words, then content.
+            $args['orderby'] = 'relevance';
         }
 
         $has_module = trim((string) ($input['has_module'] ?? ''));

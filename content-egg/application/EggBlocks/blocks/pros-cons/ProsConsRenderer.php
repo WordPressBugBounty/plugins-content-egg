@@ -33,11 +33,11 @@ class ProsConsRenderer
         $cons_col = !empty($pros) ? 'col-12 col-md-6' : 'col-12';
 
         $labels = [
-            'pros'       => $attributes['label_pros']       ?: __('Pros',        'content-egg-tpl'),
-            'cons'       => $attributes['label_cons']       ?: __('Cons',        'content-egg-tpl'),
-            'best_for'   => $attributes['label_best_for']   ?: __('Best for',    'content-egg-tpl'),
-            'not_for'    => $attributes['label_not_for']    ?: __('Not for',     'content-egg-tpl'),
-            'quick_take' => $attributes['label_quick_take'] ?: __('Quick take:', 'content-egg-tpl'),
+            'pros'       => ($attributes['label_pros']       ?? '') ?: __('Pros',        'content-egg-tpl'),
+            'cons'       => ($attributes['label_cons']       ?? '') ?: __('Cons',        'content-egg-tpl'),
+            'best_for'   => ($attributes['label_best_for']   ?? '') ?: __('Best for',    'content-egg-tpl'),
+            'not_for'    => ($attributes['label_not_for']    ?? '') ?: __('Not for',     'content-egg-tpl'),
+            'quick_take' => ($attributes['label_quick_take'] ?? '') ?: __('Quick take:', 'content-egg-tpl'),
         ];
 
         $theme_class  = self::resolveThemeClass($attributes['theme'] ?? 'auto');

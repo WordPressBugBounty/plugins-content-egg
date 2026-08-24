@@ -31,12 +31,16 @@ final class InsertBlocksAbility extends AbilityBase
 
     public function description(): string
     {
+        // Front-loaded, and tightly: this is a destructive operation, so the
+        // ChatGPT profile reserves 70 of its 300 characters for the warning line.
+        // The mode list is the contract and has to survive inside what is left.
         return 'Writes a validated block tree into an existing post. Modes: append, prepend, '
-            . 'at_index (insert before the existing block at "index"), replace_at_index '
-            . '(replace the single existing block at "index" — read positions from '
-            . 'content-egg/get-post-blocks; use to edit or reorder one block in place, e.g. '
-            . 'reorder an Egg Block\'s products, without rewriting the whole post), replace_all '
-            . '(DESTRUCTIVE: discards the current content). product_refs must resolve '
+            . 'at_index (insert before "index"), replace_at_index (replace the one block at '
+            . '"index"), replace_all (DESTRUCTIVE: discards current content). '
+            . 'Read 0-based positions from content-egg/get-post-blocks. '
+            . 'Use replace_at_index to edit or reorder a single block in place, e.g. '
+            . 'reorder an Egg Block\'s products, without rewriting the whole post. '
+            . 'product_refs must resolve '
             . 'against products already attached to the post - attach them first with '
             . 'content-egg/add-products-to-post. Existing non-Content-Egg blocks are '
             . 'preserved verbatim in all modes except replace_all.';
@@ -45,10 +49,11 @@ final class InsertBlocksAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'post_id' => array('type' => 'integer', 'minimum' => 1),
-                'blocks' => array('type' => 'array', 'minItems' => 1, 'items' => array('type' => 'object')),
+                'blocks' => array('type' => 'array', 'minItems' => 1, 'items' => self::blockNodeSchema()),
                 'mode' => array('type' => 'string', 'enum' => array('append', 'prepend', 'at_index', 'replace_at_index', 'replace_all'), 'default' => 'append'),
                 'index' => array(
                     'type' => 'integer',

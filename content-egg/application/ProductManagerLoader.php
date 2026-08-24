@@ -392,10 +392,19 @@ class ProductManagerLoader
                 'clicksLabel30' => ClickStatsHelper::label30(),
                 'templatePreviewBaseUrl' => \ContentEgg\PLUGIN_DIR_URL . '/templates/preview/',
                 'blockTemplates' => self::blockTemplatesForBuilder(),
+                // Default content-egg/products template for the "Add"/drag-in
+                // flow (single product) and for a multi-product drop/insert.
+                // Filterable so a site can default to e.g. the offers-list
+                // layout instead of the single-item card without switching
+                // templates on every insert.
+                'productSingleTemplate' => \apply_filters('cegg_product_manager_block_template', 'item_simple', $post_id),
+                'productMultiTemplate' => \apply_filters('cegg_product_manager_block_template_multi', 'offers_list', $post_id),
                 'importPresets' => $importPresets,
                 'importNonce' => $importNonce,
                 'importDefaultPresetId' => $importDefaultPresetId,
                 'ajaxUrl' => \admin_url('admin-ajax.php'),
+                // Base for links to another post's edit screen (Bridge Page indicator).
+                'postEditUrl' => \admin_url('post.php'),
             )) . ';',
             'before'
         );

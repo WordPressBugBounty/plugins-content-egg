@@ -40,7 +40,8 @@ final class RemoveProductsAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'post_id' => array('type' => 'integer', 'minimum' => 1),
                 'targets' => array(
@@ -71,6 +72,11 @@ final class RemoveProductsAbility extends AbilityBase
             'properties' => array(
                 'post_id' => array('type' => 'integer'),
                 'remaining_modules' => array('type' => 'array', 'items' => array('type' => 'string')),
+                'revisions' => array(
+                    'type' => 'object',
+                    'description' => 'module_id => fresh revision for every remaining module, so another '
+                        . 'edit can be chained without re-reading with content-egg/get-post-products.',
+                ),
             ),
         );
     }
@@ -140,9 +146,20 @@ final class RemoveProductsAbility extends AbilityBase
             }
         }
 
+        // Fresh revision per surviving module. update-product returns one, so a
+        // caller could chain edits after an update but not after a removal —
+        // the removal invalidated the revision it was holding and the only way
+        // to get the new one was another get-post-products round trip.
+        $revisions = array();
+        foreach ($remaining as $mid)
+        {
+            $revisions[$mid] = (string) ProductDataService::revision($post_id, $mid);
+        }
+
         return array(
             'post_id' => $post_id,
             'remaining_modules' => $remaining,
+            'revisions' => (object) $revisions,
         );
     }
 }

@@ -733,7 +733,7 @@ abstract class Config
 
     public function is_checkbox($option)
     {
-        if ($this->options[$option]['callback'][1] == 'render_checkbox')
+        if (isset($this->options[$option]['callback'][1]) && $this->options[$option]['callback'][1] == 'render_checkbox')
         {
             return true;
         }

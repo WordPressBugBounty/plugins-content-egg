@@ -125,6 +125,12 @@ if (!empty($item['group']) && strpos($item['group'], 'RoundupProduct') !== false
             <?php if ($this->isVisible('button')): ?>
               <?php TemplateHelper::button($btn_item, $params); ?>
             <?php endif; ?>
+
+            <?php // setItem() above has already pointed the manager at this
+                  // button's item, so couponChip() resolves for the right shop. ?>
+            <?php if ($coupon = $this->couponChip()): ?>
+              <div class="cegg-coupon-wrap text-center"><?php TemplateHelper::couponChip($btn_item, $coupon, $params); ?></div>
+            <?php endif; ?>
           <?php endforeach; ?>
         </div>
       </div>

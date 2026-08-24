@@ -86,10 +86,23 @@ final class AbilityProxyRestController
             );
         }
 
+        // Two accepted body shapes, because the envelope is a liability for the
+        // clients this route exists to serve. An LLM asked to nest a long block
+        // tree inside {"input": {...}} drops the envelope often enough to break
+        // editorial sessions, and it fails BEFORE the request is sent, so the
+        // server never sees it and no server-side change could rescue it.
+        // Top-level arguments remove the thing there is to get wrong.
+        //
+        // The envelope stays supported and is not deprecated: it is what the
+        // canonical wp-abilities route takes, and Custom GPT Actions hold an
+        // imported copy of the old schema, so already-published GPTs keep
+        // sending it. Disambiguation is unambiguous in practice -- no ability
+        // declares a property named "input" -- so the key's presence decides.
         $body = $request->get_json_params();
-        $input = (is_array($body) && isset($body['input']) && is_array($body['input']))
-            ? $body['input']
-            : array();
+        $body = is_array($body) ? $body : array();
+        $input = array_key_exists('input', $body)
+            ? (is_array($body['input']) ? $body['input'] : array())
+            : $body;
 
         if (!$ability->checkPermission($input))
         {
@@ -122,8 +135,8 @@ final class AbilityProxyRestController
         // {} skipped validation entirely, so required-property errors never fired
         // and write abilities answered "Post 0 not found." where the canonical
         // route said "post_id is a required property of input." Abilities that
-        // legitimately take no input declare type ['object','null'] with no
-        // required properties, so {} still validates for them.
+        // legitimately take no input declare no required properties, so {} still
+        // validates for them.
         $schema = $ability->inputSchema();
         if (is_array($schema))
         {

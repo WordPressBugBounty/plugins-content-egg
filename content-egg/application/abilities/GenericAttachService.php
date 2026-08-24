@@ -37,7 +37,7 @@ final class GenericAttachService
      * against that search's cached results (SearchTokenResolver) — the cached
      * item is what gets stored. Empty token = legacy full-object mode.
      */
-    public static function attach(int $post_id, string $module_id, string $expected_type, array $items, string $keyword, string $revision, string $search_token = ''): array
+    public static function attach(int $post_id, string $module_id, string $expected_type, array $items, string $revision, string $search_token = ''): array
     {
         $items = array_values($items);
         if (!$items)
@@ -81,11 +81,6 @@ final class GenericAttachService
         {
             $resolved = SearchTokenResolver::resolve($search_token, $items, $module_id);
             $items = array_values($resolved['items']);
-            if ($keyword === '')
-            {
-                // Default the stored auto-update keyword to what was actually searched.
-                $keyword = \sanitize_text_field((string) $resolved['keyword']);
-            }
         }
 
         foreach ($items as $i => $item)
@@ -104,7 +99,10 @@ final class GenericAttachService
 
         RevisionGuard::check($post_id, $module_id, $revision);
 
-        $result = ProductDataService::addItems($post_id, $module_id, $items, $keyword);
+        // Never pass a keyword: it would arm the module's auto-update, which
+        // re-runs the search and REPLACES the attached items. Human-only
+        // setting; see AddProductsToPostAbility for the full reasoning.
+        $result = ProductDataService::addItems($post_id, $module_id, $items, '');
 
         return array(
             'post_id' => $post_id,

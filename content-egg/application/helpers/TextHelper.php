@@ -716,6 +716,24 @@ class TextHelper
         return false;
     }
 
+    /**
+     * Normalize a feed-supplied barcode and return it only if it's a
+     * checksum-valid EAN/GTIN; otherwise return ''. Guards against treating
+     * arbitrary merchant feed text (or an empty value, which fixEan() would
+     * otherwise zero-pad into a spuriously "valid" all-zero EAN) as a GTIN.
+     */
+    public static function sanitizeEan($barcode)
+    {
+        if (!$barcode)
+        {
+            return '';
+        }
+
+        $ean = self::fixEan($barcode);
+
+        return self::isEan($ean) ? $ean : '';
+    }
+
     public static function fixEan($barcode, $n = 13)
     {
         if (strlen($barcode == $n))

@@ -29,10 +29,13 @@ final class AddProductsToPostAbility extends AbilityBase
 
     public function description(): string
     {
-        return 'Attaches products to a post under one module. Preferred flow for searchable modules '
-            . '(Amazon, Ebay, feeds...): run content-egg/search-products, then pass its search_token '
-            . 'plus the chosen unique_ids as items — the server attaches its stored copy of each '
-            . 'result, so full objects never need to be echoed back. (Passing full item objects from '
+        // Front-loaded on purpose: the ChatGPT profile trims this to 300 chars, so
+        // the search_token contract has to be complete inside the first sentences.
+        // Elaboration follows, where losing it to the cap costs nothing.
+        return 'Attaches products to a post under one module. For searchable modules (Amazon, Ebay, '
+            . 'feeds): run content-egg/search-products, then pass its search_token plus the chosen '
+            . 'unique_ids as items — the server attaches its own stored copy, so full product '
+            . 'objects are never echoed back. (Passing full item objects from '
             . 'fields="full" without a token still works.) You MAY '
             . 'tailor editorial fields per item with an optional "overrides" object '
             . '(title, subtitle, description, short_description, badge, badge_color '
@@ -54,7 +57,8 @@ final class AddProductsToPostAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'post_id' => array('type' => 'integer', 'minimum' => 1),
                 'module_id' => array('type' => 'string'),
@@ -75,15 +79,79 @@ final class AddProductsToPostAbility extends AbilityBase
                             . '(optionally with "overrides"), or a constructed item for the Offer module.',
                     ),
                 ),
-                'keyword' => array(
-                    'type' => 'string',
-                    'description' => 'Stored as the module search keyword for later auto-updates.',
-                ),
                 'revision' => array('type' => 'string'),
             ),
             'required' => array('post_id', 'module_id', 'items'),
             'additionalProperties' => false,
         );
+    }
+
+    /**
+     * Reject link-less items, and report the ones that will render thin.
+     *
+     * A caller trimming the payload to save tokens (or passing the lean search
+     * result, which carries no url at all) produced a stored product with no
+     * price, no image and no affiliate link — and every signal said success:
+     * the attach returned 200, validation passed, and preview-blocks rendered a
+     * confident-looking card with zero warnings. For an affiliate plugin that is
+     * the worst silent failure there is, because the card can never earn.
+     *
+     * No link is fatal, so it throws: a product that cannot be clicked is not a
+     * product, and there is no legitimate way to land here. Missing price or
+     * image only degrades the card, so those are reported and the write goes
+     * ahead. Token mode never trips either check — the server attaches its own
+     * stored copy.
+     *
+     * @throws AbilityInputException
+     */
+    private static function checkItemCompleteness(array $items): array
+    {
+        $warnings = array();
+
+        foreach (array_values($items) as $i => $item)
+        {
+            if (!is_array($item))
+            {
+                continue;
+            }
+
+            $uid = (string) ($item['unique_id'] ?? '');
+            $has_link = trim((string) ($item['url'] ?? '')) !== ''
+                || trim((string) ($item['orig_url'] ?? '')) !== '';
+
+            if (!$has_link)
+            {
+                throw new AbilityInputException(
+                    "items[{$i}] ('{$uid}') has neither url nor orig_url, so it would be stored as a "
+                        . 'product that links nowhere and can never earn. The lean search result omits '
+                        . 'both fields — pass the items from content-egg/search-products with '
+                        . 'fields="full", or (better) pass that response\'s search_token with the '
+                        . 'unique_ids and let the server attach its own stored copy.'
+                );
+            }
+
+            $thin = array();
+            if (($item['price'] ?? null) === null || (string) $item['price'] === '')
+            {
+                $thin[] = 'price';
+            }
+            if (trim((string) ($item['img'] ?? '')) === '')
+            {
+                $thin[] = 'img';
+            }
+
+            if ($thin)
+            {
+                $warnings[] = array(
+                    'code' => 'thin_product',
+                    'unique_id' => $uid,
+                    'message' => "Stored without " . implode(' and ', $thin) . ", so its block renders "
+                        . 'incomplete. Pass fields="full" items, or the search_token plus unique_ids.',
+                );
+            }
+        }
+
+        return $warnings;
     }
 
     public function outputSchema(): array
@@ -96,6 +164,19 @@ final class AddProductsToPostAbility extends AbilityBase
                 'added' => array('type' => 'array', 'items' => array('type' => 'string')),
                 'count' => array('type' => 'integer'),
                 'revision' => array('type' => 'string'),
+                'warnings' => array(
+                    'type' => 'array',
+                    'description' => 'Non-fatal notes. thin_product means the item was stored without a '
+                        . 'price or image, so its block renders incomplete.',
+                    'items' => array(
+                        'type' => 'object',
+                        'properties' => array(
+                            'code' => array('type' => 'string'),
+                            'unique_id' => array('type' => 'string'),
+                            'message' => array('type' => 'string'),
+                        ),
+                    ),
+                ),
                 'monetization' => array(
                     'type' => 'object',
                     'description' => 'Offer module only: whether the added links became affiliate links.',
@@ -129,7 +210,6 @@ final class AddProductsToPostAbility extends AbilityBase
         $module_id = trim((string) ($input['module_id'] ?? ''));
         $items = is_array($input['items'] ?? null) ? array_values($input['items']) : array();
         $search_token = trim((string) ($input['search_token'] ?? ''));
-        $cached_keyword = '';
 
         if (!$items)
         {
@@ -239,20 +319,22 @@ final class AddProductsToPostAbility extends AbilityBase
             {
                 $resolved = SearchTokenResolver::resolve($search_token, $items, $module_id);
                 $items = $resolved['items'];
-                $cached_keyword = (string) $resolved['keyword'];
             }
             $items = $this->applyItemOverrides($items);
         }
 
+        $warnings = self::checkItemCompleteness($items);
+
         RevisionGuard::check($post_id, $module_id, (string) ($input['revision'] ?? ''));
 
-        $keyword = \sanitize_text_field((string) ($input['keyword'] ?? ''));
-        if ($keyword === '' && $cached_keyword !== '')
-        {
-            // Default the stored auto-update keyword to what was actually searched.
-            $keyword = \sanitize_text_field($cached_keyword);
-        }
-        $result = ProductDataService::addItems($post_id, $module_id, $items, $keyword);
+        // No keyword is ever passed from here. A module's auto-update keyword
+        // makes the scheduler re-run the search and REPLACE that module's
+        // product list — which would strand every product_ref an agent bound
+        // its blocks to, days later, with the article silently rendering empty
+        // containers. It is a deliberate, human-only setting (the Product
+        // Manager's Settings tab, or the classic metabox), not something an
+        // agent should switch on as a side effect of attaching products.
+        $result = ProductDataService::addItems($post_id, $module_id, $items, '');
 
         $response = array(
             'post_id' => $post_id,
@@ -261,6 +343,11 @@ final class AddProductsToPostAbility extends AbilityBase
             'count' => count((array) $result['data']),
             'revision' => (string) ProductDataService::revision($post_id, $module_id),
         );
+
+        if ($warnings)
+        {
+            $response['warnings'] = $warnings;
+        }
 
         // Manual Offer module: report whether each newly added link became an
         // affiliate link. presavePrepare() rewrites `url` from the per-domain

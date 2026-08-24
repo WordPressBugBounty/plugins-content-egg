@@ -37,11 +37,13 @@ final class ConnectShopAbility extends AbilityBase
 
     public function description(): string
     {
+        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
+        // known-vs-custom-domain contract must be complete before the cut.
         return 'Connects a new Affiliate Egg-backed product module from a shop domain '
             . '(e.g. "walmart.com"), so its products become searchable via '
             . 'content-egg/search-products. Shops Affiliate Egg already recognizes '
-            . '("known") work immediately; a custom/unregistered domain needs Affiliate '
-            . 'Egg 11.0+ and a search_url containing %KEYWORD% for keyword search to work. '
+            . '("known") work immediately. A custom domain needs Affiliate '
+            . 'Egg 11.0+ and a search_url containing %KEYWORD%. '
             . 'For a custom domain, determine that search_url yourself — from the shop\'s '
             . 'known search pattern (e.g. goodeggs.com -> '
             . 'https://www.goodeggs.com/search?q=%KEYWORD%) or by asking the user to paste '
@@ -55,7 +57,8 @@ final class ConnectShopAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'domain' => array(
                     'type' => 'string',

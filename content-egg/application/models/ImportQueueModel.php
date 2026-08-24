@@ -225,6 +225,113 @@ class ImportQueueModel extends Model
         return $batch ?: [];
     }
 
+    /**
+     * Marks rows as still alive by bumping updated_at.
+     *
+     * resetStuckJobs() decides a job is dead purely from updated_at, which
+     * getNextBatch() stamps once at claim time for the WHOLE batch — jobs are
+     * then processed one at a time, so a job waiting its turn ages exactly as
+     * fast as one that is actually running. Without this, a slow batch has its
+     * later jobs swept back to 'pending' and re-claimed by the next cron tick
+     * while the first process is still working on them, which is what turns a
+     * slow import into several overlapping ones.
+     *
+     * Only 'working' rows are touched, so this can never revive a row that has
+     * already finished or been swept.
+     *
+     * @param int[] $ids
+     */
+    public function touch(array $ids): bool
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+
+        if (!$ids)
+        {
+            return false;
+        }
+
+        global $wpdb;
+
+        $table        = $this->tableName();
+        $placeholders = implode(',', array_fill(0, count($ids), '%d'));
+
+        return $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE {$table} SET updated_at = %s WHERE status = 'working' AND id IN ({$placeholders})",
+                array_merge([current_time('mysql')], $ids)
+            )
+        ) !== false;
+    }
+
+    /**
+     * Median seconds a job of this preset has actually taken on THIS site.
+     *
+     * The only honest measure of what a job costs: it already contains the AI
+     * calls, the image handling, the WooCommerce save and every plugin hook —
+     * none of which can be predicted from the preset alone. The same preset has
+     * been measured at ~2s on one host and ~21s on another, so a batch size
+     * derived from the preset's structure is guesswork; one derived from this
+     * is not.
+     *
+     * Median rather than mean so a single timed-out job cannot dominate.
+     *
+     * @return float Seconds, or 0.0 when there is no usable history yet.
+     */
+    public function medianProcessingTime(int $presetId, int $sample = 10): float
+    {
+        if ($presetId <= 0)
+        {
+            return 0.0;
+        }
+
+        global $wpdb;
+
+        $table = $this->tableName();
+
+        $times = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT processing_time
+                 FROM {$table}
+                 WHERE preset_id = %d
+                   AND status = 'done'
+                   AND processing_time IS NOT NULL
+                   AND processing_time > 0
+                 ORDER BY id DESC
+                 LIMIT %d",
+                $presetId,
+                max(1, $sample)
+            )
+        );
+
+        if (!$times)
+        {
+            return 0.0;
+        }
+
+        $times = array_map('floatval', $times);
+        sort($times);
+
+        $count  = count($times);
+        $middle = intdiv($count, 2);
+
+        return ($count % 2)
+            ? $times[$middle]
+            : ($times[$middle - 1] + $times[$middle]) / 2;
+    }
+
+    /**
+     * Preset ID of the oldest pending job, without claiming it — lets the
+     * scheduler decide a batch size for the run about to claim jobs.
+     */
+    public function peekNextPendingPresetId(): ?int
+    {
+        $presetId = $this->getDb()->get_var(
+            "SELECT preset_id FROM {$this->tableName()} WHERE status = 'pending' ORDER BY id ASC LIMIT 1"
+        );
+
+        return $presetId !== null ? (int) $presetId : null;
+    }
+
     public function resetStuckJobs(): void
     {
         global $wpdb;
@@ -263,24 +370,51 @@ class ImportQueueModel extends Model
 
         // 2) Reset any 'working' jobs that have been hanging for too long back to 'pending'
         //    so they can be retried (but again subject to the attempts cap above).
+        //
+        // Resolved in seconds on purpose: strtotime() cannot parse a fractional
+        // offset like "-0.1 minutes" and silently answers with a timestamp in
+        // the FUTURE, which made this sweep match every working row — including
+        // ones that had just checked in a moment earlier.
         $timeout_minutes = apply_filters('cegg_import_stuck_timeout_minutes', self::STUCK_TIMEOUT);
+        $timeout_seconds = (int) round((float) $timeout_minutes * MINUTE_IN_SECONDS);
 
         if (Plugin::isDevEnvironment())
         {
-            $timeout_minutes = 0.1; // 6 sec
+            $timeout_seconds = 6;
         }
 
-        $threshold = date('Y-m-d H:i:s', strtotime("-{$timeout_minutes} minutes", current_time('timestamp')));
+        // A row stuck here died mid-processJob() without ever reaching
+        // markDone()/markFailed() — e.g. an external process kill or a PHP
+        // fatal that the \Throwable catch in processBatch() can't see. That
+        // leaves no clue in the log, so record the recycle itself: which
+        // attempt got stuck, so a job that never finishes reads as exactly
+        // that instead of ending on the same generic "max retries" message
+        // as a job that failed cleanly with a real exception.
+        $prefix = "\n" . sprintf(
+            __('Job was claimed but never completed (stuck in "working" status for over %d min) on attempt ', 'content-egg'),
+            (int) max(1, ceil($timeout_seconds / MINUTE_IN_SECONDS))
+        );
+        $suffix = ' — ' . __('recycled for retry.', 'content-egg');
+
+        $threshold = date('Y-m-d H:i:s', current_time('timestamp') - $timeout_seconds);
         $wpdb->query(
             $wpdb->prepare(
                 "
             UPDATE {$table}
             SET status     = 'pending',
-                updated_at = %s
+                updated_at = %s,
+                log        = CONCAT(
+                                COALESCE(log, ''),
+                                %s,
+                                attempts,
+                                %s
+                             )
             WHERE status      = 'working'
               AND updated_at <= %s
             ",
                 $now,
+                $prefix,
+                $suffix,
                 $threshold
             )
         );

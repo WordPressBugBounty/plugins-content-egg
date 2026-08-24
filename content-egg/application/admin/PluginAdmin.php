@@ -78,6 +78,9 @@ class PluginAdmin
             new FeedWizardController;
             new ProductImportController;
             new ProductPrefillController;
+            // Submenu order follows registration order, so Shops sits directly after
+            // Prefill by being constructed here rather than at the end.
+            ShopsController::getInstance();
             new ProductController;
             new ClicksStatsController;
             new EggMetabox;

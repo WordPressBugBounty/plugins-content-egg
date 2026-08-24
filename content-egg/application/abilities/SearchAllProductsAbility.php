@@ -54,7 +54,8 @@ final class SearchAllProductsAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'module_ids' => array(
                     'type' => 'array',

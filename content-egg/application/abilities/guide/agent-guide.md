@@ -9,12 +9,16 @@ Abilities API.
   `GET|POST .../wp-abilities/v1/abilities/{name}/run` (read = GET with
   `input[...]` query params; write = POST with JSON body `{"input": {...}}`).
 - REST, all-POST: `POST {site}/wp-json/content-egg/v1/abilities/{name}/run` with
-  JSON body `{"input": {...}}` — same abilities, same permission checks and
-  activity logging, but **every** ability is a POST, reads included. Prefer this
-  from plain HTTP clients (curl, scripts, sandboxed assistants): nothing to
-  serialize into `input[...]` query params, and it is unaffected by edge/WAF
-  rules that block parameterized GETs. Posting a read-only ability to the
-  canonical route instead returns 405 `rest_ability_invalid_method`.
+  the arguments at the **top level** of the JSON body, e.g.
+  `{"post_id": 12, "mode": "append", "blocks": [...]}` — same abilities, same
+  permission checks and activity logging, but **every** ability is a POST, reads
+  included. Prefer this from plain HTTP clients (curl, scripts, sandboxed
+  assistants): nothing to serialize into `input[...]` query params, and it is
+  unaffected by edge/WAF rules that block parameterized GETs. Posting a
+  read-only ability to the canonical route instead returns 405
+  `rest_ability_invalid_method`. This route also still accepts the canonical
+  `{"input": {...}}` envelope, so existing integrations keep working; send one
+  shape or the other, not a mix.
 - Two route caveats. (1) Do not percent-encode the namespace slash: the path is
   `.../abilities/content-egg/get-status/run`; `content-egg%2Fget-status` returns
   an Apache 404 before WordPress sees it. (2) An ability this build does not
@@ -207,9 +211,17 @@ list-blocks -> search-products -> compose a block tree -> validate-blocks
 
 validate-blocks and preview-blocks take a POST body (the tree is too nested
 for query params) and accept an optional `products` payload (module_id =>
-search-products items), so a new product-bound draft fully validates BEFORE
-create-post. product_ref for single-bound blocks (product-card, verdict) may
-sit at the block top level or in attrs.product_ref — both resolve.
+search-products items), so a new product-bound draft fully schema-validates
+BEFORE create-post. All three take `search_tokens` (module_id => search_token)
+alongside it, so the whole loop runs on lean results: list unique_id strings in
+`products` and never echo product JSON back. Rendering is a separate step: a product block only fills
+with live price/image/link once the products are ATTACHED to a real post, so
+preview-blocks renders it as an empty container and returns an
+unhydrated_product_ref warning. Preview again after create-post (with post_id)
+to see the hydrated block. product_ref for single-bound blocks (product-card,
+verdict) may sit at the block top level or in attrs.product_ref — both resolve;
+the top level is the tree form get-post-blocks returns, attrs is how the post
+stores it.
 
 ### Edit an existing page
 get-post-blocks -> modify the tree -> validate-blocks (post_id) ->
@@ -232,14 +244,28 @@ date_gmt (UTC) or date (site time).
 Featured image, publish/schedule and finding posts are first-class abilities now
 — find-posts, set-featured-image, set-post-status — so reach for those; they run
 through the same channel as every other ability (including OpenAPI/connector
-agents). For anything else in core WordPress (categories/tags, excerpt, slug…),
-the full WordPress REST API at `{site}/wp-json/wp/v2/` is reachable when an
-authenticated REST transport is available — a direct HTTP client (e.g. Claude
-Code) or an MCP/connector that exposes WordPress core — under the same
-application password, no separate auth. (An agent limited to the Content Egg
-OpenAPI schema must add those endpoints to its connector first.) For example,
-assign categories/tags via `/wp/v2/categories` + `/wp/v2/tags` and the post's
-`categories`/`tags` arrays.
+agents). Anything else in core WordPress (categories/tags, excerpt, slug…) lives
+in the full WordPress REST API at `{site}/wp-json/wp/v2/`, under the same
+application password, no separate auth — but ONLY if you can call arbitrary
+URLs. Check that before promising it:
+
+- A direct HTTP client (e.g. Claude Code), or an MCP/connector that exposes
+  WordPress core: yes, call `/wp/v2/` directly.
+- A custom GPT or any OpenAPI Action agent: NO. You can only call operations
+  that are in your schema, and core WordPress is not in Content Egg's. Say so
+  rather than attempting it — the fix is for the user to add core WordPress as
+  a SEPARATE action (its own schema, its own operation budget; Content Egg's
+  schema stays untouched and survives plugin updates).
+
+For example, once reachable, assign categories/tags via `/wp/v2/categories` +
+`/wp/v2/tags` and the post's `categories`/`tags` arrays.
+
+Post meta / custom fields (Rank Math, theme fields…) are writable through
+`/wp/v2/posts/<id>` only when the plugin registered them with
+`register_post_meta(..., show_in_rest => true)`. An UNREGISTERED key is not an
+error: the write returns 200 and is silently discarded. Read
+`/wp/v2/posts/<id>?context=edit` first — whatever is listed in its `meta`
+object is what you can actually write.
 
 ## Conventions
 

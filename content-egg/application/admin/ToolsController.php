@@ -11,6 +11,8 @@ use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\AdminHelper;
 use ContentEgg\application\helpers\LogoHelper;;
+use ContentEgg\application\components\ShopStore;
+use ContentEgg\application\components\ShopMigration;
 
 /**
  * ToolsController class file
@@ -343,6 +345,10 @@ class ToolsController
 
         $settings[GeneralConfig::getInstance()->option_name()] = GeneralConfig::getInstance()->getOptionValues();
 
+        // Shops live outside the settings option, so they are not in
+        // getOptionValues() and would silently not travel with an export.
+        $settings[ShopStore::OPTION] = ShopStore::all();
+
         $json = wp_json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
         if (false === $json)
@@ -395,6 +401,27 @@ class ToolsController
 
         if (GeneralConfig::getInstance()->importOptions($settings))
         {
+            if (isset($settings[ShopStore::OPTION]) && is_array($settings[ShopStore::OPTION]))
+            {
+                $shops = array();
+                foreach ($settings[ShopStore::OPTION] as $shop)
+                {
+                    if (!is_array($shop))
+                        continue;
+
+                    if ($shop = ShopStore::sanitizeShop($shop))
+                        $shops[$shop['domain']] = $shop;
+                }
+
+                ShopStore::replaceAll($shops);
+            }
+
+            // A pre-95 export file carries merchant_names / merchants instead,
+            // and importOptions() has just written them back into the settings
+            // row. Re-fold, or the import lands as a site with no shops at all.
+            \delete_option(ShopStore::OPTION_MIGRATED);
+            ShopMigration::maybeRun();
+
             $redirect_url = AdminNotice::add2Url($redirect_url, 'plugin_settings_imported', 'success');
         }
         else

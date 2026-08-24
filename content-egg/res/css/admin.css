@@ -283,7 +283,9 @@ table.wp-list-table .column-module_id {
     width: 15ch;
 }
 
-table.wp-list-table td.column-img img {
+/* Not qualified with td: WordPress renders the primary column as a th, and which
+   column is primary can be changed by the list_table_primary_column filter. */
+table.wp-list-table .column-img img {
     margin: 0;
     width: auto;
     height: auto;

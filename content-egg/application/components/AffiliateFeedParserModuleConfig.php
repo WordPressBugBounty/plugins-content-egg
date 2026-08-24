@@ -85,6 +85,52 @@ abstract class AffiliateFeedParserModuleConfig extends AffiliateParserModuleConf
                     ),
                 ),
             ),
+            'filter_field' => array(
+                'title' => __('Filter products by', 'content-egg'),
+                'description' => __('Which product field the filter below is matched against.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'category' => __('Category', 'content-egg'),
+                    'title' => __('Title', 'content-egg'),
+                    'brand' => __('Brand', 'content-egg'),
+                ),
+                'default' => 'category',
+                'section' => 'default',
+                'validator' => array(
+                    array(
+                        'call' => array($this, 'resetFeedData'),
+                    ),
+                ),
+            ),
+            'filter_mode' => array(
+                'title' => __('Filter mode', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    FeedProductFilter::MODE_INCLUDE => __('Include matching products', 'content-egg'),
+                    FeedProductFilter::MODE_EXCLUDE => __('Exclude matching products', 'content-egg'),
+                ),
+                'default' => FeedProductFilter::MODE_INCLUDE,
+                'section' => 'default',
+                'validator' => array(
+                    array(
+                        'call' => array($this, 'resetFeedData'),
+                    ),
+                ),
+            ),
+            'filter_values' => array(
+                'title' => __('Filter values', 'content-egg'),
+                'description' => __('One value per line. Matching is case-insensitive and partial, so a parent category also matches its subcategories. Leave empty to import every product.', 'content-egg'),
+                'callback' => array($this, 'render_textarea'),
+                'default' => '',
+                'section' => 'default',
+                'validator' => array(
+                    'trim',
+                    '\sanitize_textarea_field',
+                    array(
+                        'call' => array($this, 'resetFeedData'),
+                    ),
+                ),
+            ),
         ));
 
         $options['update_mode']['dropdown_options'] = array(

@@ -44,6 +44,20 @@ class ProductTable extends MyListTable
         return $cols;
     }
 
+    /**
+     * The row header is the product title, not its thumbnail.
+     *
+     * WordPress 7.1 renders the primary column as <th scope="row"> and defaults
+     * it to the first column — here the image — which made the thumbnail the row
+     * header, put the "Show more details" toggle inside it, and left it with an
+     * empty data-colname. The title is what names the row, and it is already
+     * where this table renders its row actions.
+     */
+    protected function get_default_primary_column_name()
+    {
+        return 'title';
+    }
+
     public function column_img($item)
     {
         echo '<a href="' . \esc_url(\get_edit_post_link($item['post_id'])) . '"><img class="attachment-thumbnail size-thumbnail wp-post-image" src="' . \esc_url($item['img']) . '" /></a>';
@@ -157,7 +171,8 @@ class ProductTable extends MyListTable
         if ($last_update_timestamp > strtotime('-1 day', \current_time('timestamp', true)))
         {
             $show_date = sprintf(
-                __('%s ago', '%s = human-readable time difference', 'content-egg'),
+                /* translators: %s: human-readable time difference, e.g. "2 hours" */
+                __('%s ago', 'content-egg'),
                 \human_time_diff($last_update_timestamp, \current_time('timestamp', true))
             );
         }

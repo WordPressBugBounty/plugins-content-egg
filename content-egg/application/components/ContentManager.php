@@ -679,7 +679,7 @@ class ContentManager
             }
 
             // 4) Post-process links (cashback / local redirect) when needed
-            $doCashback = (GeneralConfig::getInstance()->option('cashback_integration') === 'enabled')
+            $doCashback = (GeneralConfig::getInstance()->option('cashback_tracking') === 'enabled')
                 && class_exists('\CashbackTracker\application\Plugin');
 
             $doRedirect = (bool) $module->config('set_local_redirect');
@@ -713,16 +713,32 @@ class ContentManager
                     // Cashback first
                     if ($doCashback)
                     {
-                        $finalUrl = \CashbackTracker\application\components\DeeplinkGenerator::maybeAddTracking($finalUrl);
+                        $finalUrl = CashbackTracking::trackingUrl($finalUrl);
                     }
 
-                    // Local redirect (preserve raw affiliate in aff_url)
+                    // Local redirect. A cloaked link is resolved at CLICK time
+                    // through aff_url (LocalRedirector::resolveAffiliateUrl), so
+                    // aff_url has to hold where the reader should end up - the
+                    // affiliate URL after cashback, not before it.
                     if ($doRedirect)
                     {
-                        if (empty($data[$key]['aff_url']))
+                        $bridged = self::bridgedAffiliateUrl($d, isset($data[$key]['aff_url']) ? $data[$key]['aff_url'] : null);
+
+                        if ($bridged !== null)
+                        {
+                            // url is an internal permalink on this item, so the
+                            // outbound link is the one bridging moved aside.
+                            // Redirecting to the permalink would send the reader
+                            // in a circle.
+                            $data[$key]['aff_url'] = $doCashback
+                                ? CashbackTracking::trackingUrl($bridged)
+                                : $bridged;
+                        }
+                        else
                         {
                             $data[$key]['aff_url'] = $finalUrl;
                         }
+
                         $tmp        = $d;
                         $tmp['url'] = $finalUrl;
                         $data[$key]['url'] = LocalRedirector::localUrlForItem($tmp);
@@ -785,6 +801,40 @@ class ContentManager
         }
 
         return false;
+    }
+
+    /**
+     * The outbound link a cloaked URL should resolve to, when bridging has
+     * moved it out of the way - or null when the processed URL is already it.
+     *
+     * Bridging replaces an item's url with an internal permalink and keeps the
+     * real affiliate link in aff_url. A cloaked link pointing at the permalink
+     * would send the reader in a circle, so on those items aff_url is the
+     * answer and the caller tracks it instead.
+     *
+     * The bridge_url test is what makes this narrow, and it is the whole bug it
+     * was written for. Choosing bridge or both as the link destination runs
+     * applyBridgeUrlsForModuleFrontend() across EVERY item, and it stamps
+     * aff_url with the pre-bridge url even for items it found no mapping for.
+     * A guard that only asked "is aff_url set?" therefore never fired on those,
+     * so a cloaked link resolved to the untracked URL and the member was
+     * silently not credited - on every product, since an item with no mapping
+     * is the ordinary case, not the exception. Pure.
+     */
+    public static function bridgedAffiliateUrl(array $item, $stored_aff_url)
+    {
+        if (empty($item['bridge_url']))
+            return null;
+
+        if (!is_string($stored_aff_url) || $stored_aff_url === '')
+            return null;
+
+        // A copy of the url we just processed carries nothing the processed
+        // one does not, and the processed one is tracked.
+        if ($stored_aff_url === (string) (isset($item['url']) ? $item['url'] : ''))
+            return null;
+
+        return $stored_aff_url;
     }
 
     public static function getProductbyUniqueId($unique_id, $module_id, $post_id, $params = array())

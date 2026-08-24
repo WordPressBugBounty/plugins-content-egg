@@ -355,6 +355,7 @@ $prompt_names = array_column($prompt_rows, 'name');
                 <td>
                     <p class="description" style="margin-bottom:1em;">
                         <?php esc_html_e('Write your own prompt, give it a short name, and use its placeholder anywhere in this preset. Each prompt runs once per imported product.', 'content-egg'); ?>
+                        <?php esc_html_e('A prompt can also use another prompt\'s placeholder — write it in the prompt text and that result is generated first and inserted here.', 'content-egg'); ?>
                     </p>
 
                     <?php

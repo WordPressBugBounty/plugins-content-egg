@@ -46,6 +46,12 @@ class ProductController
 
     public function actionIndex()
     {
+        if (isset($_GET['action']) && $_GET['action'] === 'bridge-backfill')
+        {
+            $this->actionBridgeBackfill();
+            return;
+        }
+
         \wp_enqueue_script('content-egg-blockUI', \ContentEgg\PLUGIN_RES . '/js/jquery.blockUI.js', array('jquery'));
 
         if (isset($_GET['action']) && $_GET['action'] === 'scan')
@@ -67,12 +73,67 @@ class ProductController
 
         $last_scaned = ProductModel::model()->getLastSync();
         if (time() - $last_scaned <= 3600)
-            $last_scaned_str = sprintf(__('%s ago', '%s = human-readable time difference', 'content-egg'), \human_time_diff($last_scaned, time()));
+            /* translators: %s: human-readable time difference, e.g. "2 hours" */
+            $last_scaned_str = sprintf(__('%s ago', 'content-egg'), \human_time_diff($last_scaned, time()));
         else
             $last_scaned_str = TemplateHelper::dateFormatFromGmt($last_scaned, true);
 
         \wp_enqueue_style('cegg-bootstrap5-full');
 
         PluginAdmin::getInstance()->render('product_index', array('table' => $table, 'last_scaned_str' => $last_scaned_str));
+    }
+
+    /**
+     * Bridge Mappings: report which canonical mappings are missing for pages the
+     * import tool created, and offer to create them.
+     *
+     * Rendering is the dry run — it only reads, so the screen is safe to link to
+     * and reload. Writing happens in the POST handlers.
+     */
+    public function actionBridgeBackfill()
+    {
+        $apply = isset($_POST['cegg_backfill_apply']);
+        $undo  = isset($_POST['cegg_backfill_undo']);
+
+        if ($apply || $undo)
+        {
+            \check_admin_referer('cegg_bridge_backfill', 'cegg_bridge_backfill_nonce');
+
+            if (!\current_user_can('manage_options'))
+            {
+                \wp_die(esc_html__('You do not have permission to change Bridge Page mappings.', 'content-egg'), 403);
+            }
+
+            $base = \admin_url('admin.php?page=' . self::slug . '&action=bridge-backfill');
+
+            if ($undo)
+            {
+                $removed = BridgeBackfillService::undo();
+                AdminHelper::redirect(\add_query_arg('undone', $removed, $base));
+                exit;
+            }
+
+            // Re-plan rather than trusting anything posted: the row list is
+            // derived server-side, never supplied by the client.
+            $result = BridgeBackfillService::apply(BridgeBackfillService::plan());
+            AdminHelper::redirect(\add_query_arg('created', $result['created'], $base));
+            exit;
+        }
+
+        $plan      = BridgeBackfillService::plan();
+        $receipt   = BridgeBackfillService::receipt();
+        $can_apply = \current_user_can('manage_options');
+
+        $destination = GeneralConfig::getInstance()->option('link_destination', 'affiliate');
+        $live        = in_array($destination, array('bridge', 'both'), true);
+
+        \wp_enqueue_style('cegg-bootstrap5-full');
+
+        PluginAdmin::getInstance()->render('bridge_backfill', array(
+            'plan'      => $plan,
+            'receipt'   => $receipt,
+            'can_apply' => $can_apply,
+            'live'      => $live,
+        ));
     }
 }

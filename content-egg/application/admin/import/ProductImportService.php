@@ -40,6 +40,9 @@ class ProductImportService
     /** @var int job start micro-time */
     protected $startTime = 0;
 
+    /** @var int[] queue rows claimed by the batch currently being processed */
+    protected $batchIds = [];
+
     protected $productPrompt;
     protected $postPrompt;
     protected $isSysAiEnabled = false;
@@ -65,7 +68,12 @@ class ProductImportService
         }
     }
 
-    public function processBatch(int $limit = 3): void
+    /**
+     * Runs one batch of import jobs.
+     *
+     * @return int jobs claimed and run by this batch, 0 if the queue had none
+     */
+    public function processBatch(int $limit = 3): int
     {
         // Prune old and excess rows from the import queue log
         if (mt_rand(1, 10) === 1)
@@ -79,17 +87,80 @@ class ProductImportService
         $jobs = $this->queue->getNextBatch($limit);   // mark rows = 'working'
         if (!$jobs)
         {
-            return;
+            return 0;
         }
 
+        $this->batchIds = array_map('intval', array_column($jobs, 'id'));
+
+        /**
+         * A batch of import jobs is about to run, in this process. Paired with
+         * 'cegg_import_batch_end', which fires even if the batch dies, and with
+         * 'cegg_import_queue_drained', which fires once when the queue empties.
+         *
+         * Importing one product writes the post more than once — the insert,
+         * then WooCommerce's own save — so a cache plugin set to purge on
+         * publish purges the whole site several times per product. These three
+         * actions are the window in which to stop that. Suppress purging for
+         * the length of the import and purge once at the end (substitute your
+         * cache plugin's own callback and purge function):
+         *
+         *   add_action('cegg_import_batch_start', function () {
+         *       remove_action('save_post', 'my_cache_purge_all');
+         *   });
+         *   add_action('cegg_import_queue_drained', 'my_cache_purge_all');
+         *
+         * The removal only applies to the process running the batch, so there
+         * is nothing to restore. The trade-off is that the cache stays stale
+         * for as long as the queue takes to empty — hours, on a large import.
+         * To bound that, purge per batch instead: still one purge per batch
+         * rather than one per write, but never more than a batch behind.
+         *
+         *   add_action('cegg_import_batch_start', function () {
+         *       remove_action('save_post', 'my_cache_purge_all');
+         *   });
+         *   add_action('cegg_import_batch_end', 'my_cache_purge_all');
+         *
+         * @param int[] $batchIds queue row ids claimed by this batch
+         */
+        do_action('cegg_import_batch_start', $this->batchIds);
+
+        try
+        {
+            $this->runJobs($jobs);
+        }
+        finally
+        {
+            /**
+             * The batch is over, whether it completed or died part-way. Always
+             * paired with 'cegg_import_batch_start' in the same process.
+             *
+             * @param int[] $batchIds queue row ids claimed by this batch
+             */
+            do_action('cegg_import_batch_end', $this->batchIds);
+
+            $this->batchIds = [];
+        }
+
+        return count($jobs);
+    }
+
+    protected function runJobs(array $jobs): void
+    {
         foreach ($jobs as $idx => $row)
         {
             $this->logger->reset();
 
+            // Breathing room between jobs. Raise it to cap how much CPU the
+            // queue takes on a busy or shared box, at the cost of throughput.
             if ($idx)
             {
-                sleep(1);
+                sleep(max(0, (int) apply_filters('cegg_import_job_pause', 1)));
             }
+
+            // Jobs run one at a time but were all claimed at the same moment,
+            // so the ones still waiting their turn are ageing towards the
+            // stuck threshold without being stuck. Keep the whole batch alive.
+            $this->heartbeat();
 
             try
             {
@@ -114,6 +185,26 @@ class ProductImportService
                 ]), microtime(true) - $this->startTime);
             }
         }
+    }
+
+    /**
+     * Reports that this run is still alive.
+     *
+     * resetStuckJobs() infers death from updated_at alone, and the batch lock
+     * expires on a timer, so a long-but-healthy run has to say so — otherwise
+     * the next cron tick reclaims its rows and processes them a second time
+     * alongside it. Called between jobs and between AI calls, the two places
+     * where a run can legitimately go quiet for minutes at a time.
+     */
+    protected function heartbeat(): void
+    {
+        if (!$this->batchIds)
+        {
+            return;
+        }
+
+        $this->queue->touch($this->batchIds);
+        ProductImportScheduler::refreshLock();
     }
 
     /* --------------------------------------------------------------------
@@ -528,7 +619,7 @@ class ProductImportService
             {
                 $keyword = $ean;
             }
-            elseif ($product['ean'] && $settings['is_ean_search'])
+            elseif ($product['ean'] && $settings['is_ean_search'] && self::isValidComparisonEan($product['ean'], $product))
             {
                 $keyword = $product['ean'];
             }
@@ -603,6 +694,17 @@ class ProductImportService
         return $module_data;
     }
 
+    /**
+     * Whether $ean (the source product's own EAN, as opposed to the
+     * search-row keyword) is safe to use as a price-comparison search
+     * keyword. Rejects non-EAN text (e.g. invalid feed data) so it can't be
+     * sent to comparison modules as a de-facto keyword search.
+     */
+    private static function isValidComparisonEan($ean, array $product)
+    {
+        return (bool) \apply_filters('cegg_import_price_comparison_valid_ean', TextHelper::isEan($ean), $ean, $product);
+    }
+
     /* --------------------------------------------------------------------
        Build post/product according to preset meta
     -------------------------------------------------------------------- */
@@ -656,6 +758,8 @@ class ProductImportService
 
             $product = $this->productPrompt->craftProductData($product, $gen_fields);
 
+            $this->heartbeat();
+
             $this->logger->notice(sprintf(
                 esc_html__('AI product data generated: %s.', 'content-egg'),
                 join(', ', $gen_fields)
@@ -696,131 +800,147 @@ class ProductImportService
             $postPrompt->setProduct($product);
             $postPrompt->setCustomPrompts($promptRows);
 
-            // A prompt resolves to exactly one value per product, generated once.
-            $generated = [];
-
-            if (!empty($preset['ai_title']))
+            // Which sinks are switched on, and which prompt (or built-in) runs each.
+            $sinks = [];
+            foreach (['title' => 'ai_title', 'content' => 'ai_content', 'short_desc' => 'ai_short_desc'] as $node => $presetKey)
             {
-                $ai_title_method_key = $preset['ai_title'];
-                if ($postPrompt->canGenerateTitle($ai_title_method_key))
+                if (!empty($preset[$presetKey]))
                 {
-                    try
-                    {
-                        $ai['AI.title'] = $postPrompt->generateTitle($ai_title_method_key);
-                        $postPrompt->setPostTitle($ai['AI.title']);
-                    }
-                    catch (\Exception $e)
-                    {
-                        throw new \RuntimeException(
-                            'AI: Post Title generation error: ' . esc_html($e->getMessage())
-                        );
-                    }
-
-                    if (isset($promptRows[$ai_title_method_key]))
-                    {
-                        $generated[$ai_title_method_key] = $ai['AI.title'];
-                    }
-
-                    $this->logger->notice(
-                        sprintf(
-                            esc_html__('AI post title generated: %s.', 'content-egg'),
-                            esc_html($ai_title_method_key)
-                        )
-                    );
+                    $sinks[$node] = $preset[$presetKey];
                 }
             }
 
-            if (!empty($preset['ai_content']))
+            // Alias map: every name a user may write in %AI.…% => the single
+            // generation it stands for. A prompt selected as a sink is an alias
+            // of that sink, so it is never generated twice.
+            $aliasMap = [];
+            foreach (array_keys($promptRows) as $promptName)
             {
-                $ai_description_method_key = $preset['ai_content'];
-                if ($postPrompt->canGenerateDescription($ai_description_method_key))
+                $aliasMap[strtolower($promptName)] = $promptName;
+            }
+            foreach ($sinks as $node => $methodKey)
+            {
+                $aliasMap[$node] = $node;
+
+                if (isset($promptRows[$methodKey]))
                 {
-                    try
-                    {
-                        $ai['AI.content'] = $postPrompt->generateDescription($ai_description_method_key);
-                    }
-                    catch (\Exception $e)
-                    {
-                        throw new \RuntimeException(
-                            'AI: Post Content generation error: ' . esc_html($e->getMessage())
-                        );
-                    }
-
-                    if (isset($promptRows[$ai_description_method_key]))
-                    {
-                        $generated[$ai_description_method_key] = $ai['AI.content'];
-                    }
-
-                    $this->logger->notice(sprintf(
-                        __('AI post content generated: %s.', 'content-egg'),
-                        $ai_description_method_key
-                    ));
+                    $aliasMap[strtolower($methodKey)] = $node;
                 }
             }
 
-            if (!empty($preset['ai_short_desc']))
+            $generator = function (string $node) use ($postPrompt, $sinks): string
             {
-                $ai_short_desc_method_key = $preset['ai_short_desc'];
-                if ($postPrompt->canGenerateShortDescription($ai_short_desc_method_key))
+                if ($node === 'title')
                 {
-                    try
-                    {
-                        $ai['AI.short_desc'] = $postPrompt->generateShortDescription($ai_short_desc_method_key);
-                    }
-                    catch (\Exception $e)
-                    {
-                        throw new \RuntimeException(
-                            'AI: Post Short Description generation error: ' . esc_html($e->getMessage())
-                        );
-                    }
+                    $value = $postPrompt->generateTitle($sinks['title']);
 
-                    if (isset($promptRows[$ai_short_desc_method_key]))
-                    {
-                        $generated[$ai_short_desc_method_key] = $ai['AI.short_desc'];
-                    }
+                    // Built-in description methods interpolate the post title, so
+                    // this has to follow the title node wherever it is generated —
+                    // it may now be pulled in as another prompt's dependency.
+                    $postPrompt->setPostTitle($value);
 
-                    $this->logger->notice(sprintf(
-                        __('AI short desc generated: %s.', 'content-egg'),
-                        $ai_short_desc_method_key
-                    ));
+                    return $value;
                 }
-            }
 
-            // Placeholder-only prompts: generate each referenced prompt once.
-            // Unlike the three sinks above, a failure here is non-fatal — a
-            // missing meta description must not kill a 500-product import.
-            foreach ($promptRows as $name => $promptRow)
+                if ($node === 'content')
+                {
+                    return $postPrompt->generateDescription($sinks['content']);
+                }
+
+                if ($node === 'short_desc')
+                {
+                    return $postPrompt->generateShortDescription($sinks['short_desc']);
+                }
+
+                return $postPrompt->generateCustomPrompt($node);
+            };
+
+            $resolver = new AiValueResolver($aliasMap, $generator);
+            $postPrompt->setValueResolver($resolver);
+
+            // ---- Entry points: the three sinks, in their established order ----
+            // A sink that throws fails the import row: an empty post title is
+            // worse than a visible failure.
+            $sinkLabels = [
+                'title'      => esc_html__('AI post title generated: %s.', 'content-egg'),
+                'content'    => esc_html__('AI post content generated: %s.', 'content-egg'),
+                'short_desc' => esc_html__('AI short desc generated: %s.', 'content-egg'),
+            ];
+            $sinkErrors = [
+                'title'      => 'AI: Post Title generation error: ',
+                'content'    => 'AI: Post Content generation error: ',
+                'short_desc' => 'AI: Post Short Description generation error: ',
+            ];
+
+            foreach ($sinks as $node => $methodKey)
             {
-                if (isset($generated[$name]) || !in_array($name, $referencedPrompts, true))
+                if ($node === 'title' && !$postPrompt->canGenerateTitle($methodKey))
+                {
+                    continue;
+                }
+                if ($node === 'content' && !$postPrompt->canGenerateDescription($methodKey))
+                {
+                    continue;
+                }
+                if ($node === 'short_desc' && !$postPrompt->canGenerateShortDescription($methodKey))
                 {
                     continue;
                 }
 
                 try
                 {
-                    $generated[$name] = $postPrompt->generateCustomPrompt($name);
+                    $resolver->resolveOrFail($node);
+                }
+                catch (\Exception $e)
+                {
+                    throw new \RuntimeException($sinkErrors[$node] . esc_html($e->getMessage()));
+                }
 
+                $this->heartbeat();
+
+                $this->logger->notice(sprintf($sinkLabels[$node], esc_html($methodKey)));
+            }
+
+            // ---- Entry points: placeholder-only prompts, in row order ----
+            // Anything already pulled in as a dependency above is memoised, so
+            // this loop is a no-op for it. A failure here is non-fatal: a missing
+            // meta description must not kill a 500-product import.
+            foreach (array_keys($promptRows) as $name)
+            {
+                if (!in_array($name, $referencedPrompts, true))
+                {
+                    continue;
+                }
+
+                // Prompts that are a sink's selected method already ran above.
+                if (isset($sinks[$aliasMap[strtolower($name)] ?? '']))
+                {
+                    continue;
+                }
+
+                // resolve() reports its own failure, so only claim success when
+                // it added no notice.
+                $noticesBefore = count($resolver->notices());
+
+                $resolver->resolve($name);
+
+                if (count($resolver->notices()) === $noticesBefore)
+                {
                     $this->logger->notice(sprintf(
                         __('AI custom prompt generated: %s.', 'content-egg'),
                         $name
                     ));
                 }
-                catch (\Exception $e)
-                {
-                    $generated[$name] = '';
 
-                    $this->logger->notice(sprintf(
-                        __('AI custom prompt "%1$s" failed: %2$s.', 'content-egg'),
-                        $name,
-                        $e->getMessage()
-                    ));
-                }
+                $this->heartbeat();
             }
 
-            foreach ($generated as $name => $value)
+            foreach ($resolver->notices() as $notice)
             {
-                $ai['AI.' . $name] = $value;
+                $this->logger->notice($notice);
             }
+
+            $ai = array_merge($ai, $resolver->all());
         }
 
         // ---------- 1. Resolve title / content via templates ----------
@@ -877,6 +997,17 @@ class ProductImportService
 
         // ---------- 3. Insert post ----------
         wp_set_current_user($preset['author_id']);
+
+        // Carried by the insert rather than written by a wp_update_post() of
+        // its own straight afterwards: on a site whose cache plugin purges on
+        // publish, every post write is a full purge, and an import already
+        // writes each product more than once. Sanitised here, after the author
+        // switch, so kses runs in exactly the context the insert does.
+        if ($isWoo && $wooShortDesc)
+        {
+            $postArr['post_excerpt'] = wp_kses_post($wooShortDesc);
+        }
+
         $postId = wp_insert_post($postArr, true);
         if (is_wp_error($postId))
         {
@@ -886,14 +1017,6 @@ class ProductImportService
         // ---------- 3.1 Set WooCommerce product data ----------
         if ($isWoo)
         {
-            if ($wooShortDesc)
-            {
-                wp_update_post([
-                    'ID'           => $postId,
-                    'post_excerpt' => wp_kses_post($wooShortDesc),
-                ]);
-            }
-
             if (!empty($preset['product_type']) && $preset['product_type'] == 'external')
             {
                 $classname = \WC_Product_Factory::get_product_classname($postId, 'external');

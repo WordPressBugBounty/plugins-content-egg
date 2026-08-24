@@ -49,6 +49,13 @@ use function ContentEgg\prnx;
                 </div>
             <?php endif; ?>
 
+            <?php // Measured, not assumed: the slot is 275px in a grid and 194px in
+                  // a tile, and the full chip needs 128px. An earlier compact here
+                  // was guesswork about tiles being narrow. ?>
+            <?php if ($coupon = $this->couponChip()): ?>
+                <div class="cegg-coupon-wrap"><?php TemplateHelper::couponChip($item, $coupon, $params); ?></div>
+            <?php endif; ?>
+
             <?php if ($this->isVisible('rating')): ?>
                 <div class="pt-0 fs-5">
                     <?php TemplateHelper::ratingStars($item, true); ?>
@@ -91,6 +98,12 @@ use function ContentEgg\prnx;
             <?php if ($this->isVisible('promo')): ?>
                 <div class="cegg-card-promo text-success small pt-1">
                     <?php TemplateHelper::promo($item); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($this->isVisible('cashback') && TemplateHelper::getCashbackStr($item)): ?>
+                <div class="cegg-card-cashback text-success small pt-1">
+                    <?php TemplateHelper::cashback($item); ?>
                 </div>
             <?php endif; ?>
 

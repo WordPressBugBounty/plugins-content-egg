@@ -14,6 +14,7 @@ use ContentEgg\application\admin\import\ProductImportScheduler;
 use ContentEgg\application\admin\LicConfig;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\OfferCountService;
+use ContentEgg\application\components\ShopMigration;
 use ContentEgg\application\models\LinkIndexModel;
 
 /**
@@ -253,6 +254,14 @@ class Installer
         if ($db_version && $db_version < 94)
             self::upgrade_v94();
 
+        if ($db_version < 95)
+            self::upgrade_v95();
+
+        // Truthy $db_version ⇒ an existing install. A fresh one has nothing to
+        // carry over and takes the new defaults.
+        if ($db_version && $db_version < 96)
+            self::upgrade_v96();
+
         if (Plugin::isPaidBuild())
             MaintenanceCron::schedule();
 
@@ -272,6 +281,73 @@ class Installer
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
         dbDelta($sql);
+    }
+
+    /**
+     * Folds merchant_names + merchants into ShopStore BEFORE their field
+     * definitions leave GeneralConfig.
+     *
+     * The order is load-bearing: Config::validate() rebuilds the option from
+     * defined keys only, so the first settings save after their removal deletes
+     * both. Running unconditionally (not gated on a truthy $db_version) so a
+     * fresh install also gets the migrated flag and never re-runs later.
+     */
+    private static function upgrade_v95()
+    {
+        ShopMigration::run();
+    }
+
+    /**
+     * cashback_integration => cashback_tracking + cashback_badge.
+     *
+     * Both new fields default to 'enabled', and Config::get_current() falls
+     * through to the default for any key missing from the stored row - so
+     * without this an install that had deliberately switched the integration
+     * OFF would come back from an update stamping links and printing rates
+     * again. Carrying the old value across is the whole point.
+     *
+     * Written straight to the option rather than through GeneralConfig:
+     * validate() rebuilds the row from currently defined keys only, and
+     * cashback_integration is no longer one of them.
+     */
+    private static function upgrade_v96()
+    {
+        $name = GeneralConfig::getInstance()->option_name();
+        $stored = \get_option($name);
+
+        if (!is_array($stored))
+            return;
+
+        $migrated = self::migrateCashbackOption($stored);
+
+        if ($migrated !== $stored)
+            \update_option($name, $migrated);
+    }
+
+    /**
+     * The rename itself, as a value in and a value out.
+     *
+     * Separated from the option read/write because getting it wrong is silent:
+     * the site simply comes back from an update with a setting the operator
+     * had switched off switched on again, and nothing says so. Pure.
+     */
+    public static function migrateCashbackOption(array $stored)
+    {
+        if (!isset($stored['cashback_integration']))
+            return $stored;
+
+        $was = (string) $stored['cashback_integration'] === 'enabled' ? 'enabled' : 'disabled';
+
+        // A key the operator has somehow already set wins over the old one.
+        if (!isset($stored['cashback_tracking']))
+            $stored['cashback_tracking'] = $was;
+
+        if (!isset($stored['cashback_badge']))
+            $stored['cashback_badge'] = $was;
+
+        unset($stored['cashback_integration']);
+
+        return $stored;
     }
 
     private static function upgrade_v50()

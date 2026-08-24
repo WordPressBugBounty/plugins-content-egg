@@ -47,17 +47,18 @@ final class ValidateBlocksAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
-                'blocks' => array('type' => 'array', 'minItems' => 1, 'items' => array('type' => 'object')),
+                'blocks' => array('type' => 'array', 'minItems' => 1, 'items' => self::blockNodeSchema()),
                 'post_id' => array('type' => 'integer', 'description' => 'Resolve product_refs against this post\'s products.'),
-                'products' => array(
-                    'type' => 'object',
-                    'description' => 'Optional product payload (module_id => items from content-egg/search-products), so '
-                        . 'product_refs resolve for a post that does not exist yet. Mirrors content-egg/create-post, '
-                        . 'letting you fully validate a new product-bound draft before creating it.',
-                    'additionalProperties' => array('type' => 'array', 'items' => array('type' => 'object')),
+                'products' => self::productsPayloadSchema(
+                    'Optional product payload (module_id => items from content-egg/search-products, or '
+                        . 'unique_id strings when search_tokens is set), so product_refs resolve for a post '
+                        . 'that does not exist yet. Mirrors content-egg/create-post, letting you fully '
+                        . 'validate a new product-bound draft before creating it.'
                 ),
+                'search_tokens' => self::searchTokensSchema(),
             ),
             'required' => array('blocks'),
             'additionalProperties' => false,
@@ -94,7 +95,10 @@ final class ValidateBlocksAbility extends AbilityBase
             throw new AbilityInputException("'blocks' must be a non-empty array of block nodes.");
         }
 
-        $products = is_array($input['products'] ?? null) ? $input['products'] : array();
+        $products = self::resolveProductSearchTokens(
+            is_array($input['products'] ?? null) ? $input['products'] : array(),
+            is_array($input['search_tokens'] ?? null) ? $input['search_tokens'] : array()
+        );
 
         $validator = new Validator();
         $result = $validator->validate($blocks, (int) ($input['post_id'] ?? 0), $products);

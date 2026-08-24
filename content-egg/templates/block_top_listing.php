@@ -86,6 +86,12 @@ if (!isset($items[0]['_source_order']))
                             </div>
                         <?php endif; ?>
 
+                        <?php // Main column beside the promo: the button column is
+                              // 128px, this one has the width. ?>
+                        <?php if ($coupon = $this->couponChip()): ?>
+                            <div class="cegg-coupon-wrap"><?php TemplateHelper::couponChip($item, $coupon, $params); ?></div>
+                        <?php endif; ?>
+
                         <?php if ($this->isVisible('description', false)): ?>
                             <div class="cegg-desc-small card-text small lh-sm  pt-3"><?php echo \wp_kses_post($item['description']); ?></div>
                         <?php endif; ?>
@@ -144,6 +150,11 @@ if (!isset($items[0]['_source_order']))
                         <div class="cegg-merchant small fs-6 text-body-secondary text-truncate">
                             <small><?php TemplateHelper::merchant($item); ?></small>
                         </div>
+                    <?php endif; ?>
+
+                    <?php // Fallback only: with no title column there is nowhere else. ?>
+                    <?php if (!$this->isVisible('title') && ($coupon = $this->couponChip())): ?>
+                        <div class="cegg-coupon-wrap"><?php TemplateHelper::couponChip($item, $coupon, $params, true); ?></div>
                     <?php endif; ?>
                 </div>
             </div>

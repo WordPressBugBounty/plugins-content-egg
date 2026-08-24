@@ -33,38 +33,43 @@ final class CreatePostAbility extends AbilityBase
 
     public function description(): string
     {
+        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
+        // "products" payload contract must be complete before the cut.
         return 'Creates a post from a block tree in one call: validates the tree, attaches '
             . 'the supplied items and serializes to Gutenberg markup. The "products" payload '
-            . 'is module_id => items from the matching search ability with fields="full" — it '
-            . 'accepts ANY module type: products (search-products / manual Offer items), '
+            . 'is module_id => items from the matching search ability with fields="full", and '
+            . 'accepts ANY module type. Nothing is written when validation fails. '
+            . 'The types are products (search-products / manual Offer items), '
             . 'coupons (search-coupons), images (search-images) and videos (search-videos); '
             . 'each module is attached through the ability that matches its type. product_refs '
             . 'in Egg Blocks reference products from the payload (matched by module_id + '
             . 'unique_id). Product items may carry an optional "overrides" object (title, '
             . 'subtitle, description, short_description, badge, badge_color [a named color: '
             . 'primary, secondary, success, danger, warning, info, light, dark — not hex], promo) applied on '
-            . 'top of the source item; overrides apply to products only. Nothing is written '
-            . 'when validation fails. Publishing requires the publish_posts capability; '
+            . 'top of the source item; overrides apply to products only. '
+            . 'Publishing requires the publish_posts capability; '
             . 'default status is draft.';
     }
 
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'title' => array('type' => 'string', 'minLength' => 2),
                 'status' => array('type' => 'string', 'enum' => self::STATUSES, 'default' => 'draft'),
                 'post_type' => array('type' => 'string', 'default' => 'post'),
-                'blocks' => array('type' => 'array', 'minItems' => 1, 'items' => array('type' => 'object')),
+                'blocks' => array('type' => 'array', 'minItems' => 1, 'items' => self::blockNodeSchema()),
                 'products' => array(
-                    'type' => 'object',
+                    'type' => array('object', 'null'),
                     'description' => 'module_id => array of items to attach before rendering, for any '
                         . 'module type (products, coupons, images, videos) from the matching search '
-                        . 'ability with fields="full". Product items may include an optional "overrides" '
+                        . 'ability with fields="full", or unique_id strings when search_tokens is set. '
+                        . 'Product items may include an optional "overrides" '
                         . 'object of editorial fields (products only).',
                 ),
-                'keyword' => array('type' => 'string', 'description' => 'Stored as the search keyword for later auto-updates.'),
+                'search_tokens' => self::searchTokensSchema(),
             ),
             'required' => array('title', 'blocks'),
             'additionalProperties' => false,
@@ -141,6 +146,16 @@ final class CreatePostAbility extends AbilityBase
             );
         }
 
+        // 0. Swap unique_id refs for the server's stored copy of each search
+        //    result, BEFORE validating: the validator resolves product_refs
+        //    against this payload, so it needs the real items, and everything
+        //    downstream then sees full objects exactly as if they had been
+        //    echoed back.
+        $products = self::resolveProductSearchTokens(
+            $products,
+            is_array($input['search_tokens'] ?? null) ? $input['search_tokens'] : array()
+        );
+
         // 1. Validate BEFORE any write; refs may resolve from the payload.
         $result = (new Validator())->validate($blocks, 0, $products);
         if (!$result->valid)
@@ -181,7 +196,7 @@ final class CreatePostAbility extends AbilityBase
                 {
                     continue;
                 }
-                $r = self::attachByType($post_id, (string) $module_id, array_values($items), (string) ($input['keyword'] ?? ''));
+                $r = self::attachByType($post_id, (string) $module_id, array_values($items), '');
                 $attached[(string) $module_id] = $r['added'];
             }
 
@@ -210,7 +225,12 @@ final class CreatePostAbility extends AbilityBase
             'edit_url' => (string) \get_edit_post_link($post_id, 'raw'),
             'status' => $status,
             'block_count' => count($result->tree),
-            'attached' => $attached,
+            // Cast so an empty map serializes as {} and not []: the output schema
+            // declares this an object, and a blocks-only create (no "products"
+            // payload) leaves it empty, which PHP would otherwise emit as an
+            // array. MCP clients are told to validate structuredContent against
+            // outputSchema, so the mismatch flags an otherwise successful create.
+            'attached' => (object) $attached,
         );
     }
 

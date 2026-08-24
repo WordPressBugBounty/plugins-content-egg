@@ -77,7 +77,17 @@ class AutoblogController
     public function add_admin_menu()
     {
         \add_submenu_page(Plugin::slug, __('Autoblogging', 'content-egg') . ' &lsaquo; Content Egg', __('Autoblogging', 'content-egg'), 'manage_options', self::slug, array($this, 'actionIndex'));
-        \add_submenu_page('', __('Add autoblogging', 'content-egg') . ' &lsaquo; Content Egg', __('Add autoblogging', 'content-egg'), 'manage_options', 'content-egg-autoblog-edit', array($this, 'actionUpdate'));
+        $hook = \add_submenu_page('', __('Add autoblogging', 'content-egg') . ' &lsaquo; Content Egg', __('Add autoblogging', 'content-egg'), 'manage_options', 'content-egg-autoblog-edit', array($this, 'actionUpdate'));
+
+        // Parentless submenu: get_admin_page_title() cannot resolve it, so
+        // $title reaches admin-header.php as null. See ShopsController.
+        if ($hook)
+            \add_action('load-' . $hook, function ()
+            {
+                $GLOBALS['title'] = empty($_GET['id'])
+                    ? __('Add autoblogging', 'content-egg')
+                    : __('Edit autoblogging', 'content-egg');
+            });
         \add_submenu_page('options.php', __('Add autoblogging - bulk mode', 'content-egg') . ' &lsaquo; Content Egg', __('Add autoblogging - bulk mode', 'content-egg'), 'manage_options', 'content-egg-autoblog-edit--batch', array($this, 'actionUpdate'));
     }
 

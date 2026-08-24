@@ -12,8 +12,9 @@ class ProductListVariant
     public static function render(array $payload, string $theme_class, string $data_theme): void
     {
         $winner_index = self::getWinnerIndex($payload['items']);
+        $stack_class = self::getStackClass(count($payload['criteria']));
         ?>
-        <div class="eggb-block eggb-ct eggb-ct--product-list<?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+        <div class="eggb-block eggb-ct eggb-ct--product-list <?php echo esc_attr($stack_class); ?><?php echo $theme_class ? ' ' . esc_attr($theme_class) : ''; ?>"<?php echo $data_theme; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
             <?php if ($payload['heading_label'] !== '' || $payload['heading_title'] !== '') : ?>
                 <div class="eggb-ct-header px-3 px-md-4 pt-3 pt-md-4 pb-3">
                     <?php if ($payload['heading_label'] !== '') : ?>
@@ -42,8 +43,8 @@ class ProductListVariant
                         <?php foreach ($payload['items'] as $index => $item) : ?>
                             <?php $is_winner = ($winner_index === $index); ?>
                             <tr>
-                                <td>
-                                    <div class="d-flex align-items-center gap-2">
+                                <td class="eggb-ct-pl-product-cell">
+                                    <div class="eggb-ct-pl-media d-flex align-items-center gap-2">
                                         <?php self::renderThumb($item); ?>
                                         <div class="min-w-0">
                                             <?php self::renderTitle($item); ?>
@@ -53,12 +54,13 @@ class ProductListVariant
                                 </td>
 
                                 <?php foreach ($payload['criteria'] as $criterion) : ?>
-                                    <td class="eggb-ct-pl-value text-center">
-                                        <?php self::renderCriterionValue($criterion, $item, $index, self::getLowestPrice($payload['items'], $criterion)); ?>
+                                    <?php $criterion_label = (string) $criterion['label']; ?>
+                                    <td class="eggb-ct-pl-value"<?php echo $criterion_label !== '' ? ' data-label="' . esc_attr($criterion_label) . '"' : ''; ?> data-type="<?php echo esc_attr((string) ($criterion['type'] ?? 'text')); ?>">
+                                        <span class="eggb-ct-pl-val"><?php self::renderCriterionValue($criterion, $item, $index, self::getLowestPrice($payload['items'], $criterion)); ?></span>
                                     </td>
                                 <?php endforeach; ?>
 
-                                <td class="text-center">
+                                <td class="eggb-ct-pl-cta-cell">
                                     <?php
                                     $button_class = 'eggb-btn text-nowrap';
                                     if ($is_winner)
@@ -91,6 +93,25 @@ class ProductListVariant
             <?php endif; ?>
         </div>
         <?php
+    }
+
+    /**
+     * The stacked (card) mobile layout kicks in at a width that depends on how many
+     * criteria columns the table has to fit: the more columns, the sooner it stacks.
+     */
+    private static function getStackClass(int $criteria_count): string
+    {
+        if ($criteria_count <= 2)
+        {
+            return 'eggb-ct-stack--sm';
+        }
+
+        if ($criteria_count === 3)
+        {
+            return 'eggb-ct-stack--md';
+        }
+
+        return 'eggb-ct-stack--lg';
     }
 
     private static function getWinnerIndex(array $items): ?int

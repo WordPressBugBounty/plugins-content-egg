@@ -413,6 +413,170 @@ class PresetNormalizer
         return $preset;
     }
 
+    /**
+     * Counts how many separate synchronous AI API calls one import of this
+     * preset will make. Mirrors ProductImportService::createPostFromPreset():
+     * ai_product_content is one batched call regardless of field count; each
+     * of ai_title/ai_content/ai_short_desc is one call; and each referenced
+     * custom prompt not already produced by one of those sinks is one more
+     * (see the "generated" dedup in createPostFromPreset()).
+     *
+     * Used to decide whether a preset is AI-heavy enough to warrant a
+     * smaller import batch size, so one cron run doesn't chain too many
+     * sequential AI round trips.
+     */
+    public static function estimateAiCallCount(array $preset): int
+    {
+        $count = !empty($preset['ai_product_content']) ? 1 : 0;
+
+        $sinkValues = [];
+        foreach (self::SINK_KEYS as $sink)
+        {
+            if (!empty($preset[$sink]))
+            {
+                $count++;
+                $sinkValues[] = $preset[$sink];
+            }
+        }
+
+        $referenced = self::collectReferencedNames($preset);
+
+        return $count + count(array_diff($referenced, $sinkValues));
+    }
+
+    /**
+     * Dependency graph over prompt bodies: name => names it references.
+     *
+     * A sink token (%AI.title%, %AI.content%, %AI.short_desc%) resolves to the
+     * prompt selected for that sink, so chaining through a sink is visible to
+     * cycle detection. References to unknown names are dropped.
+     *
+     * Unlike collectReferencedNames(), which answers "what does the preset
+     * reference", this answers "what does each prompt reference".
+     *
+     * @return array<string, string[]>
+     */
+    public static function collectPromptDependencies(array $preset): array
+    {
+        $known = [];
+        foreach ($preset['ai_prompts'] ?? [] as $row)
+        {
+            if (is_array($row) && !empty($row['name']))
+            {
+                $known[strtolower($row['name'])] = $row['name'];
+            }
+        }
+
+        if (!$known)
+        {
+            return [];
+        }
+
+        $alias = [];
+        foreach (['ai_title' => 'title', 'ai_content' => 'content', 'ai_short_desc' => 'short_desc'] as $sinkKey => $token)
+        {
+            $selected = strtolower((string) ($preset[$sinkKey] ?? ''));
+
+            if ($selected !== '' && isset($known[$selected]))
+            {
+                $alias[$token] = $known[$selected];
+            }
+        }
+
+        $graph = [];
+
+        foreach ($preset['ai_prompts'] ?? [] as $row)
+        {
+            if (!is_array($row) || empty($row['name']))
+            {
+                continue;
+            }
+
+            $deps = [];
+
+            if (preg_match_all('/%AI\.([A-Za-z0-9_]+)%/', (string) ($row['prompt'] ?? ''), $matches))
+            {
+                foreach ($matches[1] as $token)
+                {
+                    $key = strtolower($token);
+
+                    if (isset($alias[$key]))
+                    {
+                        $deps[$alias[$key]] = true;
+                    }
+                    elseif (isset($known[$key]))
+                    {
+                        $deps[$known[$key]] = true;
+                    }
+                }
+            }
+
+            $graph[$row['name']] = array_keys($deps);
+        }
+
+        return $graph;
+    }
+
+    /**
+     * Every cycle in a dependency graph, each as the path of names in the loop.
+     *
+     * Depth-first search with a colour map: 0 unvisited, 1 on the current
+     * stack, 2 finished. A node is only expanded once, so a cycle reachable
+     * from several roots is reported once.
+     *
+     * @param array<string, string[]> $graph
+     * @return array<int, string[]>
+     */
+    public static function detectCycles(array $graph): array
+    {
+        $cycles = [];
+        $state  = [];
+        $stack  = [];
+
+        $visit = function (string $node) use (&$visit, $graph, &$state, &$stack, &$cycles): void
+        {
+            $state[$node] = 1;
+            $stack[]      = $node;
+
+            foreach ($graph[$node] ?? [] as $dep)
+            {
+                if (!isset($graph[$dep]))
+                {
+                    continue;
+                }
+
+                $depState = $state[$dep] ?? 0;
+
+                if ($depState === 1)
+                {
+                    $at = array_search($dep, $stack, true);
+
+                    if ($at !== false)
+                    {
+                        $cycles[] = array_slice($stack, $at);
+                    }
+                }
+                elseif ($depState === 0)
+                {
+                    $visit($dep);
+                }
+            }
+
+            array_pop($stack);
+            $state[$node] = 2;
+        };
+
+        foreach (array_keys($graph) as $node)
+        {
+            if (($state[$node] ?? 0) === 0)
+            {
+                $visit($node);
+            }
+        }
+
+        return $cycles;
+    }
+
     private static function stripLegacyKeys(array $preset): array
     {
         for ($n = 1; $n <= 5; $n++)

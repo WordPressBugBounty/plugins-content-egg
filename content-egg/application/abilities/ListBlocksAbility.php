@@ -38,7 +38,8 @@ final class ListBlocksAbility extends AbilityBase
     public function inputSchema(): array
     {
         return array(
-            'type' => array('object', 'null'),
+            'type' => 'object',
+            'default' => array(),
             'properties' => array(
                 'family' => array('type' => 'string', 'enum' => array('eggb', 'products', 'coupons', 'images', 'videos', 'core')),
                 'type' => array('type' => 'string', 'description' => 'Return one block type in full detail.'),

@@ -90,6 +90,54 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
     }
 
     /**
+     * Delete a temporary file if it is still there.
+     *
+     * Cleanup paths routinely run for files that were never created (a download
+     * that failed before writing, an already-consumed prefetch). Plain @unlink()
+     * still raises a warning in that case, and an error handler that ignores the
+     * @ operator — WP_DEBUG, WP-CLI — turns it into a fatal that aborts the
+     * import. The is_file() check keeps those paths silent.
+     */
+    protected function deleteFile(?string $path): void
+    {
+        if ($path !== null && $path !== '' && is_file($path))
+        {
+            @unlink($path);
+        }
+    }
+
+    /**
+     * Per-product import filter built from the module settings, or null when
+     * no usable values are configured.
+     */
+    protected function makeProductFilter(): ?FeedProductFilter
+    {
+        $filter = new FeedProductFilter(
+            (string) $this->config('filter_field'),
+            (string) $this->config('filter_mode'),
+            preg_split('/\R/', (string) $this->config('filter_values')) ?: array()
+        );
+
+        return $filter->isEmpty() ? null : $filter;
+    }
+
+    /**
+     * True when the product must not be saved to the local database.
+     *
+     * Combines the user-configured filter with the 'cegg_feed_product_filter'
+     * hook, which fires for every row even when no filter is configured.
+     */
+    protected function isFilteredOut(array $product, ?FeedProductFilter $filter): bool
+    {
+        if ($filter !== null && !$filter->keeps($product))
+        {
+            return true;
+        }
+
+        return !\apply_filters('cegg_feed_product_filter', true, $product, $this->getId());
+    }
+
+    /**
      * Fingerprint of the module settings; a change (mapping, format, filters…)
      * invalidates the unchanged-feed delta shortcut.
      */
@@ -145,7 +193,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
     public function storePrefetchedArchive(string $tmp_file, string $feed_url): bool
     {
         $dest = $this->prefetchFilePath();
-        @unlink($dest);
+        $this->deleteFile($dest);
 
         if (!@rename($tmp_file, $dest))
         {
@@ -188,7 +236,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
     /** Removes a leftover prefetched archive, if any (abandoned wizard, module reset). Safe to call anytime. */
     public function clearPrefetchedArchive(): void
     {
-        @unlink($this->prefetchFilePath());
+        $this->deleteFile($this->prefetchFilePath());
         \delete_option($this->prefetchOptionName());
     }
 
@@ -236,7 +284,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
             if ($cache->store($raw, $feed_url))
             {
-                @unlink($raw);
+                $this->deleteFile($raw);
             }
             else
             {
@@ -670,7 +718,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         {
             if ($file)
             {
-                @unlink($file);
+                $this->deleteFile($file);
             }
             if ($this->rmdir)
             {
@@ -791,7 +839,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             $result = $this->unzipSingleFeed($tmp_file, $dest_dir);
             if (is_wp_error($result))
             {
-                @unlink($tmp_file);
+                $this->deleteFile($tmp_file);
                 throw new \Exception(
                     sprintf(
                         esc_html__('Unable to unzip feed archive: %s', 'content-egg'),
@@ -800,7 +848,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 );
             }
 
-            @unlink($tmp_file);
+            $this->deleteFile($tmp_file);
             $this->rmdir = $dest_dir; // keep for later cleanup
             return $result;
         }
@@ -815,7 +863,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             }
             catch (\Throwable $e)
             {
-                @unlink($tmp_file);
+                $this->deleteFile($tmp_file);
                 throw new \Exception(
                     'Unable to gunzip feed: ' . esc_html(wp_strip_all_tags($e->getMessage()))
                 );
@@ -878,7 +926,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             $fh = @fopen($tmp_file, 'wb');
             if (! $fh)
             {
-                @unlink($tmp_file);
+                $this->deleteFile($tmp_file);
                 throw new \Exception('Failed opening temp file for writing (FTP).');
             }
 
@@ -918,7 +966,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             }
 
             // Cleanup and fall through to next method
-            @unlink($tmp_file);
+            $this->deleteFile($tmp_file);
             $errors[] = $err ? 'cURL: ' . $err : 'cURL transfer error';
 
             // Recreate temp file for next attempt
@@ -986,7 +1034,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 $errors[] = 'FTP extension: unable to connect';
             }
 
-            @unlink($tmp_file);
+            $this->deleteFile($tmp_file);
             $tmp_file = \wp_tempnam($ftp_url);
             if (! $tmp_file)
             {
@@ -1040,7 +1088,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             }
         }
 
-        @unlink($tmp_file);
+        $this->deleteFile($tmp_file);
 
         $safeUrl = $this->redactUrlCredentials($ftp_url);
         $msg = implode('; ', array_filter($errors));
@@ -1316,9 +1364,11 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             'empty_product'        => 0,
             'out_of_stock'         => 0,
             'variation'            => 0,
+            'filtered'             => 0,
         ];
 
         $variationFilter = $this->config('filter_variations') ? new FeedVariationFilter() : null;
+        $productFilter = $this->makeProductFilter();
 
         $escape = '\\';
         $reader = new CsvReader($handle, $delimiter, $enclosure, $escape);
@@ -1389,6 +1439,12 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 continue;
             }
 
+            if ($this->isFilteredOut($product, $productFilter))
+            {
+                ++$skipped['filtered'];
+                continue;
+            }
+
             if ($variationFilter !== null && $variationFilter->isVariation(
                 (string) ($product['title'] ?? ''),
                 (string) ($product['orig_url'] ?? ''),
@@ -1418,6 +1474,14 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         {
             $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
         }
+
+        // Final tick: the batch tick above only fires on whole MULTIPLE_INSERT_ROWS
+        // boundaries, so without this the last partial batch is never reported.
+        $this->importStatus()->tick(array(
+            'rows_read' => $inserted + array_sum($skipped),
+            'inserted' => $inserted,
+            'skipped' => array_sum($skipped),
+        ));
 
         // build notice about skipped products
         $skipped = array_filter($skipped);
@@ -1451,10 +1515,15 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         $i = 0;
         $products = array();
         $variationsSkipped = 0;
+        $filteredSkipped = 0;
+        $rowsRead = 0;
         $variationFilter = $this->config('filter_variations') ? new FeedVariationFilter() : null;
+        $productFilter = $this->makeProductFilter();
 
         while (($data = $reader->read()) !== null)
         {
+            $rowsRead++;
+
             if (!$data)
             {
                 continue;
@@ -1492,6 +1561,12 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 continue;
             }
 
+            if ($this->isFilteredOut($product, $productFilter))
+            {
+                ++$filteredSkipped;
+                continue;
+            }
+
             if ($variationFilter !== null && $variationFilter->isVariation(
                 (string) ($product['title'] ?? ''),
                 (string) ($product['orig_url'] ?? ''),
@@ -1508,7 +1583,11 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             {
                 $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
                 $products = array();
-                $this->importStatus()->tick(array('rows_read' => $i, 'inserted' => $i));
+                $this->importStatus()->tick(array(
+                    'rows_read' => $rowsRead,
+                    'inserted' => $i,
+                    'skipped' => $filteredSkipped + $variationsSkipped,
+                ));
             }
         }
 
@@ -1525,12 +1604,26 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             $this->setLastImportError($error ?: 'No products found in the JSON feed.');
         }
 
+        // Final tick: the batch tick only fires on whole MULTIPLE_INSERT_ROWS
+        // boundaries, so without this the last partial batch is never reported.
+        $this->importStatus()->tick(array(
+            'rows_read' => $rowsRead,
+            'inserted' => $i,
+            'skipped' => $filteredSkipped + $variationsSkipped,
+        ));
+
+        $skippedNotice = array();
+        if ($filteredSkipped > 0)
+        {
+            $skippedNotice[] = sprintf(__('%s filtered', 'content-egg'), number_format_i18n($filteredSkipped));
+        }
         if ($variationsSkipped > 0)
         {
-            $this->setLastImportNotice(sprintf(
-                __('Skipped rows', 'content-egg') . ': %s variation',
-                number_format_i18n($variationsSkipped)
-            ));
+            $skippedNotice[] = sprintf(__('%s variation', 'content-egg'), number_format_i18n($variationsSkipped));
+        }
+        if ($skippedNotice)
+        {
+            $this->setLastImportNotice(__('Skipped rows', 'content-egg') . ': ' . implode(', ', $skippedNotice));
         }
     }
 
@@ -1651,10 +1744,15 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         $i = 0;
         $products = array();
         $variationsSkipped = 0;
+        $filteredSkipped = 0;
+        $rowsRead = 0;
         $variationFilter = $this->config('filter_variations') ? new FeedVariationFilter() : null;
+        $productFilter = $this->makeProductFilter();
 
         while ($node_string = $streamer->getNode())
         {
+            $rowsRead++;
+
             // Encoding normalization (optional)
             if ($encoding !== 'UTF-8')
             {
@@ -1738,6 +1836,12 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                                 continue;
                             }
 
+                            if ($this->isFilteredOut($product, $productFilter))
+                            {
+                                ++$filteredSkipped;
+                                continue;
+                            }
+
                             if ($variationFilter !== null && $variationFilter->isVariation(
                                 (string) ($product['title'] ?? ''),
                                 (string) ($product['orig_url'] ?? ''),
@@ -1754,7 +1858,11 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                             {
                                 $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
                                 $products = array();
-                                $this->importStatus()->tick(array('rows_read' => $i, 'inserted' => $i));
+                                $this->importStatus()->tick(array(
+                                    'rows_read' => $rowsRead,
+                                    'inserted' => $i,
+                                    'skipped' => $filteredSkipped + $variationsSkipped,
+                                ));
                             }
                         }
                         // Done with this chunk
@@ -1805,6 +1913,12 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 continue;
             }
 
+            if ($this->isFilteredOut($product, $productFilter))
+            {
+                ++$filteredSkipped;
+                continue;
+            }
+
             if ($variationFilter !== null && $variationFilter->isVariation(
                 (string) ($product['title'] ?? ''),
                 (string) ($product['orig_url'] ?? ''),
@@ -1821,7 +1935,11 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             {
                 $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
                 $products = array();
-                $this->importStatus()->tick(array('rows_read' => $i, 'inserted' => $i));
+                $this->importStatus()->tick(array(
+                    'rows_read' => $rowsRead,
+                    'inserted' => $i,
+                    'skipped' => $filteredSkipped + $variationsSkipped,
+                ));
             }
         }
 
@@ -1834,12 +1952,26 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         {
             $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
         }
+        // Final tick: the batch tick only fires on whole MULTIPLE_INSERT_ROWS
+        // boundaries, so without this the last partial batch is never reported.
+        $this->importStatus()->tick(array(
+            'rows_read' => $rowsRead,
+            'inserted' => $i,
+            'skipped' => $filteredSkipped + $variationsSkipped,
+        ));
+
+        $skippedNotice = array();
+        if ($filteredSkipped > 0)
+        {
+            $skippedNotice[] = sprintf(__('%s filtered', 'content-egg'), number_format_i18n($filteredSkipped));
+        }
         if ($variationsSkipped > 0)
         {
-            $this->setLastImportNotice(sprintf(
-                __('Skipped rows', 'content-egg') . ': %s variation',
-                number_format_i18n($variationsSkipped)
-            ));
+            $skippedNotice[] = sprintf(__('%s variation', 'content-egg'), number_format_i18n($variationsSkipped));
+        }
+        if ($skippedNotice)
+        {
+            $this->setLastImportNotice(__('Skipped rows', 'content-egg') . ': ' . implode(', ', $skippedNotice));
         }
     }
 
@@ -1886,7 +2018,10 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         $i = 0;
         $products = array();
         $variationsSkipped = 0;
+        $filteredSkipped = 0;
+        $rowsRead = 0;
         $variationFilter = $this->config('filter_variations') ? new FeedVariationFilter() : null;
+        $productFilter = $this->makeProductFilter();
 
         while ($reader->read())
         {
@@ -1916,6 +2051,8 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             {
                 continue;
             }
+
+            $rowsRead++;
 
             if ($encoding !== 'UTF-8')
             {
@@ -1972,6 +2109,12 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 continue;
             }
 
+            if ($this->isFilteredOut($product, $productFilter))
+            {
+                ++$filteredSkipped;
+                continue;
+            }
+
             if ($variationFilter !== null && $variationFilter->isVariation(
                 (string) ($product['title'] ?? ''),
                 (string) ($product['orig_url'] ?? ''),
@@ -1989,7 +2132,11 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             {
                 $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
                 $products = array();
-                $this->importStatus()->tick(array('rows_read' => $i, 'inserted' => $i));
+                $this->importStatus()->tick(array(
+                    'rows_read' => $rowsRead,
+                    'inserted' => $i,
+                    'skipped' => $filteredSkipped + $variationsSkipped,
+                ));
             }
         }
 
@@ -2004,12 +2151,26 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         {
             $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
         }
+        // Final tick: the batch tick only fires on whole MULTIPLE_INSERT_ROWS
+        // boundaries, so without this the last partial batch is never reported.
+        $this->importStatus()->tick(array(
+            'rows_read' => $rowsRead,
+            'inserted' => $i,
+            'skipped' => $filteredSkipped + $variationsSkipped,
+        ));
+
+        $skippedNotice = array();
+        if ($filteredSkipped > 0)
+        {
+            $skippedNotice[] = sprintf(__('%s filtered', 'content-egg'), number_format_i18n($filteredSkipped));
+        }
         if ($variationsSkipped > 0)
         {
-            $this->setLastImportNotice(sprintf(
-                __('Skipped rows', 'content-egg') . ': %s variation',
-                number_format_i18n($variationsSkipped)
-            ));
+            $skippedNotice[] = sprintf(__('%s variation', 'content-egg'), number_format_i18n($variationsSkipped));
+        }
+        if ($skippedNotice)
+        {
+            $this->setLastImportNotice(__('Skipped rows', 'content-egg') . ': ' . implode(', ', $skippedNotice));
         }
     }
 
@@ -2117,7 +2278,8 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
         if (time() - $last_import <= 43200)
         {
-            return sprintf(__('%s ago', '%s = human-readable time difference', 'content-egg'), \human_time_diff($last_import, time()));
+            /* translators: %s: human-readable time difference, e.g. "2 hours" */
+            return sprintf(__('%s ago', 'content-egg'), \human_time_diff($last_import, time()));
         }
 
         return TemplateHelper::dateFormatFromGmt($last_import, true);
@@ -2207,7 +2369,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         // clean up the file/directory it was working on here instead.
         if ($this->current_file)
         {
-            @unlink($this->current_file);
+            $this->deleteFile($this->current_file);
             $this->current_file = null;
         }
         if ($this->rmdir)
@@ -2558,21 +2720,21 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             {
                 @gzclose($in);
                 @fclose($fh);
-                @unlink($out_path);
+                $this->deleteFile($out_path);
                 throw new \Exception('Gzip read error.');
             }
             if (fwrite($fh, $buf) === false)
             {
                 @gzclose($in);
                 @fclose($fh);
-                @unlink($out_path);
+                $this->deleteFile($out_path);
                 throw new \Exception('Gzip write error.');
             }
         }
 
         @gzclose($in);
         @fclose($fh);
-        @unlink($gz_path); // remove the .gz source
+        $this->deleteFile($gz_path); // remove the .gz source
 
         return $out_path;
     }
