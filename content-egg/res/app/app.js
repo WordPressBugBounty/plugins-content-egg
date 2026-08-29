@@ -111,6 +111,9 @@ contentEgg.controller(
             domain: item && item.domain ? item.domain : "",
             group: item && item.group ? item.group : "",
             img: item && item.img ? item.img : "",
+            // Gallery shots, for blocks that let an author show something
+            // other than the catalog hero.
+            images: item && Array.isArray(item.images) ? item.images : [],
             url: item && item.url ? item.url : "",
             price: item && item.price ? item.price : "",
             priceOld: item && item.priceOld ? item.priceOld : "",

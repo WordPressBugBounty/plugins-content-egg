@@ -30,16 +30,23 @@ class ProductImportController
     /** @var AbstractTab[] */
     private array $tabs = [];
 
+    /** Screen hook returned by add_submenu_page(), for the load- action. */
+    private string $hook = '';
+
     public function __construct()
     {
         add_action('admin_menu', [$this, 'registerMenu']);
+
+        // set_screen_options() runs before any load- hook, so this has to be
+        // registered from plugin boot or the value never persists.
+        add_filter('set_screen_option_import_presets_per_page', [$this, 'savePresetsPerPage'], 10, 3);
     }
 
     public function registerMenu()
     {
         $badge = '';
 
-        add_submenu_page(
+        $this->hook = (string) add_submenu_page(
             Plugin::getSlug(),
             __('Import Tools', 'content-egg'),
             __('Import Tools', 'content-egg') . $badge,
@@ -47,6 +54,40 @@ class ProductImportController
             self::SLUG,
             [$this, 'renderPage']
         );
+
+        if ($this->hook)
+        {
+            add_action('load-' . $this->hook, [$this, 'addScreenOptions']);
+        }
+    }
+
+    /**
+     * Registered on load-{$hook}: admin-header.php prints the Screen Options
+     * panel before the page callback runs, so registering during render (as
+     * PresetsTab previously did) was always too late for it to appear.
+     */
+    public function addScreenOptions(): void
+    {
+        if (sanitize_key($_GET['tab'] ?? '') !== 'presets')
+        {
+            return;
+        }
+
+        add_screen_option('per_page', [
+            'label'   => __('Presets per page', 'content-egg'),
+            'default' => 20,
+            'option'  => 'import_presets_per_page',
+        ]);
+    }
+
+    /**
+     * @param mixed  $screen_option Value to store, or false to skip saving.
+     * @param string $option        Option name.
+     * @param int    $value         Submitted value.
+     */
+    public function savePresetsPerPage($screen_option, $option, $value): int
+    {
+        return ListTableNav::clampPerPage($value, 20);
     }
 
     private function initTabs()

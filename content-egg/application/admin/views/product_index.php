@@ -14,6 +14,20 @@
                 message: $j('#cegg_waiting_products')
             });
         });
+
+        // Start a new search or filter at page 1. Core does this in
+        // wp-admin/js/common.js, but only when a bulk-action dropdown is
+        // present -- this table has none, so its reset never fired here and the
+        // page number you were on got re-submitted with the new query.
+        // Comparing against the initial value keeps a hand-typed page working.
+        var $pageInput = $j('input.current-page');
+        var initialPage = $pageInput.val();
+
+        $j('#cegg-products-table').on('submit', function() {
+            if ($pageInput.val() === initialPage) {
+                $pageInput.val('1');
+            }
+        });
     });
 </script>
 

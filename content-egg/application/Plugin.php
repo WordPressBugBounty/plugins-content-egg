@@ -34,7 +34,7 @@ use ContentEgg\application\licensing\LicenseGate;
  */
 class Plugin
 {
-    const version = '11.6.0';
+    const version = '11.7.0';
     const db_version = 96;
     const wp_requires = '6.0';
     const slug = 'content-egg';

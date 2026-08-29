@@ -159,6 +159,42 @@ final class CacheGuard
     }
 
     /**
+     * Decide whether a response is served with no body at all, mirroring the
+     * check core does just before it echoes (class-wp-rest-server.php):
+     *
+     *   // The 204 response shouldn't have a body.
+     *   if ( 204 === $code || null === $result ) { return null; }
+     *
+     * serveEncoded() short-circuits core at 'rest_pre_serve_request', which is
+     * upstream of that check, so it has to make the same decision itself.
+     *
+     * The MCP transport returns WP_REST_Response(null, 202) to acknowledge a
+     * JSON-RPC notification; without this, wp_json_encode(null) would put the
+     * 4-byte string `null` in a body the Streamable HTTP spec says MUST be
+     * empty. Only `null` data counts — an empty array/string, false and 0 are
+     * all legitimate JSON bodies.
+     *
+     * Pure — no WordPress calls — so the standalone test harness can exercise it.
+     *
+     * @param mixed $data   Response data from response_to_data().
+     * @param int   $status HTTP status of the response.
+     * @return array|null Headers to emit for the empty body, or null when the
+     *                    response has a body and should be served normally.
+     */
+    public static function bodylessHeaders($data, int $status): ?array
+    {
+        if ($data !== null && $status !== 204)
+        {
+            return null;
+        }
+
+        // RFC 9110 8.6: a server MUST NOT send Content-Length on a 204. Any
+        // other bodyless status (202 notification acks) states the 0 explicitly
+        // so nothing downstream falls back to chunked framing.
+        return $status === 204 ? array() : array('Content-Length' => '0');
+    }
+
+    /**
      * Turn PHP's own output compression off for the agent surface, so it can't
      * add a second encoding layer on top of the body serveEncoded() emits.
      *
@@ -228,6 +264,22 @@ final class CacheGuard
         }
 
         $data = $server->response_to_data($result, false);
+
+        // Bodyless responses (MCP notification acks, 204s) must not be encoded:
+        // taking over from core means taking over its no-body check too. Runs
+        // before the gzip branch so an empty body never claims an encoding.
+        $status = method_exists($result, 'get_status') ? (int) $result->get_status() : 200;
+        $bodyless = self::bodylessHeaders($data, $status);
+        if ($bodyless !== null)
+        {
+            foreach ($bodyless as $name => $value)
+            {
+                header($name . ': ' . $value);
+            }
+
+            return true;
+        }
+
         $json = \wp_json_encode($data);
         if (!is_string($json))
         {

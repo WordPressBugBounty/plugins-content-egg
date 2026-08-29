@@ -119,7 +119,7 @@ dropped, so a wrong shape fails loudly instead of losing content silently.
 
 | Shape | Keys | When |
 | --- | --- | --- |
-| Content Egg block | `type`, `attrs` (+ `product_ref` on `product-card` / `verdict` only) | `eggb/*` and `content-egg/*` — you author these |
+| Content Egg block | `type`, `attrs` (+ `product_ref` on `product-card` / `verdict` / `editorial-product` only) | `eggb/*` and `content-egg/*` — you author these |
 | Prose | `type`, `attrs`, `html` | simple `core/paragraph` / `core/heading` / `core/list` — editable; `attrs` holds only `level` (heading) or `ordered` (list) |
 | Opaque | `type`, `opaque: true`, `raw_markup` | classic content, third-party blocks, and any core block with inner blocks (including modern lists). **Round-trip verbatim; never hand-author one** |
 | Markdown | `type: "core/markdown"`, `markdown` (or `attrs.markdown`) | authoring new prose; compiled to core blocks on save, so it comes back as prose or opaque nodes, never as `core/markdown` |
@@ -219,7 +219,7 @@ with live price/image/link once the products are ATTACHED to a real post, so
 preview-blocks renders it as an empty container and returns an
 unhydrated_product_ref warning. Preview again after create-post (with post_id)
 to see the hydrated block. product_ref for single-bound blocks (product-card,
-verdict) may sit at the block top level or in attrs.product_ref — both resolve;
+verdict, editorial-product) may sit at the block top level or in attrs.product_ref — both resolve;
 the top level is the tree form get-post-blocks returns, attrs is how the post
 stores it.
 

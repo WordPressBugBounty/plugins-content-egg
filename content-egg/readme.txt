@@ -4,7 +4,7 @@ Tags: affiliate marketing, price comparison, csv import, affiliate links, gutenb
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 11.6.0
+Stable tag: 11.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,11 +39,13 @@ Stop building product reviews from generic paragraphs and shortcodes. Egg Blocks
 
 **Editorial insights:** key takeaways, criteria, methodology, definitions, myth vs fact, pros & cons
 
-**Product & commerce:** product card, quick picks, where to buy, comparison table, verdict, rating breakdown, specifications
+**Product & commerce:** product card, editorial product, quick picks, where to buy, comparison table, verdict, rating breakdown, specifications
 
 **Conversion & social proof:** contextual CTA, pricing, testimonial, trust signals
 
 **Navigation:** related posts
+
+The **editorial product** block is the quiet one: a real product shown as part of the article, with no price, rating or buy button, so a guide can cite products and still read like a guide.
 
 **Why it matters for SEO:** AI search engines (Google AI Overviews, Perplexity, ChatGPT) cite chunks of content, not whole pages. Egg Blocks break your article into self-contained, machine-readable sections — a labeled FAQ block, a methodology block, a pros/cons section — each one a candidate for AI citation and rich results. The FAQ block emits FAQPage structured data automatically.
 
@@ -254,6 +256,9 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 Products, coupons, images and videos are now managed in the editor instead of the metabox. Adds AI Agents: run Content Egg from ChatGPT or Claude. Requires WordPress 6.9.
 
 == Changelog ==
+
+= 11.7.0 =
+* New: Editorial Product block — show a product as part of the article, not as an advert. Four layouts, from a full-width figure to a one-line mention, with no price, rating, score or buy button; the link rides on the product name and image.
 
 = 11.6.0 =
 

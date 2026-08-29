@@ -5,6 +5,7 @@ namespace ContentEgg\application\blocks\productblock;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\components\BlockTemplateManager;
 use ContentEgg\application\components\ModuleManager;;
+use ContentEgg\application\ProductManagerLoader;
 
 defined('\ABSPATH') || exit;
 
@@ -222,6 +223,11 @@ class ProductBlock
                 // Coupons share the editor product snapshot but must never appear
                 // in the product picker — ProductRefsControl excludes these ids.
                 'couponModuleIds' => array_values(ModuleManager::getInstance()->getParserModuleIdsByTypes('COUPON', true)),
+                // Active product-manager presentation. The block reads group
+                // names from whichever UI is actually running: the Angular
+                // metabox publishes them live in window.ceggProductGroups,
+                // the React presentations keep them in the products store.
+                'pmMode' => ProductManagerLoader::mode(),
             )
         );
     }

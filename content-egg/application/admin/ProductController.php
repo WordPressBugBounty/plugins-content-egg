@@ -21,10 +21,18 @@ class ProductController
 
     const slug = 'content-egg-product';
 
+    /** Screen hook returned by add_submenu_page(), for the load- action. */
+    private $hook = '';
+
     public function __construct()
     {
         \add_action('admin_menu', array($this, 'add_admin_menu'));
         \add_action('admin_init', array($this, 'remove_http_referer'));
+
+        // set_screen_options() runs in wp-admin/admin.php before
+        // set_current_screen() and before any load- hook, so the save filter has
+        // to be in place from plugin boot or the value never persists.
+        \add_filter('set_screen_option_' . ProductTable::per_page_option, array($this, 'save_per_page'), 10, 3);
     }
 
     public function remove_http_referer()
@@ -41,7 +49,43 @@ class ProductController
 
     public function add_admin_menu()
     {
-        \add_submenu_page(Plugin::slug, __('All Products', 'content-egg') . ' &lsaquo; Content Egg', __('All Products', 'content-egg'), 'publish_posts', self::slug, array($this, 'actionIndex'));
+        $this->hook = \add_submenu_page(Plugin::slug, __('All Products', 'content-egg') . ' &lsaquo; Content Egg', __('All Products', 'content-egg'), 'publish_posts', self::slug, array($this, 'actionIndex'));
+
+        if ($this->hook)
+        {
+            \add_action('load-' . $this->hook, array($this, 'add_screen_options'));
+        }
+    }
+
+    /**
+     * Screen options have to be registered on load-{$hook}: admin-header.php
+     * prints the Screen Options panel before the page callback runs, so
+     * registering from inside actionIndex() would always be too late.
+     */
+    public function add_screen_options()
+    {
+        // The Scan and Bridge Mappings actions render no list table.
+        if (isset($_GET['action']))
+        {
+            return;
+        }
+
+        \add_screen_option('per_page', array(
+            'label'   => __('Products per page', 'content-egg'),
+            'default' => ProductTable::per_page,
+            'option'  => ProductTable::per_page_option,
+        ));
+    }
+
+    /**
+     * @param mixed  $screen_option Value to store, or false to skip saving.
+     * @param string $option        Option name.
+     * @param int    $value         Submitted value.
+     * @return int
+     */
+    public function save_per_page($screen_option, $option, $value)
+    {
+        return ListTableNav::clampPerPage($value, ProductTable::per_page);
     }
 
     public function actionIndex()

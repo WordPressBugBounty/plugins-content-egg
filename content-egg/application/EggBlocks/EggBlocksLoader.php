@@ -17,6 +17,7 @@ class EggBlocksLoader
         'pros-cons',
         'verdict',
         'product-card',
+        'editorial-product',
         'quick-picks',
         'comparison-table',
         'where-to-buy',
@@ -52,6 +53,14 @@ class EggBlocksLoader
         // the only style-loading path that reaches the iframed editor canvas
         // in WP 6.3+ without depending on legacy non-iframe behavior.
         add_filter('register_block_type_args', [self::class, 'attachThemeStyles'], 10, 2);
+
+        // Also before register_block_type(): WordPress takes each block
+        // stylesheet's cache-busting ?ver= straight from block.json's
+        // "version", which every block here pins at 1.0.0. Left alone, a
+        // released CSS change never invalidates a browser or CDN copy, and
+        // visitors keep the stale file with nothing to signal it. Stamping the
+        // plugin version makes the URL move with each release.
+        add_filter('block_type_metadata', [self::class, 'stampBlockVersion']);
 
         self::registerBlocks();
         EggbSchemaCollector::init();
@@ -128,6 +137,32 @@ class EggBlocksLoader
         }
 
         return $args;
+    }
+
+    /**
+     * Stamp the plugin version onto eggb/* block metadata, so every block
+     * stylesheet is served as ?ver=<plugin version> rather than the 1.0.0
+     * frozen into block.json. Runs before the style handles are registered,
+     * which is where WordPress reads this value.
+     *
+     * @param array $metadata Parsed block.json.
+     * @return array
+     */
+    public static function stampBlockVersion($metadata)
+    {
+        if (!is_array($metadata) || !isset($metadata['name']))
+        {
+            return $metadata;
+        }
+
+        if (strpos((string) $metadata['name'], 'eggb/') !== 0)
+        {
+            return $metadata;
+        }
+
+        $metadata['version'] = \ContentEgg\application\Plugin::version();
+
+        return $metadata;
     }
 
     public static function registerBlockCategory(array $categories): array

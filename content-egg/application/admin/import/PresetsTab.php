@@ -137,16 +137,9 @@ class PresetsTab extends AbstractTab
     ------------------------------------------------------------------ */
     private function renderList(): void
     {
-        // Screen option (once)
-        $screen = get_current_screen();
-        if (method_exists($screen, 'add_option'))
-        {
-            $screen->add_option('per_page', [
-                'label'   => __('Presets per page', 'content-egg'),
-                'default' => 20,
-                'option'  => 'import_presets_per_page',
-            ]);
-        }
+        // The per_page screen option is registered on load-{$hook} in
+        // ProductImportController: admin-header.php prints the Screen Options
+        // panel before this callback runs, so registering it here never showed.
 
         // Instantiate & prepare
         $table = new PresetListTable();

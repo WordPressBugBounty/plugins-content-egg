@@ -1,0 +1,46 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/editorial-product",
+    "version": "1.0.0",
+    "title": "Editorial Product",
+    "category": "cegg-blocks",
+    "icon": "format-aside",
+    "description": "Product shown as editorial content, without price, score, or CTA.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+    "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "figure",
+            "enum": ["figure", "claim", "specimen", "mention"]
+        },
+        "product_ref": { "type": "object", "default": {} },
+        "image_index": { "type": "number", "default": 0 },
+        "section_label": { "type": "string", "default": "" },
+        "title": { "type": "string", "default": "" },
+        "merchant": { "type": "string", "default": "" },
+        "body": { "type": "string", "default": "" },
+        "specs": { "type": "array", "default": [] },
+        "context": { "type": "string", "default": "" },
+        "seeded_for": { "type": "string", "default": "" },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "anchor": { "type": "string", "default": "" },
+        "style": {
+            "type": "object",
+            "default": {}
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "align": ["wide"],
+        "spacing": { "margin": ["top", "bottom"] }
+    }
+}

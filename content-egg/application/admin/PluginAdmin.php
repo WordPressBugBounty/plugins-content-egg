@@ -89,6 +89,7 @@ class PluginAdmin
             new ModuleApi;
             new FeaturedImage;
             new ToolsController;
+            new ScrapTestController;
             new AgentAccessController;
             ImportQueueApi::init();
             AeIntegrationConfig::getInstance()->adminInit();

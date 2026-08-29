@@ -16,7 +16,7 @@ final class Catalog
 {
     const EGGB_DIR = \ContentEgg\PLUGIN_PATH . 'application/EggBlocks/blocks/';
 
-    const SINGLE_PRODUCT = array('product-card', 'verdict');
+    const SINGLE_PRODUCT = array('product-card', 'verdict', 'editorial-product');
     const MULTI_PRODUCT = array('comparison-table', 'quick-picks', 'where-to-buy');
 
     /** The four "live display" blocks that render module data attached to a post. */

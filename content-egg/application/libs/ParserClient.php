@@ -144,11 +144,28 @@ class ParserClient
 		if ($response_code != 200)
 		{
 			$response_message = \wp_remote_retrieve_response_message($response);
-			$error_mess       = "HTTP request status fails: " . $response_code . " - " . $response_message . '.';
+			$error_mess       = $this->formatHttpError($response, $response_code, $response_message);
 			throw new \Exception(esc_html($error_mess), (int) $response_code);
 		}
 
 		return \wp_remote_retrieve_body($response);
+	}
+
+	/**
+	 * Build the exception message for a failed HTTP request.
+	 *
+	 * Overridable so a subclass can surface a provider's error body. Never
+	 * include the request URL: several scraping services carry the user's
+	 * api_key in the query string.
+	 *
+	 * @param array|\WP_Error $response
+	 * @param int             $code
+	 * @param string          $message
+	 * @return string
+	 */
+	protected function formatHttpError($response, $code, $message)
+	{
+		return "HTTP request status fails: " . $code . " - " . $message . '.';
 	}
 
 	public function decodeCharset($str, $fix_encoding = true)

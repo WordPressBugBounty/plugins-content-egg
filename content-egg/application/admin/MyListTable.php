@@ -54,6 +54,14 @@ class MyListTable extends \WP_List_Table
         return '';
     }
 
+    /**
+     * Rows per page. Subclasses override to honour a screen option.
+     */
+    protected function perPage()
+    {
+        return max(1, (int) static::per_page);
+    }
+
     function prepare_items()
     {
         $doaction = $this->current_action();
@@ -64,32 +72,40 @@ class MyListTable extends \WP_List_Table
 
         $columns = $this->get_columns();
         $where = $this->getWhereFilters();
+        $per_page = $this->perPage();
 
         $hidden = array();
         $sortable = $this->get_sortable_columns();
         $this->_column_headers = array($columns, $hidden, $sortable);
         $this->process_bulk_action();
 
-        $paged = isset($_REQUEST['paged']) ? max(0, intval($_REQUEST['paged']) - 1) : 0;
+        // Count before selecting, so an out-of-range page number can be clamped
+        // before it turns into an offset past the end of the result set.
+        // Searching or filtering re-submits the page you were on (WP puts the
+        // paged input inside this same form), so without the clamp a search made
+        // from page 4 lands on an empty screen with no pagination left to click.
+        $total_items = (int) $this->model->count($where !== '' ? $where : null);
+
+        $paged = isset($_REQUEST['paged']) ? \wp_unslash($_REQUEST['paged']) : 1;
+        $paged = ListTableNav::clampPage($paged, $total_items, $per_page);
+
         $orderby = (isset($_REQUEST['orderby']) && in_array($_REQUEST['orderby'], array_keys($this->get_sortable_columns()))) ? sanitize_text_field(wp_unslash($_REQUEST['orderby'])) : $this->default_orderby();
 
         $order = (isset($_REQUEST['order']) && in_array($_REQUEST['order'], array('asc', 'desc'))) ? sanitize_key($_REQUEST['order']) : $this->default_order();
 
         $params = array(
-            'select' => 'SQL_CALC_FOUND_ROWS *',
             'where' => $where,
-            'limit' => static::per_page,
-            'offset' => $paged * static::per_page,
+            'limit' => $per_page,
+            'offset' => ($paged - 1) * $per_page,
             'order' => $orderby . ' ' . $order,
         );
         $this->items = $this->model->findAll($params);
-        $total_items = (int) $this->model->getDb()->get_var('SELECT FOUND_ROWS();');
 
         $this->set_pagination_args(
             array(
                 'total_items' => $total_items,
-                'per_page' => static::per_page,
-                'total_pages' => ceil($total_items / static::per_page)
+                'per_page' => $per_page,
+                'total_pages' => (int) ceil($total_items / $per_page)
             )
         );
     }
