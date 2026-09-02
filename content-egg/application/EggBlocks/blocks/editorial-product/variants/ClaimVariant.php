@@ -26,7 +26,7 @@ class ClaimVariant
                 <div class="eggb-ep-evidence">
                     <div class="eggb-ep-thumb">
                         <?php TemplateHelper::openATag($block['product_item'], [], ['class' => 'eggb-ep-img-link']); ?>
-                            <?php TemplateHelper::displayImage($block['product_item'], 200, 200, ['class' => 'eggb-ep-img']); ?>
+                            <?php TemplateHelper::displayImage($block['product_item'], 200, 200, FigureVariant::imgParams($block)); ?>
                         <?php TemplateHelper::closeATag(); ?>
                     </div>
                     <div class="eggb-ep-evidence-body">

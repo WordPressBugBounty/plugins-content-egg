@@ -12,7 +12,7 @@ defined('\ABSPATH') || exit;
 ?>
 
 <?php
-$item = reset($items);
+$item = TemplateHelper::getPriceAlertItem($items);
 $module_id = $item['module_id'];
 if (!$title)
     $title = TemplateHelper::__('Set Alert for') . ' ' . TextHelper::truncate($item['title'], 80) . ' - ' . TemplateHelper::formatPriceCurrency($item['price'], $item['currencyCode']);

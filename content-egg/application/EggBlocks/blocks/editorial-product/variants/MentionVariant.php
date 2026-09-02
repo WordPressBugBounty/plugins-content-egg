@@ -20,7 +20,7 @@ class MentionVariant
             <?php if (!empty($block['product_item'])) : ?>
                 <div class="eggb-ep-mention-thumb">
                     <?php TemplateHelper::openATag($block['product_item'], [], ['class' => 'eggb-ep-img-link']); ?>
-                        <?php TemplateHelper::displayImage($block['product_item'], 160, 160, ['class' => 'eggb-ep-img']); ?>
+                        <?php TemplateHelper::displayImage($block['product_item'], 160, 160, FigureVariant::imgParams($block)); ?>
                     <?php TemplateHelper::closeATag(); ?>
                 </div>
             <?php endif; ?>

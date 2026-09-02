@@ -296,3 +296,100 @@
 .eggb-pc-block-header {
   margin-bottom: 1rem;
 }
+
+/* ── Plain variant ─────────────────────────── */
+
+.eggb-product-card--plain .eggb-pc-plain-title {
+  display:         block;
+  margin-bottom:   .3rem;
+  text-decoration: none;
+}
+
+/* The image is content, not a rail mark, so it shares a row with the
+   product name and specs; the description below keeps the full content
+   width. */
+.eggb-product-card--plain .eggb-pc-plain-top {
+  display:       flex;
+  gap:           1.25rem;
+  align-items:   flex-start;
+  margin-bottom: 1.15rem;
+}
+
+.eggb-product-card--plain .eggb-pc-plain-figure {
+  flex:    0 0 var(--eggb-pc-plain-img-w, 210px);
+  width:   var(--eggb-pc-plain-img-w, 210px);
+  display: block;
+}
+
+.eggb-product-card--plain .eggb-pc-plain-img {
+  display:       block;
+  width:         100%;
+  height:        auto;
+  /* Cap the height so a portrait image cannot blow the row open. */
+  max-height:    var(--eggb-pc-plain-img-h, 210px);
+  object-fit:    contain;
+  border-radius: var(--eggb-radius);
+}
+
+.eggb-product-card--plain .eggb-pc-plain-head {
+  flex:      1 1 auto;
+  min-width: 0;
+}
+
+.eggb-product-card--plain .eggb-pc-plain-sub {
+  /* A step darker than the spec run below it, so the two muted lines
+     read as two things rather than one grey block. */
+  color:         color-mix(in srgb, var(--eggb-text-muted) 65%, var(--eggb-text));
+  font-size:     var(--eggb-text-sm);
+  margin-bottom: .5rem;
+}
+
+.eggb-product-card--plain .eggb-pc-plain-meta {
+  margin-bottom: 0;
+}
+
+/* Price line and CTA each get their own row: the button reads as the
+   block's one action rather than as another item in the price line. */
+.eggb-product-card--plain .eggb-pc-plain-buy {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     flex-start;
+  gap:             .7rem;
+  margin-top:      1rem;
+}
+
+.eggb-product-card--plain .eggb-pc-plain-store {
+  color:     var(--eggb-text-muted);
+  font-size: var(--eggb-text-xs);
+}
+
+.eggb-product-card--plain .eggb-pc-plain-updated {
+  margin-top: .65rem;
+  font-size:  var(--eggb-text-xs);
+  color:      var(--eggb-text-muted);
+}
+
+.eggb-product-card--plain .eggb-pc-plain-img-link {
+  display: block;
+}
+
+/* Stack the image above the name at the same breakpoint where the rail
+   collapses — otherwise the name column drops to about 150px on a phone. */
+@media (max-width: 700px) {
+  .eggb-product-card--plain .eggb-pc-plain-top {
+    flex-direction: column;
+    gap:            .75rem;
+  }
+
+  /* Stranding a 180px image at the left leaves dead space beside it with
+     nothing to fill it. The figure takes the full width instead and the
+     image is height-capped, so it centres inside a full-width box. */
+  .eggb-product-card--plain .eggb-pc-plain-figure {
+    flex:  0 0 auto;
+    width: 100%;
+  }
+
+  .eggb-product-card--plain .eggb-pc-plain-img {
+    max-height: var(--eggb-pc-plain-img-h-sm, 230px);
+  }
+}

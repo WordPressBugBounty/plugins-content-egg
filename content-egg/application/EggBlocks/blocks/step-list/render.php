@@ -14,6 +14,7 @@ require_once __DIR__ . '/variants/DefaultVariant.php';
 require_once __DIR__ . '/variants/ChecklistVariant.php';
 require_once __DIR__ . '/variants/CardsVariant.php';
 require_once __DIR__ . '/variants/CardGridVariant.php';
+require_once __DIR__ . '/variants/PlainVariant.php';
 require_once __DIR__ . '/StepListRenderer.php';
 require_once __DIR__ . '/../../shared/EggbTocSupport.php';
 

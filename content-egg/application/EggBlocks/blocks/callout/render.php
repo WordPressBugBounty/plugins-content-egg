@@ -12,6 +12,7 @@ defined('ABSPATH') || exit;
 
 require_once __DIR__ . '/variants/DefaultVariant.php';
 require_once __DIR__ . '/variants/CompactVariant.php';
+require_once __DIR__ . '/variants/PlainVariant.php';
 require_once __DIR__ . '/CalloutRenderer.php';
 
 $wrapper_attributes = get_block_wrapper_attributes(['class' => 'cegg5-container']);

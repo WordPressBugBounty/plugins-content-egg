@@ -4,6 +4,7 @@ namespace ContentEgg\application\EggBlocks\blocks\myth_fact;
 
 use ContentEgg\application\EggBlocks\blocks\myth_fact\variants\DefaultVariant;
 use ContentEgg\application\EggBlocks\blocks\myth_fact\variants\InlineVariant;
+use ContentEgg\application\EggBlocks\blocks\myth_fact\variants\PlainVariant;
 use ContentEgg\application\EggBlocks\shared\EggbSanitizer;
 use ContentEgg\application\EggBlocks\shared\traits\RendersWithTheme;
 
@@ -17,7 +18,11 @@ class MythFactRenderer
 
     public static function render(array $attributes): string
     {
-        $variant = ($attributes['variant'] ?? 'default') === 'inline' ? 'inline' : 'default';
+        $variant = (string) ($attributes['variant'] ?? 'default');
+        if (!in_array($variant, ['default', 'inline', 'plain'], true))
+        {
+            $variant = 'default';
+        }
         $items = self::normalizeItems($attributes['items'] ?? [], $variant);
 
         if (empty($items))
@@ -46,7 +51,11 @@ class MythFactRenderer
 
         ob_start();
 
-        if ($variant === 'inline')
+        if ($variant === 'plain')
+        {
+            PlainVariant::render($data, $theme_class, $data_theme);
+        }
+        elseif ($variant === 'inline')
         {
             InlineVariant::render($data, $theme_class, $data_theme);
         }

@@ -15,7 +15,7 @@
         "variant": {
             "type": "string",
             "default": "default",
-            "enum": ["default", "compact", "grid", "category-grid"]
+            "enum": ["default", "compact", "grid", "category-grid", "plain"]
         },
         "overall_score": {
             "type": "string",

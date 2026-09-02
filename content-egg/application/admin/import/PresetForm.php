@@ -65,6 +65,13 @@ class PresetForm
                 'value' => '',
             ]),
 
+            // Category mapping – provide three empty slots by default
+            'category_map'        => array_fill(0, 3, [
+                'from'       => '',
+                'to_cat'     => 0,
+                'to_woo_cat' => 0,
+            ]),
+
             // Flags
             'avoid_duplicates'      => true,
             'avoid_duplicates_gtin' => false,
@@ -144,6 +151,7 @@ class PresetForm
                     'value' => sanitize_text_field($field['value'] ?? ''),
                 ];
             }, array_values((array) $data['custom_fields'])),
+            'category_map'       => self::clean_category_map((array) $data['category_map']),
             'avoid_duplicates'          => ! empty($data['avoid_duplicates']),
             'avoid_duplicates_gtin'     => ! empty($data['avoid_duplicates_gtin']),
             'use_default'               => ! empty($data['use_default']),
@@ -178,6 +186,47 @@ class PresetForm
         }
 
         self::$lastPromptNotices = $promptResult['notices'];
+
+        return $clean;
+    }
+
+    /**
+     * Rows with no source string, or with no target for either taxonomy, are
+     * dropped: an empty rule matches nothing and only makes the stored map
+     * longer than the rules the user actually wrote.
+     */
+    private static function clean_category_map(array $rows): array
+    {
+        $clean = [];
+
+        foreach ($rows as $row)
+        {
+            if (!is_array($row))
+            {
+                continue;
+            }
+
+            $from = sanitize_text_field($row['from'] ?? '');
+
+            if ('' === trim($from))
+            {
+                continue;
+            }
+
+            $to_cat     = absint($row['to_cat'] ?? 0);
+            $to_woo_cat = absint($row['to_woo_cat'] ?? 0);
+
+            if (!$to_cat && !$to_woo_cat)
+            {
+                continue;
+            }
+
+            $clean[] = [
+                'from'       => $from,
+                'to_cat'     => $to_cat,
+                'to_woo_cat' => $to_woo_cat,
+            ];
+        }
 
         return $clean;
     }

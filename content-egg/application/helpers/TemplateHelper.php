@@ -1902,10 +1902,16 @@ class TemplateHelper
         $params['decoding'] = 'async';
         $params['loading'] = 'lazy';
 
-        if (!empty($item['title']))
-            $params['alt'] = $item['title'];
-        elseif (!empty($item['_alt']))
-            $params['alt'] = $item['_alt'];
+        // A caller-supplied alt wins. The product title describes the product,
+        // not the photograph, so a template that lets its author say what the
+        // image actually shows serves a screen reader better than this default.
+        if (!isset($params['alt']))
+        {
+            if (!empty($item['title']))
+                $params['alt'] = $item['title'];
+            elseif (!empty($item['_alt']))
+                $params['alt'] = $item['_alt'];
+        }
 
         echo '<img ' . self::buildTagParams($params) . ' />'; // phpcs:ignore
     }
@@ -1965,8 +1971,12 @@ class TemplateHelper
 
     public static function getOptimizedImage(array $item, $max_width = 0, $max_height = 0)
     {
+        // _AC_SL urls come from page scraping, where the master really can be
+        // 1500px, so those keep the 520 ceiling. Plain _SL urls come from the
+        // API, whose Large image is 500px on the longest side -- asking for 520
+        // there is a 4% upscale of a picture we already have whole.
         $item['img'] = preg_replace('/\._AC_SL\d+_\./', '._SS520_.', $item['img']);
-        $item['img'] = preg_replace('/\._SL\d+_\./', '._SS520_.', $item['img']);
+        $item['img'] = preg_replace('/\._SL\d+_\./', '._SS500_.', $item['img']);
 
         if ($item['module_id'] == 'Amazon' && strpos($item['img'], 'https://m.media-amazon.com') !== false)
         {
@@ -3907,6 +3917,25 @@ class TemplateHelper
         $items = TemplateHelper::sortByPrice($items);
         $item = reset($items);
         return $item;
+    }
+
+    /**
+     * The offer a price alert should subscribe to: the cheapest one that
+     * actually has price history. An alert tracks a single unique_id, so the
+     * choice must not depend on how the block happens to be ordered for display
+     * (manual numbering, sources order and the sort/order atts all leave the
+     * raw first item arbitrary). Falls back to the cheapest offer so the
+     * inline block keeps deciding on its own whether to render at all.
+     */
+    public static function getPriceAlertItem(array $items)
+    {
+        foreach (TemplateHelper::sortByPrice($items) as $item)
+        {
+            if (self::isPriceAlertAllowed($item['unique_id'], $item['module_id']))
+                return $item;
+        }
+
+        return self::getLowestPriceItem($items);
     }
 
     public static function getItemPriceHistory($unique_id, $module_id, $currency = '', $days = 180)

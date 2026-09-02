@@ -135,3 +135,51 @@
     grid-row: auto;
   }
 }
+
+/* ── Plain variant ─────────────────────────────
+   Three rail rows per item — the same definition-list shape pros-cons
+   uses. The block header spans both columns because the per-item rails
+   are taken by the myth / fact / why labels. */
+
+.eggb-myth-fact--plain .eggb-mf-plain-head {
+  grid-column: 1 / -1;
+}
+
+.eggb-myth-fact--plain .eggb-mf-plain-eyebrow {
+  display:        block;
+  font-size:      .6875rem;
+  font-weight:    600;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  line-height:    1.5;
+  color:          var(--eggb-text-muted);
+  margin-bottom:  .3rem;
+}
+
+/* Separates one myth/fact pair from the next without boxing either. */
+.eggb-myth-fact--plain .eggb-mf-plain-sep {
+  grid-column: 1 / -1;
+  border-top:  var(--eggb-border-w, 1px) solid var(--eggb-border, currentColor);
+  margin:      .35rem 0;
+}
+
+/* The claim being corrected reads as the quieter of the two. Typographic
+   rather than coloured, so it adds no further red to the page. */
+.eggb-myth-fact--plain .eggb-mf-plain-myth {
+  color: var(--eggb-text-muted);
+}
+
+.eggb-myth-fact--plain .eggb-mf-plain-fact p,
+.eggb-myth-fact--plain .eggb-mf-plain-why p {
+  margin: 0;
+}
+
+.eggb-myth-fact--plain .eggb-mf-plain-fact p + p,
+.eggb-myth-fact--plain .eggb-mf-plain-why p + p {
+  margin-top: .9em;
+}
+
+.eggb-myth-fact--plain .eggb-mf-plain-why {
+  color:     var(--eggb-text-muted);
+  font-size: var(--eggb-text-sm);
+}

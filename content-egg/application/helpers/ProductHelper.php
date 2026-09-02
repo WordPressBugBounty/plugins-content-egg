@@ -401,4 +401,59 @@ class ProductHelper
 		$res = trim($res);
 		return $res;
 	}
+
+	/**
+	 * Split a delimited category string into its path segments.
+	 *
+	 * Feeds express a category either as a single label ("Bathroom Storage") or
+	 * as a delimited path ("Home > Bathroom > Bathroom Storage"). Modules that
+	 * receive the latter should store the whole path in categoryPath and keep the
+	 * leaf in category, which is what nested category creation and the preset
+	 * category mapping both expect.
+	 *
+	 * @param string   $raw        Raw category value from the feed.
+	 * @param string[] $separators Literal separators, not patterns.
+	 *
+	 * @return string[] Trimmed, non-empty segments with sequential keys, or [].
+	 */
+	public static function parseCategoryPath(string $raw, array $separators = array('>', '|')): array
+	{
+		$raw = trim($raw);
+
+		if ($raw === '')
+		{
+			return array();
+		}
+
+		$separators = array_filter(array_map('strval', $separators), 'strlen');
+
+		if (!$separators)
+		{
+			return array($raw);
+		}
+
+		$escaped = array_map(function ($sep)
+		{
+			return preg_quote($sep, '#');
+		}, $separators);
+
+		$pattern = '#\s*(?:' . implode('|', $escaped) . ')\s*#';
+
+		if (!preg_match($pattern, $raw))
+		{
+			return array($raw);
+		}
+
+		$path = preg_split($pattern, $raw);
+
+		if (!is_array($path))
+		{
+			return array($raw);
+		}
+
+		$path = array_map('trim', $path);
+
+		// array_filter preserves keys; re-index so the result is a real list.
+		return array_values(array_filter($path, 'strlen'));
+	}
 }

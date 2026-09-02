@@ -36,6 +36,16 @@
   font-size: var(--eggb-text-sm);
 }
 
+.eggb-block .eggb-cr-desc p,
+.eggb-block .eggb-cr-plain-desc p {
+  margin: 0 0 0.75rem;
+}
+
+.eggb-block .eggb-cr-desc p:last-child,
+.eggb-block .eggb-cr-plain-desc p:last-child {
+  margin-bottom: 0;
+}
+
 .eggb-cr-num {
   font-size: var(--eggb-text-xs);
   font-weight: 700;
@@ -99,3 +109,56 @@
   border-left: 2px solid color-mix(in srgb, var(--eggb-negative) 35%, transparent);
   padding-left: 0.6rem;
 }
+
+/* ── Plain variant ─────────────────────────────
+   One rail row per criterion; the block header spans both columns. */
+
+.eggb-criteria--plain .eggb-cr-plain-head {
+  grid-column: 1 / -1;
+}
+
+.eggb-criteria--plain .eggb-cr-plain-eyebrow {
+  display:        block;
+  font-size:      .6875rem;
+  font-weight:    600;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  line-height:    1.5;
+  color:          var(--eggb-text-muted);
+  margin-bottom:  .3rem;
+}
+
+.eggb-criteria--plain .eggb-cr-plain-dots {
+  display:    flex;
+  gap:        .2rem;
+  margin-top: .45rem;
+}
+
+/* The default variant's off-dot uses --eggb-border, a panel hairline at
+   about 10% opacity, which is effectively invisible. currentColor keeps
+   the unfilled dots readable in every theme and in dark mode. */
+.eggb-criteria--plain .eggb-cr-plain-dot {
+  width:         .4rem;
+  height:        .4rem;
+  border-radius: 50%;
+  background:    currentColor;
+  opacity:       .25;
+}
+
+.eggb-criteria--plain .eggb-cr-plain-dot--on {
+  background: var(--eggb-accent);
+  opacity:    1;
+}
+
+.eggb-criteria--plain .eggb-cr-plain-sub {
+  margin-top: .5rem;
+  font-size:  var(--eggb-text-sm);
+}
+
+.eggb-criteria--plain .eggb-cr-plain-sub-label {
+  font-weight:   700;
+  margin-right:  .4em;
+}
+
+.eggb-criteria--plain .eggb-cr-plain-sub-label--positive { color: var(--eggb-positive); }
+.eggb-criteria--plain .eggb-cr-plain-sub-label--negative { color: var(--eggb-negative); }

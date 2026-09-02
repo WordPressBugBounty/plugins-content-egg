@@ -73,3 +73,135 @@
   letter-spacing: 0.1em;
   color: var(--eggb-accent);
 }
+
+
+
+/* ── Plain variant ─────────────────────────────
+   Rail-aligned but not built from rail cells: each li carries its own
+   grid on the same --eggb-rail-w token as .eggb-plain, so the step text
+   lines up with every other block's content column while the markup
+   stays a real ordered list. */
+
+.eggb-step-list--plain {
+  --eggb-sl-gutter: calc(var(--eggb-rail-w, 7.5rem) + var(--eggb-rail-gap, 2rem));
+  border-top:  var(--eggb-border-w, 1px) solid var(--eggb-border, currentColor);
+  padding-top: 1.6rem;
+  margin:      1.6rem 0;
+}
+
+.eggb-step-list--plain .eggb-sl-plain-eyebrow {
+  display:        block;
+  font-size:      .6875rem;
+  font-weight:    600;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  line-height:    1.5;
+  color:          var(--eggb-text-muted);
+  margin-bottom:  .3rem;
+}
+
+.eggb-step-list--plain .eggb-sl-plain-head {
+  margin-bottom: 1.25rem;
+}
+
+/* Anchored on .eggb-block: the bundled Bootstrap sets
+   `.cegg5-container ol { padding-left: 2rem }` and a 1rem bottom margin at
+   (0,1,1), which outspecifies a bare class selector. */
+.eggb-block .eggb-sl-plain-steps {
+  list-style:     none;
+  counter-reset:  eggb-sl-step;
+  padding-left:   0;
+  margin:         0;
+  display:        flex;
+  flex-direction: column;
+  gap:            1.35rem;
+}
+
+.eggb-block .eggb-sl-plain-steps > li {
+  counter-increment:     eggb-sl-step;
+  margin-bottom:         0;
+  display:               grid;
+  grid-template-columns: var(--eggb-rail-w, 7.5rem) minmax(0, 1fr);
+  column-gap:            var(--eggb-rail-gap, 2rem);
+  align-items:           start;
+}
+
+/* The leader fills the gutter, so the numeral does not have to. Set at
+   the title's own size and line-height, the two share a centre line and
+   the leader crosses both cleanly — an oversized numeral could not,
+   because its optical centre sat well below the title's.
+   Neutral, not accent: the accent means "this is the action". */
+.eggb-step-list--plain .eggb-sl-plain-steps > li::before {
+  content:              counter(eggb-sl-step);
+  font-size:            1.0625rem;
+  font-weight:          700;
+  line-height:          1.4;
+  color:                var(--eggb-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A leader ties the numeral to its step and closes the gutter, reusing
+   the same dotted vocabulary as .eggb-leader-fill. Absolutely positioned
+   so it does not become a third grid item; left clears a two-digit
+   numeral. */
+.eggb-block .eggb-sl-plain-steps > li {
+  position: relative;
+}
+
+.eggb-step-list--plain .eggb-sl-plain-steps > li::after {
+  content:       "";
+  position:      absolute;
+  left:          1.7rem;
+  right:         calc(100% - var(--eggb-sl-gutter) + .5rem);
+  top:           .67rem;
+  border-bottom: 2px dotted currentColor;
+  opacity:       .28;
+}
+
+.eggb-step-list--plain .eggb-sl-plain-title {
+  font-weight:   700;
+  line-height:   1.4;
+  margin-bottom: .15rem;
+}
+
+.eggb-step-list--plain .eggb-sl-plain-desc p {
+  margin: 0;
+}
+
+.eggb-step-list--plain .eggb-sl-plain-desc p + p {
+  margin-top: .9em;
+}
+
+/* Aligned with the step text rather than the numbers. */
+.eggb-step-list--plain .eggb-sl-plain-note {
+  margin-top:   1.35rem;
+  padding-left: var(--eggb-sl-gutter);
+  color:        var(--eggb-text-muted);
+  font-size:    var(--eggb-text-sm);
+}
+
+.eggb-step-list--plain .eggb-sl-plain-note p {
+  margin: 0;
+}
+
+/* A 7.5rem gutter is too much of a phone's width to give to a numeral,
+   so the step collapses to a tight hanging indent instead. */
+@media (max-width: 700px) {
+  .eggb-step-list--plain {
+    --eggb-sl-gutter: 2.75rem;
+  }
+
+  .eggb-block .eggb-sl-plain-steps > li {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    column-gap:            .5rem;
+  }
+
+  .eggb-step-list--plain .eggb-sl-plain-steps > li::before {
+    font-size: 1rem;
+  }
+
+  /* A 2.25rem gutter has no room for a leader. */
+  .eggb-step-list--plain .eggb-sl-plain-steps > li::after {
+    display: none;
+  }
+}

@@ -4,7 +4,7 @@ Tags: affiliate marketing, price comparison, csv import, affiliate links, gutenb
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 11.7.0
+Stable tag: 11.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -249,15 +249,19 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 9. Egg Blocks demo — quick picks, conclusion
 
 
-== Upgrade Notice ==
-
-= 11.5.0 =
-
-Products, coupons, images and videos are now managed in the editor instead of the metabox. Adds AI Agents: run Content Egg from ChatGPT or Claude. Requires WordPress 6.9.
-
 == Changelog ==
 
+= 11.8.0 =
+
+* New: Egg Blocks — a Plain variant for nine blocks, including Product Card, Verdict, Pros & Cons and Callout. No panel, no tinted background, no bordered tags: the blocks line up on a shared label column so a review reads as one article instead of a stack of widgets.
+* New: Import presets — Category Mapping. Send a merchant's feed category to one of your own categories, so products arrive filed correctly instead of needing cleanup. A rule can name the full path or a single level, and * matches a whole branch.
+* New: Editorial Product — an alt text field for the product image.
+* Improved: All feed modules — an offer stayed out of stock for good once a merchant re-listed the product under a new ID. The lookup now falls back to the EAN within the same merchant and reconnects the offer on a single unambiguous match, refreshing price, stock, image and links while keeping the saved product data and price history.
+* Fixed: Editorial Product was missing from the block catalog the agent API publishes, so an AI agent could not create or validate one.
+* Fixed: AWIN — the maximum price was ignored when searching a feed.
+
 = 11.7.0 =
+
 * New: Editorial Product block — show a product as part of the article, not as an advert. Four layouts, from a full-width figure to a one-line mention, with no price, rating, score or buy button; the link rides on the product name and image.
 
 = 11.6.0 =

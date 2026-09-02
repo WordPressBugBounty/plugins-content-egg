@@ -15,7 +15,7 @@
         "variant": {
             "type": "string",
             "default": "default",
-            "enum": ["default", "featured", "compact"]
+            "enum": ["default", "featured", "compact", "plain"]
         },
         "product_ref": {
             "type": "object",

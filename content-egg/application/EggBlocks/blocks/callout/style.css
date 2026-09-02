@@ -79,3 +79,79 @@
   height: 0.85rem;
   margin-top: 0.15em;
 }
+
+/* ── Plain variant ─────────────────────────────
+   Hairline box with the label straddling the top rule. The rule is two
+   flex segments either side of the label, not a background knockout, so
+   it needs no knowledge of the page colour and works in dark mode.
+
+   Deliberately off the shared label rail: a callout interrupts the
+   article rather than belonging to it. */
+
+.eggb-callout--plain {
+  --eggb-co-pad: clamp(1rem, 4vw, 1.75rem);
+  border:     1px solid var(--eggb-signal-color, var(--eggb-accent));
+  border-top: 0;
+  /* Square at the top: the rule is drawn as straight segments that meet
+     the side borders at a right angle, so a rounded top corner leaves the
+     border curving up into nothing. Rounding stays at the bottom, where
+     the border is continuous. */
+  border-radius: 0 0 var(--eggb-radius) var(--eggb-radius);
+  padding:       0 var(--eggb-co-pad) 1.35rem;
+  margin:        1.75rem 0;
+  /* Required. With no top border and no top padding, the head row's
+     negative top margin collapses through this box and shifts the box
+     instead of the row, leaving each side border stubbed above the rule.
+     A block formatting context keeps the margin on the child. */
+  display:       flow-root;
+}
+
+/* No label means no notch, so the box needs its top rule back. */
+.eggb-callout--plain.eggb-callout--plain-nolabel {
+  border-top:    1px solid var(--eggb-signal-color, var(--eggb-accent));
+  /* The border is continuous here, so it can round all four corners. */
+  border-radius: var(--eggb-radius);
+  padding-top:   1.35rem;
+}
+
+.eggb-callout--plain .eggb-co-head {
+  display:     flex;
+  align-items: center;
+  gap:         .9rem;
+  /* Pulled out to the side borders, and up by half its height so the
+     segments land exactly on the container's top edge. */
+  height:      1rem;
+  margin:      -.5rem calc(var(--eggb-co-pad) * -1) 1.15rem;
+}
+
+.eggb-callout--plain .eggb-co-line {
+  flex:      1 1 auto;
+  min-width: 0;
+  border-top: 1px solid var(--eggb-signal-color, var(--eggb-accent));
+}
+
+.eggb-callout--plain .eggb-co-label {
+  flex:           0 0 auto;
+  font-size:      .75rem;
+  font-weight:    700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  line-height:    1;
+  white-space:    nowrap;
+  color:          var(--eggb-text);
+}
+
+.eggb-callout--plain .eggb-co-title {
+  font-size:     1.0625rem;
+  font-weight:   700;
+  line-height:   1.35;
+  margin-bottom: .3rem;
+}
+
+.eggb-callout--plain .eggb-co-text p {
+  margin: 0;
+}
+
+.eggb-callout--plain .eggb-co-text p + p {
+  margin-top: .9em;
+}

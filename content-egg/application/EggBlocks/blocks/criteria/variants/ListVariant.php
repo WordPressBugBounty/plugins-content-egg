@@ -37,7 +37,7 @@ class ListVariant
                                     <span class="eggb-cr-importance eggb-cr-importance--<?php echo esc_attr($item['importance']); ?>" role="img" aria-label="<?php echo esc_attr($item['importance_label']); ?>"><?php foreach ($item['importance_dots'] as $on): ?><span class="eggb-cr-dot<?php echo $on ? ' eggb-cr-dot--on' : ''; ?>"></span><?php endforeach; ?></span>
                                 </div>
                                 <?php if ($item['description'] !== ''): ?>
-                                    <div class="eggb-cr-desc"><?php echo esc_html($item['description']); ?></div>
+                                    <div class="eggb-cr-desc"><?php echo $item['description']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
                                 <?php endif; ?>
                                 <?php if ($item['look_for'] !== ''): ?>
                                     <div class="d-flex flex-column gap-1">

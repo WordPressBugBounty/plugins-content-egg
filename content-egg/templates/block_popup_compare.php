@@ -10,7 +10,7 @@ defined('\ABSPATH') || exit;
 
 \wp_enqueue_script('cegg-bootstrap5');
 
-$cheapest = reset($items);
+$cheapest = TemplateHelper::getLowestPriceItem($items);
 $item = TemplateHelper::selectItemByDescription($items);
 ?>
 

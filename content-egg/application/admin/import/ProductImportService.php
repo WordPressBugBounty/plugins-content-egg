@@ -1076,6 +1076,22 @@ class ProductImportService
         }
 
         /**
+         * Then the preset's own mapping: a feed category the user has pointed
+         * at one of their store categories. It runs ahead of dynamic creation
+         * so a mapped product never creates a merchant category.
+         */
+        if (!$categoryId && !empty($preset['category_map']))
+        {
+            $mappedId = CategoryMapper::resolve((array) $preset['category_map'], $product, $taxonomy);
+
+            // The term can be deleted long after the mapping was saved.
+            if ($mappedId && term_exists($mappedId, $taxonomy))
+            {
+                $categoryId = $mappedId;
+            }
+        }
+
+        /**
          * Otherwise, apply dynamic category creation rules
          */
         if (!$categoryId)
@@ -1107,8 +1123,18 @@ class ProductImportService
 
         $categoryId = absint($categoryId);
 
+        /**
+         * Last word on categories, for mapping rules too dynamic to express in
+         * the preset UI — a per-merchant table, a regex, several terms at once.
+         *
+         *   add_filter('cegg_import_category_ids', function ($ids, $product, $preset, $taxonomy, $post_id) {
+         *       return $ids;
+         *   }, 10, 5);
+         */
+        $termIds = apply_filters('cegg_import_category_ids', [$categoryId], $product, $preset, $taxonomy, $postId);
+
         // Apply to the post
-        $setter($postId, [$categoryId]);
+        $setter($postId, array_map('absint', (array) $termIds));
 
         // ---------- 5. Save product data ----------
         update_post_meta($postId, '_cegg_import_unique_id', $product['unique_id'] ?? '');

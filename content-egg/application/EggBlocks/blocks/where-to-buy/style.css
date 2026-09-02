@@ -450,3 +450,116 @@
     justify-content: flex-start;
   }
 }
+
+
+/* ── Plain variant ─────────────────────────────
+   On the shared rail at block level: the rail carries section_label and
+   the content column carries the whole offer list. Per-offer rails would
+   break the price column, which is the one alignment a comparison must
+   protect; a block-level rail does not. */
+
+.eggb-wtb--plain .eggb-wtb-plain-head {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     baseline;
+  flex-wrap:       wrap;
+  gap:             .35rem 1rem;
+  margin-bottom:   .5rem;
+}
+
+.eggb-wtb--plain .eggb-wtb-plain-meta {
+  color:     var(--eggb-text-muted);
+  font-size: var(--eggb-text-xs);
+}
+
+/* Anchored on .eggb-block: Bootstrap's `.cegg5-container ul` sets
+   padding-left 2rem and a bottom margin at (0,1,1). */
+.eggb-block .eggb-wtb-plain-offers {
+  list-style:   none;
+  padding-left: 0;
+  margin:       0;
+}
+
+.eggb-block .eggb-wtb-plain-offers > li {
+  margin-bottom: 0;
+}
+
+.eggb-wtb--plain .eggb-wtb-plain-offer {
+  display:     flex;
+  align-items: center;
+  gap:         1rem;
+  padding:     .8rem 0;
+  border-top:  var(--eggb-border-w, 1px) solid var(--eggb-border, currentColor);
+}
+
+.eggb-wtb--plain .eggb-wtb-plain-main {
+  display:     flex;
+  align-items: center;
+  gap:         .8rem;
+  flex:        1 1 auto;
+  min-width:   0;
+}
+
+.eggb-wtb--plain .eggb-wtb-plain-logo {
+  width:      2rem;
+  height:     2rem;
+  object-fit: contain;
+  display:    block;
+}
+
+.eggb-wtb--plain .eggb-wtb-plain-merchant {
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.eggb-wtb--plain .eggb-wtb-plain-name,
+.eggb-wtb--plain .eggb-wtb-plain-name-link {
+  color:           var(--eggb-text-muted);
+  font-size:       var(--eggb-text-sm);
+  text-decoration: none;
+}
+
+.eggb-wtb--plain .eggb-wtb-plain-right {
+  display:     flex;
+  align-items: center;
+  gap:         .9rem;
+  flex:        0 0 auto;
+}
+
+.eggb-wtb--plain .eggb-wtb-plain-price {
+  text-align: right;
+}
+
+.eggb-wtb--plain .eggb-wtb-status {
+  color:     var(--eggb-text-muted);
+  font-size: var(--eggb-text-xs);
+}
+
+/* The cheapest offer is marked by colour alone. There is no authored
+   label for it, and inventing one would put words in the author's mouth. */
+.eggb-wtb--plain .eggb-wtb-plain-offer--best .eggb-price {
+  color: var(--eggb-accent);
+}
+
+.eggb-wtb--plain .eggb-wtb-plain-note {
+  margin-top: .9rem;
+  color:      var(--eggb-text-muted);
+  font-size:  var(--eggb-text-sm);
+}
+
+@media (max-width: 700px) {
+  .eggb-wtb--plain .eggb-wtb-plain-offer {
+    flex-direction: column;
+    align-items:    flex-start;
+    gap:            .7rem;
+  }
+
+  .eggb-wtb--plain .eggb-wtb-plain-right {
+    width:           100%;
+    justify-content: space-between;
+  }
+
+  .eggb-wtb--plain .eggb-wtb-plain-price {
+    text-align: left;
+  }
+}

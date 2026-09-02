@@ -4,6 +4,8 @@ namespace ContentEgg\application\EggBlocks\blocks\criteria;
 
 use ContentEgg\application\EggBlocks\blocks\criteria\variants\DefaultVariant;
 use ContentEgg\application\EggBlocks\blocks\criteria\variants\ListVariant;
+use ContentEgg\application\EggBlocks\blocks\criteria\variants\PlainVariant;
+use ContentEgg\application\EggBlocks\shared\EggbSanitizer;
 use ContentEgg\application\EggBlocks\shared\traits\RendersWithTheme;
 
 defined('ABSPATH') || exit;
@@ -22,7 +24,11 @@ class CriteriaRenderer
             return '';
         }
 
-        $variant = ($attributes['variant'] ?? 'default') === 'list' ? 'list' : 'default';
+        $variant = (string) ($attributes['variant'] ?? 'default');
+        if (!in_array($variant, ['default', 'list', 'plain'], true))
+        {
+            $variant = 'default';
+        }
 
         $heading_tag = (string) ($attributes['heading_tag'] ?? 'h2');
         if (!in_array($heading_tag, self::ALLOWED_HEADING_TAGS, true))
@@ -52,6 +58,10 @@ class CriteriaRenderer
         if ($variant === 'list')
         {
             ListVariant::render($header, $items, $labels, $theme_class, $data_theme);
+        }
+        elseif ($variant === 'plain')
+        {
+            PlainVariant::render($header, $items, $labels, $theme_class, $data_theme);
         }
         else
         {
@@ -94,7 +104,7 @@ class CriteriaRenderer
 
             $normalized[] = [
                 'title' => $title,
-                'description' => $description,
+                'description' => self::sanitizeOptionalRichText($description),
                 'importance' => $importance,
                 'importance_label' => match($importance) {
                     'high'  => __('High', 'content-egg-tpl'),
@@ -112,5 +122,16 @@ class CriteriaRenderer
         }
 
         return $normalized;
+    }
+
+    private static function sanitizeOptionalRichText($text): string
+    {
+        $text = trim((string) $text);
+        if ($text === '')
+        {
+            return '';
+        }
+
+        return EggbSanitizer::basicRichText($text);
     }
 }

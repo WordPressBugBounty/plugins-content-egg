@@ -14,6 +14,7 @@ require_once __DIR__ . '/variants/DefaultVariant.php';
 require_once __DIR__ . '/variants/CompactVariant.php';
 require_once __DIR__ . '/variants/HighlightVariant.php';
 require_once __DIR__ . '/variants/InlineVariant.php';
+require_once __DIR__ . '/variants/PlainVariant.php';
 require_once __DIR__ . '/ProsConsRenderer.php';
 
 $wrapper_attributes = get_block_wrapper_attributes(['class' => 'cegg5-container']);

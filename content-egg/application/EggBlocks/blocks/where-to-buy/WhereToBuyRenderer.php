@@ -6,6 +6,7 @@ use ContentEgg\application\Translator;
 use ContentEgg\application\EggBlocks\blocks\wheretobuy\variants\CompactVariant;
 use ContentEgg\application\EggBlocks\blocks\wheretobuy\variants\DefaultVariant;
 use ContentEgg\application\EggBlocks\blocks\wheretobuy\variants\TableCompactVariant;
+use ContentEgg\application\EggBlocks\blocks\wheretobuy\variants\PlainVariant;
 use ContentEgg\application\EggBlocks\shared\CeProductResolver;
 use ContentEgg\application\EggBlocks\shared\traits\RendersWithTheme;
 use ContentEgg\application\helpers\TemplateHelper;
@@ -54,6 +55,9 @@ class WhereToBuyRenderer
             case 'table-compact':
                 TableCompactVariant::render($payload, $theme_class, $data_theme);
                 break;
+            case 'plain':
+                PlainVariant::render($payload, $theme_class, $data_theme);
+                break;
             default:
                 DefaultVariant::render($payload, $theme_class, $data_theme);
                 break;
@@ -66,7 +70,7 @@ class WhereToBuyRenderer
     {
         $variant = (string) $variant;
 
-        if (!in_array($variant, ['default', 'compact', 'table-compact'], true)) {
+        if (!in_array($variant, ['default', 'compact', 'table-compact', 'plain'], true)) {
             return 'default';
         }
 

@@ -10,6 +10,7 @@ use ContentEgg\application\components\AffiliateFeedParserModule;
 use ContentEgg\application\components\ai\ModulePrompt;
 use ContentEgg\application\components\ModuleName;
 use ContentEgg\application\helpers\TextHelper;
+use ContentEgg\application\helpers\ProductHelper;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\components\LinkHandler;
 
@@ -277,7 +278,7 @@ class FeedModule extends AffiliateFeedParserModule
         $options = array();
         if (!empty($query_params['price_min']))
             $options['price_min'] = (float) $query_params['price_min'];
-        if (!empty($query_params['price_min']))
+        if (!empty($query_params['price_max']))
             $options['price_max'] = (float) $query_params['price_max'];
 
         if (TextHelper::isEan($keyword))
@@ -472,26 +473,16 @@ class FeedModule extends AffiliateFeedParserModule
                 $content->category = $r['category'];
 
                 $separators = apply_filters('cegg_feed_category_separators', array('>', '|'), $r);
+                $separators = is_array($separators) ? $separators : array();
 
-                if (! empty($separators) && is_array($separators))
+                $path = ProductHelper::parseCategoryPath((string) $content->category, $separators);
+
+                // A single label parses to one segment equal to itself; only a
+                // genuinely delimited value becomes a path.
+                if ($path && $path !== array(trim((string) $content->category)))
                 {
-                    $escaped = array_map(function ($sep)
-                    {
-                        return preg_quote($sep, '#');
-                    }, $separators);
-
-                    $pattern = '#\s*(?:' . implode('|', $escaped) . ')\s*#';
-
-                    if (preg_match($pattern, $content->category))
-                    {
-                        $content->categoryPath = preg_split($pattern, $content->category);
-                        $content->categoryPath = array_map('trim', $content->categoryPath);
-                        $content->categoryPath = array_filter($content->categoryPath, 'strlen');
-                        if (! empty($content->categoryPath))
-                        {
-                            $content->category = end($content->categoryPath);
-                        }
-                    }
+                    $content->categoryPath = $path;
+                    $content->category     = end($path);
                 }
             }
 

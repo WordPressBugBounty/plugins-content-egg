@@ -3,6 +3,7 @@
 namespace ContentEgg\application\EggBlocks\blocks\steplist;
 
 use ContentEgg\application\EggBlocks\blocks\steplist\variants\CardGridVariant;
+use ContentEgg\application\EggBlocks\blocks\steplist\variants\PlainVariant;
 use ContentEgg\application\EggBlocks\blocks\steplist\variants\CardsVariant;
 use ContentEgg\application\EggBlocks\blocks\steplist\variants\ChecklistVariant;
 use ContentEgg\application\EggBlocks\blocks\steplist\variants\DefaultVariant;
@@ -20,7 +21,7 @@ class StepListRenderer
     public static function render(array $attributes): string
     {
         $variant = (string) ($attributes['variant'] ?? 'default');
-        if (!in_array($variant, ['default', 'checklist', 'cards', 'card-grid'], true))
+        if (!in_array($variant, ['default', 'checklist', 'cards', 'card-grid', 'plain'], true))
         {
             $variant = 'default';
         }
@@ -60,6 +61,9 @@ class StepListRenderer
                 break;
             case 'card-grid':
                 CardGridVariant::render($step_list, $theme_class, $data_theme);
+                break;
+            case 'plain':
+                PlainVariant::render($step_list, $theme_class, $data_theme);
                 break;
             default:
                 DefaultVariant::render($step_list, $theme_class, $data_theme);

@@ -127,11 +127,12 @@
 }
 
 /*
- * The image is shown at its own size and never enlarged. Modules hand over
- * modest product shots -- Content Egg rewrites every Amazon URL to ._SS520_.
- * before output, capping the longest side at 520px -- so stretching one to the
- * column width buys nothing but blur. Matching that same 520px ceiling also
- * keeps figures a consistent size whatever module the product came from.
+ * Shown at its own size and never enlarged past the caption column. Amazon's
+ * API image is 500px on the longest side, so a figure at column width is
+ * already past 1:1 before a 2x display doubles it again; the renderer asks the
+ * CDN for a 1040px render of that same picture so the resampling happens once,
+ * at the source, rather than in the browser. See EditorialProductRenderer.
+ *
  * The radius sits on the image itself rather than on a clipping wrapper: the
  * wrapper can be wider than a small image, and a clip that misses the edges
  * leaves square corners on exactly the images this cap is meant to serve.

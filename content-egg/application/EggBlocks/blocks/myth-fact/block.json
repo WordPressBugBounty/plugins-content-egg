@@ -15,7 +15,7 @@
         "variant": {
             "type": "string",
             "default": "default",
-            "enum": ["default", "inline"]
+            "enum": ["default", "inline", "plain"]
         },
         "section_label": {
             "type": "string",

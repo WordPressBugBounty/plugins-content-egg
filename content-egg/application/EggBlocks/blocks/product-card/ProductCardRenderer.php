@@ -5,6 +5,7 @@ namespace ContentEgg\application\EggBlocks\blocks\productcard;
 use ContentEgg\application\EggBlocks\blocks\productcard\variants\CompactVariant;
 use ContentEgg\application\EggBlocks\blocks\productcard\variants\DefaultVariant;
 use ContentEgg\application\EggBlocks\blocks\productcard\variants\FeaturedVariant;
+use ContentEgg\application\EggBlocks\blocks\productcard\variants\PlainVariant;
 use ContentEgg\application\EggBlocks\shared\CeProductResolver;
 use ContentEgg\application\EggBlocks\shared\EggbSchemaCollector;
 use ContentEgg\application\EggBlocks\shared\EggbSanitizer;
@@ -53,6 +54,9 @@ class ProductCardRenderer
             case 'compact':
                 CompactVariant::render($card, $theme_class, $data_theme);
                 break;
+            case 'plain':
+                PlainVariant::render($card, $theme_class, $data_theme);
+                break;
             default:
                 DefaultVariant::render($card, $theme_class, $data_theme);
                 break;
@@ -72,7 +76,7 @@ class ProductCardRenderer
     {
         $variant = (string) $variant;
 
-        if (!in_array($variant, ['default', 'featured', 'compact'], true))
+        if (!in_array($variant, ['default', 'featured', 'compact', 'plain'], true))
         {
             return 'default';
         }

@@ -3,6 +3,7 @@
 namespace ContentEgg\application\EggBlocks\blocks\callout;
 
 use ContentEgg\application\EggBlocks\blocks\callout\variants\CompactVariant;
+use ContentEgg\application\EggBlocks\blocks\callout\variants\PlainVariant;
 use ContentEgg\application\EggBlocks\blocks\callout\variants\DefaultVariant;
 use ContentEgg\application\EggBlocks\shared\EggbSanitizer;
 use ContentEgg\application\EggBlocks\shared\traits\RendersWithTheme;
@@ -38,7 +39,11 @@ class CalloutRenderer
 
     public static function render(array $attributes): string
     {
-        $variant = ($attributes['variant'] ?? 'default') === 'compact' ? 'compact' : 'default';
+        $variant = (string) ($attributes['variant'] ?? 'default');
+        if (!in_array($variant, ['default', 'compact', 'plain'], true))
+        {
+            $variant = 'default';
+        }
         $body = trim((string) ($attributes['body'] ?? ''));
         $title = trim((string) ($attributes['title'] ?? ''));
 
@@ -60,7 +65,7 @@ class CalloutRenderer
             'type_class' => $config['class'],
             'icon' => $config['icon'],
             'label' => $label,
-            'title' => $variant === 'default' ? $title : '',
+            'title' => $variant === 'compact' ? '' : $title,
             'body' => $body !== '' ? EggbSanitizer::basicRichText($body) : '',
         ];
 
@@ -70,6 +75,9 @@ class CalloutRenderer
         {
             case 'compact':
                 CompactVariant::render($resolved, $theme_class, $data_theme);
+                break;
+            case 'plain':
+                PlainVariant::render($resolved, $theme_class, $data_theme);
                 break;
             default:
                 DefaultVariant::render($resolved, $theme_class, $data_theme);

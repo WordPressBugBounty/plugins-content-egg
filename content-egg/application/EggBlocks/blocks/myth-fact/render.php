@@ -12,6 +12,7 @@ defined('ABSPATH') || exit;
 
 require_once __DIR__ . '/variants/DefaultVariant.php';
 require_once __DIR__ . '/variants/InlineVariant.php';
+require_once __DIR__ . '/variants/PlainVariant.php';
 require_once __DIR__ . '/MythFactRenderer.php';
 require_once __DIR__ . '/../../shared/EggbTocSupport.php';
 

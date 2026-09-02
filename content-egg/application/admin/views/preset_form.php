@@ -134,6 +134,126 @@ $prompt_names = array_column($prompt_rows, 'name');
                 </td>
             </tr>
 
+            <!-- Category Mapping -->
+            <tr>
+                <th><label for="cegg_preset_category_map"><?php esc_html_e('Category Mapping', 'content-egg'); ?></label></th>
+                <td>
+                    <?php
+                    $map_rows = array_values(array_filter((array)($data['category_map'] ?? []), function ($row)
+                    {
+                        return is_array($row) && '' !== trim((string)($row['from'] ?? ''));
+                    }));
+                    $map_loop_count = max(1, count($map_rows));
+                    $map_next_index = count($map_rows) > 0 ? count($map_rows) : 1;
+
+                    $map_cat_options = [
+                        'post' => \ContentEgg\application\helpers\AdminHelper::getPostCategoryList(),
+                        'woo'  => \ContentEgg\application\helpers\WooHelper::getWooCategoryList(),
+                    ];
+
+                    $feed_modules = \ContentEgg\application\components\ModuleManager::getInstance()->getActiveFeedModules();
+
+                    /**
+                     * Only the saved option is rendered per select; the rest are
+                     * built in JS from the JSON below. A store with hundreds of
+                     * categories and dozens of rules would otherwise ship tens of
+                     * thousands of option tags in the page source.
+                     */
+                    $map_render_target = function ($index, $source, $field, $selected) use ($map_cat_options)
+                    {
+                        $class = ('woo' === $source) ? 'cegg-product-only' : 'cegg-post-only';
+                    ?>
+                        <select
+                            class="<?php echo esc_attr($class); ?> cegg-map-target"
+                            name="cegg_preset[category_map][<?php echo esc_attr($index); ?>][<?php echo esc_attr($field); ?>]"
+                            data-source="<?php echo esc_attr($source); ?>"
+                            data-selected="<?php echo esc_attr($selected); ?>">
+                            <?php if ($selected && isset($map_cat_options[$source][$selected])) : ?>
+                                <option value="<?php echo esc_attr($selected); ?>" selected><?php echo esc_html($map_cat_options[$source][$selected]); ?></option>
+                            <?php else : ?>
+                                <option value="0"><?php esc_html_e('— Select a category —', 'content-egg'); ?></option>
+                            <?php endif; ?>
+                        </select>
+                    <?php
+                    };
+                    ?>
+                    <div id="cegg_preset_category_map"
+                        data-next-index="<?php echo esc_attr($map_next_index); ?>"
+                        data-nonce="<?php echo esc_attr(wp_create_nonce('cegg_feed_categories')); ?>">
+
+                        <div class="cegg-map-rows">
+                            <?php for ($i = 0; $i < $map_loop_count; $i++): ?>
+                                <p class="cegg-category-map-row">
+                                    <input
+                                        type="text"
+                                        name="cegg_preset[category_map][<?php echo esc_attr($i); ?>][from]"
+                                        class="regular-text cegg-map-from"
+                                        list="cegg_feed_categories"
+                                        value="<?php echo esc_attr($map_rows[$i]['from'] ?? ''); ?>"
+                                        placeholder="<?php esc_attr_e('Feed category, e.g. Home > Bathroom > Storage', 'content-egg'); ?>">
+                                    <span class="cegg-map-arrow" aria-hidden="true">&rarr;</span>
+                                    <?php
+                                    $map_render_target($i, 'post', 'to_cat', (int)($map_rows[$i]['to_cat'] ?? 0));
+                                    $map_render_target($i, 'woo', 'to_woo_cat', (int)($map_rows[$i]['to_woo_cat'] ?? 0));
+                                    ?>
+                                    <button type="button" class="btn-link cegg-remove-map-row">&times;</button>
+                                </p>
+                            <?php endfor; ?>
+                        </div>
+
+                        <datalist id="cegg_feed_categories"></datalist>
+
+                        <p class="cegg-map-actions">
+                            <button type="button" class="button" id="cegg_add_map_row"><?php esc_html_e('Add mapping', 'content-egg'); ?></button>
+
+                            <?php if ($feed_modules) : ?>
+                                <label class="screen-reader-text" for="cegg_map_suggest_module"><?php esc_html_e('Suggest categories from a feed', 'content-egg'); ?></label>
+                                <select id="cegg_map_suggest_module">
+                                    <option value=""><?php esc_html_e('Suggest categories from…', 'content-egg'); ?></option>
+                                    <?php foreach ($feed_modules as $feed_module) : ?>
+                                        <option value="<?php echo esc_attr($feed_module->getId()); ?>"><?php echo esc_html($feed_module->getName()); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <span class="cegg-map-suggest-status" aria-live="polite"></span>
+                            <?php endif; ?>
+                        </p>
+
+                        <script type="application/json" id="cegg_map_cat_options"><?php
+                                                                                    $map_cat_json = [];
+                                                                                    foreach ($map_cat_options as $map_source => $map_list)
+                                                                                    {
+                                                                                        $map_cat_json[$map_source] = [];
+                                                                                        foreach ($map_list as $map_id => $map_label)
+                                                                                        {
+                                                                                            $map_cat_json[$map_source][] = ['id' => (int) $map_id, 'label' => (string) $map_label];
+                                                                                        }
+                                                                                    }
+                                                                                    echo wp_json_encode($map_cat_json);
+                                                                                    ?></script>
+
+                        <script type="text/template" id="cegg_map_row_tpl">
+                            <p class="cegg-category-map-row">
+                                <input
+                                    type="text"
+                                    name="cegg_preset[category_map][__index__][from]"
+                                    class="regular-text cegg-map-from"
+                                    list="cegg_feed_categories"
+                                    value=""
+                                    placeholder="<?php echo esc_attr__('Feed category, e.g. Home > Bathroom > Storage', 'content-egg'); ?>">
+                                <span class="cegg-map-arrow" aria-hidden="true">&rarr;</span>
+                                <select class="cegg-post-only cegg-map-target" name="cegg_preset[category_map][__index__][to_cat]" data-source="post" data-selected="0"></select>
+                                <select class="cegg-product-only cegg-map-target" name="cegg_preset[category_map][__index__][to_woo_cat]" data-source="woo" data-selected="0"></select>
+                                <button type="button" class="btn-link cegg-remove-map-row">&times;</button>
+                            </p>
+                        </script>
+
+                        <p class="description">
+                            <?php esc_html_e('Send products from a merchant feed category to one of your own categories, instead of creating the merchant’s category. Rules are checked top to bottom, and the first match wins. End a rule with * to match a whole branch, e.g. Home > Bathroom*. Categories with no rule follow the Dynamic Categories setting above.', 'content-egg'); ?>
+                        </p>
+                    </div>
+                </td>
+            </tr>
+
             <!-- Post Status -->
             <tr>
                 <th><label for="cegg_preset_post_status"><?php esc_html_e('Post Status', 'content-egg'); ?></label></th>
@@ -862,6 +982,103 @@ $prompt_names = array_column($prompt_rows, 'name');
             $wrap.on("click", ".cegg-remove-field", (e) => {
                 e.preventDefault();
                 $(e.currentTarget).closest(".cegg-custom-field-row").remove();
+            });
+
+            // --- Category Mapping: add/remove rows, deferred target options ---
+            const $mapWrap = $("#cegg_preset_category_map");
+            const $mapList = $mapWrap.find(".cegg-map-rows");
+
+            let mapCatOptions = {};
+            try {
+                mapCatOptions = JSON.parse($("#cegg_map_cat_options").text() || "{}");
+            } catch (err) {
+                mapCatOptions = {};
+            }
+
+            // Built once per taxonomy and reused as a string: with many
+            // categories and many rows, rebuilding the option nodes per select
+            // is the slow part of opening this screen.
+            const mapOptionCache = {};
+            const mapOptionsHtml = (source) => {
+                if (!mapOptionCache[source]) {
+                    const $scratch = $("<select></select>");
+                    $scratch.append($("<option></option>").val("0").text("<?php echo esc_js(__('— Select a category —', 'content-egg')); ?>"));
+                    (mapCatOptions[source] || []).forEach((opt) => {
+                        $scratch.append($("<option></option>").val(opt.id).text(opt.label));
+                    });
+                    mapOptionCache[source] = $scratch.html();
+                }
+                return mapOptionCache[source];
+            };
+
+            const fillMapTarget = (el) => {
+                const $sel = $(el);
+                if ($sel.data("ceggFilled")) return;
+                const selected = String($sel.attr("data-selected") || "0");
+                $sel.html(mapOptionsHtml($sel.attr("data-source")));
+                $sel.val(selected);
+                $sel.data("ceggFilled", true);
+            };
+
+            const appendMapRow = () => {
+                const idx = parseInt($mapWrap.attr("data-next-index"), 10) || 0;
+                const tpl = $("#cegg_map_row_tpl").html().replace(/__index__/g, idx);
+                const $row = $(tpl).appendTo($mapList);
+                $mapWrap.attr("data-next-index", idx + 1);
+                $row.find(".cegg-map-target").each((i, el) => fillMapTarget(el));
+                toggleFields();
+                return $row;
+            };
+
+            $mapWrap.find(".cegg-map-target").each((i, el) => fillMapTarget(el));
+
+            $("#cegg_add_map_row").on("click", () => {
+                appendMapRow().find(".cegg-map-from").trigger("focus");
+            });
+
+            $mapWrap.on("click", ".cegg-remove-map-row", (e) => {
+                e.preventDefault();
+                $(e.currentTarget).closest(".cegg-category-map-row").remove();
+            });
+
+            const mapStatus = {
+                loading: "<?php echo esc_js(__('Loading categories…', 'content-egg')); ?>",
+                empty: "<?php echo esc_js(__('No categories found in this feed.', 'content-egg')); ?>",
+                error: "<?php echo esc_js(__('Could not load categories.', 'content-egg')); ?>",
+                loaded: "<?php echo esc_js(__('%d categories available as suggestions.', 'content-egg')); ?>"
+            };
+
+            $("#cegg_map_suggest_module").on("change", function() {
+                const moduleId = $(this).val();
+                const $status = $mapWrap.find(".cegg-map-suggest-status");
+                const $datalist = $("#cegg_feed_categories");
+
+                if (!moduleId) {
+                    $datalist.empty();
+                    $status.text("");
+                    return;
+                }
+
+                $status.text(mapStatus.loading);
+
+                $.post(window.ajaxurl, {
+                    action: "cegg_feed_categories",
+                    module_id: moduleId,
+                    nonce: $mapWrap.attr("data-nonce")
+                }).done((res) => {
+                    const cats = (res && res.data && res.data.categories) || [];
+                    $datalist.empty();
+                    cats.forEach((cat) => {
+                        $datalist.append(
+                            $("<option></option>")
+                            .attr("value", cat.name)
+                            .attr("label", cat.name + " (" + cat.count + ")")
+                        );
+                    });
+                    $status.text(cats.length ? mapStatus.loaded.replace("%d", cats.length) : mapStatus.empty);
+                }).fail(() => {
+                    $status.text(mapStatus.error);
+                });
             });
 
             // --- Custom Prompts: add/remove rows, live placeholder ---

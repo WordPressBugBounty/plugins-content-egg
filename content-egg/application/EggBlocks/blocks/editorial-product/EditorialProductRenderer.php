@@ -109,6 +109,13 @@ class EditorialProductRenderer
             }
         }
 
+        // The figure renders large enough to want a 2x source; the other
+        // variants draw into 236px or less, where the master is already sharp.
+        if ($variant === 'figure' && is_array($product_item) && !empty($product_item['img']))
+        {
+            $product_item['img'] = self::retinaImageUrl((string) $product_item['img']);
+        }
+
         // Authored values win. The editor seeds them from the product once per
         // binding (see seeded_for in Edit.js), so an author or the generator can
         // replace a raw catalog name with something that reads in prose; the
@@ -133,12 +140,46 @@ class EditorialProductRenderer
             'variant'       => $variant,
             'product_item'  => is_array($product_item) ? $product_item : null,
             'section_label' => trim((string) ($attributes['section_label'] ?? '')),
+            // Empty means "no author alt": the image falls back to
+            // TemplateHelper's own default, the product title.
+            'image_alt'     => trim((string) ($attributes['image_alt'] ?? '')),
             'body'          => EggbSanitizer::basicRichText((string) ($attributes['body'] ?? '')),
             'specs'         => self::normalizeSpecs($attributes['specs'] ?? []),
             'context'       => trim((string) ($attributes['context'] ?? '')),
             'title'         => $title,
             'merchant'      => $merchant,
         ];
+    }
+
+    /**
+     * An Amazon image url asking the CDN for a 1040px render -- 520 CSS px on a
+     * 2x display. Anything else is returned unchanged.
+     *
+     * _UF is the only Amazon transform that enlarges. _SL and _SX refuse to,
+     * handing back the master untouched; _SS pads the master onto a square
+     * canvas of the requested size, which on a non-square photo is a white
+     * border rather than a bigger picture. _UF keeps the aspect ratio: a 500x320
+     * master comes back 1040x666, not 1040x1040.
+     *
+     * For an API image, whose master is 500px, this adds no detail -- it moves
+     * the resampling from the browser, on every paint, to the CDN once at encode
+     * time. For a scraped one, whose master can be 1500px, it is a real 1040px
+     * render. Left in the _UF form deliberately: TemplateHelper's
+     * getOptimizedImage() rewrites only _SL and _AC_SL urls, so this survives it.
+     */
+    public static function retinaImageUrl(string $img): string
+    {
+        if (strpos($img, 'media-amazon.com') === false)
+        {
+            return $img;
+        }
+
+        if (preg_match('/\._(?:AC_)?S[SLXY]\d+_\./', $img))
+        {
+            return preg_replace('/\._(?:AC_)?S[SLXY]\d+_\./', '._UF1040,1040_.', $img);
+        }
+
+        return preg_replace('/(\.(?:jpg|jpeg|png))$/i', '._UF1040,1040_$1', $img);
     }
 
     /**

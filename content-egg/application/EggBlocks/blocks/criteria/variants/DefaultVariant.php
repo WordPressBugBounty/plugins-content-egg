@@ -32,7 +32,7 @@ class DefaultVariant
                             <div class="eggb-cr-title"><?php echo esc_html($item['title']); ?></div>
                         <?php endif; ?>
                         <?php if ($item['description'] !== ''): ?>
-                            <div class="eggb-cr-desc"><?php echo esc_html($item['description']); ?></div>
+                            <div class="eggb-cr-desc"><?php echo $item['description']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
                         <?php endif; ?>
                         <?php if ($item['look_for'] !== ''): ?>
                             <div class="d-flex flex-column gap-1 mt-auto pt-1">

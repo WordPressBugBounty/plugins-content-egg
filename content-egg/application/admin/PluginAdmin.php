@@ -8,6 +8,7 @@ use ContentEgg\application\Plugin;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\admin\import\ImportQueueApi;
+use ContentEgg\application\admin\import\FeedCategoryApi;
 use ContentEgg\application\admin\import\PresetRepository;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ModuleApi;
@@ -92,6 +93,7 @@ class PluginAdmin
             new ScrapTestController;
             new AgentAccessController;
             ImportQueueApi::init();
+            FeedCategoryApi::init();
             AeIntegrationConfig::getInstance()->adminInit();
             AeConnectController::register();
             new AutoblogController;

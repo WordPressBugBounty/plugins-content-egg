@@ -5,6 +5,7 @@ namespace ContentEgg\application\EggBlocks\blocks\verdict;
 use ContentEgg\application\EggBlocks\blocks\verdict\variants\CompactVariant;
 use ContentEgg\application\EggBlocks\blocks\verdict\variants\DefaultVariant;
 use ContentEgg\application\EggBlocks\blocks\verdict\variants\SummaryVariant;
+use ContentEgg\application\EggBlocks\blocks\verdict\variants\PlainVariant;
 use ContentEgg\application\EggBlocks\shared\CeProductResolver;
 use ContentEgg\application\EggBlocks\shared\EggbSanitizer;
 use ContentEgg\application\EggBlocks\shared\traits\RendersWithTheme;
@@ -51,6 +52,9 @@ class VerdictRenderer
             case 'summary':
                 SummaryVariant::render($resolved, $theme_class, $data_theme);
                 break;
+            case 'plain':
+                PlainVariant::render($resolved, $theme_class, $data_theme);
+                break;
             default:
                 DefaultVariant::render($resolved, $theme_class, $data_theme);
                 break;
@@ -62,7 +66,7 @@ class VerdictRenderer
     private static function normalizeVariant($variant): string
     {
         $variant = (string) $variant;
-        if (!in_array($variant, ['default', 'compact', 'summary'], true))
+        if (!in_array($variant, ['default', 'compact', 'summary', 'plain'], true))
         {
             return 'default';
         }

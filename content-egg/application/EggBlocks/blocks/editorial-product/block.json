@@ -19,6 +19,7 @@
         },
         "product_ref": { "type": "object", "default": {} },
         "image_index": { "type": "number", "default": 0 },
+        "image_alt": { "type": "string", "default": "" },
         "section_label": { "type": "string", "default": "" },
         "title": { "type": "string", "default": "" },
         "merchant": { "type": "string", "default": "" },

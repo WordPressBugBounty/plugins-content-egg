@@ -1021,3 +1021,41 @@ body .cegg_nomargin_components .components-range-control .components-base-contro
 .cegg-custom-field-row .cegg-remove-field {
     flex: 0 0 auto;
 }
+
+/* Keep source, arrow and target on one line so a rule reads left to right */
+.cegg-category-map-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cegg-category-map-row .regular-text,
+.cegg-category-map-row .cegg-map-target {
+    flex: 1 1 220px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.cegg-category-map-row .cegg-remove-map-row {
+    flex: 0 0 auto;
+}
+
+.cegg-map-arrow {
+    flex: 0 0 auto;
+    color: #646970;
+}
+
+/* Feed picker beside "Add mapping" in the category mapping repeater */
+.cegg-map-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: .5em;
+}
+
+.cegg-map-suggest-status {
+    color: #646970;
+    font-style: italic;
+}

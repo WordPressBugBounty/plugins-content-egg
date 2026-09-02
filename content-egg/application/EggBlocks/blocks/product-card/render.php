@@ -13,6 +13,7 @@ defined('ABSPATH') || exit;
 require_once __DIR__ . '/variants/DefaultVariant.php';
 require_once __DIR__ . '/variants/FeaturedVariant.php';
 require_once __DIR__ . '/variants/CompactVariant.php';
+require_once __DIR__ . '/variants/PlainVariant.php';
 require_once __DIR__ . '/ProductCardRenderer.php';
 require_once __DIR__ . '/../../shared/EggbTocSupport.php';
 

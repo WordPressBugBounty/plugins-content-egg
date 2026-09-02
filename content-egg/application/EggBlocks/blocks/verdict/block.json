@@ -15,7 +15,7 @@
         "variant": {
             "type": "string",
             "default": "default",
-            "enum": ["default", "compact", "summary"]
+            "enum": ["default", "compact", "summary", "plain"]
         },
         "score": {
             "type": "string",

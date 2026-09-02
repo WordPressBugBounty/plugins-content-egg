@@ -162,3 +162,31 @@
   padding: 0.4em 0.95em;
 }
 
+
+/* ── Plain variant ─────────────────────────── */
+
+.eggb-verdict--plain .eggb-vd-plain-title {
+  font-size:      1.375rem;
+  font-weight:    700;
+  letter-spacing: -.015em;
+  line-height:    1.3;
+  margin-bottom:  .3rem;
+}
+
+/* Same vertical scale as product-card--plain, so the two blocks read as
+   one family: title .3rem, muted line .5rem, meta run .9rem, CTA 1rem. */
+.eggb-verdict--plain .eggb-vd-plain-award {
+  /* A step darker than the spec run below it, so the two muted lines
+     read as two things rather than one grey block. */
+  color:         color-mix(in srgb, var(--eggb-text-muted) 65%, var(--eggb-text));
+  font-size:     var(--eggb-text-sm);
+  margin-bottom: .5rem;
+}
+
+.eggb-verdict--plain .eggb-vd-plain-meta {
+  margin-bottom: .9rem;
+}
+
+.eggb-verdict--plain .eggb-vd-plain-cta {
+  margin-top: 1rem;
+}

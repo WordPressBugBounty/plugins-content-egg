@@ -20,7 +20,7 @@ class FigureVariant
             <?php if (!empty($block['product_item'])) : ?>
                 <div class="eggb-ep-figure-img">
                     <?php TemplateHelper::openATag($block['product_item'], [], ['class' => 'eggb-ep-img-link']); ?>
-                        <?php TemplateHelper::displayImage($block['product_item'], 520, 520, ['class' => 'eggb-ep-img']); ?>
+                        <?php TemplateHelper::displayImage($block['product_item'], 520, 520, self::imgParams($block)); ?>
                     <?php TemplateHelper::closeATag(); ?>
                 </div>
             <?php endif; ?>
@@ -33,6 +33,26 @@ class FigureVariant
             </figcaption>
         </figure>
         <?php
+    }
+
+    /**
+     * Attributes for the product image.
+     *
+     * An authored alt wins; with none, displayImage() falls back to the product
+     * title. The title names the product, which is the right alt for a shop
+     * listing but not for an image placed to illustrate a point -- so the author
+     * gets to describe what the photo shows instead.
+     */
+    public static function imgParams(array $block): array
+    {
+        $params = ['class' => 'eggb-ep-img'];
+
+        if ($block['image_alt'] !== '')
+        {
+            $params['alt'] = $block['image_alt'];
+        }
+
+        return $params;
     }
 
     public static function renderMeta(array $block): void

@@ -20,7 +20,7 @@ class SpecimenVariant
             <?php if (!empty($block['product_item'])) : ?>
                 <div class="eggb-ep-specimen-img">
                     <?php TemplateHelper::openATag($block['product_item'], [], ['class' => 'eggb-ep-img-link']); ?>
-                        <?php TemplateHelper::displayImage($block['product_item'], 600, 600, ['class' => 'eggb-ep-img']); ?>
+                        <?php TemplateHelper::displayImage($block['product_item'], 600, 600, FigureVariant::imgParams($block)); ?>
                     <?php TemplateHelper::closeATag(); ?>
                 </div>
             <?php endif; ?>

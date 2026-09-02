@@ -6,6 +6,7 @@ use ContentEgg\application\EggBlocks\blocks\ratingbreakdown\variants\CategoryGri
 use ContentEgg\application\EggBlocks\blocks\ratingbreakdown\variants\CompactVariant;
 use ContentEgg\application\EggBlocks\blocks\ratingbreakdown\variants\DefaultVariant;
 use ContentEgg\application\EggBlocks\blocks\ratingbreakdown\variants\GridVariant;
+use ContentEgg\application\EggBlocks\blocks\ratingbreakdown\variants\PlainVariant;
 use ContentEgg\application\EggBlocks\shared\EggbIcons;
 use ContentEgg\application\EggBlocks\shared\EggbSchemaCollector;
 use ContentEgg\application\EggBlocks\shared\traits\RendersWithTheme;
@@ -46,6 +47,9 @@ class RatingBreakdownRenderer
             case 'category-grid':
                 CategoryGridVariant::render($categories, $theme_class, $data_theme);
                 break;
+            case 'plain':
+                PlainVariant::render($overall, $categories, $theme_class, $data_theme);
+                break;
             default:
                 DefaultVariant::render($overall, $categories, $theme_class, $data_theme);
                 break;
@@ -65,7 +69,7 @@ class RatingBreakdownRenderer
     private static function normalizeVariant($variant): string
     {
         $variant = (string) $variant;
-        if (!in_array($variant, ['default', 'compact', 'grid', 'category-grid'], true))
+        if (!in_array($variant, ['default', 'compact', 'grid', 'category-grid', 'plain'], true))
         {
             return 'default';
         }

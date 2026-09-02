@@ -460,3 +460,303 @@
   flex-grow:  1;
   background: color-mix(in srgb, var(--eggb-accent) 20%, transparent);
 }
+
+
+/* ─────────────────────────────────────────────
+   13. Plain variant family
+   Shared "label rail" grid used by the plain
+   variants. Structure only — colors come from
+   tokens, typeface from the WP theme.
+
+   Children alternate: rail, col, rail, col…
+   so every rail across every block aligns.
+───────────────────────────────────────────── */
+
+.eggb-plain {
+  display:               grid;
+  grid-template-columns: var(--eggb-rail-w, 7.5rem) minmax(0, 1fr);
+  column-gap:            var(--eggb-rail-gap, 2rem);
+  row-gap:               var(--eggb-rail-row-gap, 1.25rem);
+  border-top:            var(--eggb-border-w, 1px) solid var(--eggb-border, currentColor);
+  padding-top:           1.6rem;
+}
+
+/* Every rail attribute is optional. A rail with nothing in it would
+   reserve an unexplained gutter, so the block drops to a single column
+   and the variant omits the rail cell entirely. */
+.eggb-plain--norail {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.eggb-plain-rail {
+  font-size:      .6875rem;
+  font-weight:    600;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  line-height:    1.5;
+  color:          var(--eggb-text-muted, currentColor);
+  padding-top:    .34rem;
+}
+
+.eggb-plain-col {
+  min-width: 0;
+}
+
+/* Section 0 zeroes p margins across every block, so multi-paragraph
+   prose inside a plain column would otherwise run together. */
+.eggb-block.eggb-block .eggb-plain-col p + p {
+  margin-top: .9em;
+}
+
+/* block_title spans the whole grid, above the first rail row */
+.eggb-plain-title {
+  grid-column: 1 / -1;
+  margin:      0;
+  line-height: 1.3;
+}
+
+.eggb-rail-name {
+  display: block;
+}
+
+.eggb-rail-badge {
+  display:     block;
+  margin-top:  .3rem;
+  font-size:   .625rem;
+  font-weight: 700;
+  color:       var(--eggb-accent, currentColor);
+}
+
+.eggb-rail-sub {
+  display:    block;
+  margin-top: .75rem;
+  font-size:  .625rem;
+}
+
+.eggb-rail-score {
+  display:              block;
+  margin-top:           .4rem;
+  font-size:            2.5rem;
+  font-weight:          700;
+  letter-spacing:       -.035em;
+  line-height:          1;
+  text-transform:       none;
+  font-variant-numeric: tabular-nums;
+  color:                var(--eggb-accent, currentColor);
+}
+
+.eggb-rail-sub + .eggb-rail-score {
+  margin-top: .15rem;
+}
+
+.eggb-rail-denom {
+  font-size:      .8125rem;
+  font-weight:    500;
+  letter-spacing: .02em;
+  color:          var(--eggb-text-muted, currentColor);
+}
+
+.eggb-rail-denom--block {
+  display:     block;
+  margin-top:  .1rem;
+  font-size:   .625rem;
+  font-weight: 600;
+}
+
+.eggb-rail-rank {
+  display:              block;
+  margin-top:           .4rem;
+  font-size:            1.75rem;
+  font-weight:          700;
+  letter-spacing:       -.03em;
+  line-height:          1;
+  text-transform:       none;
+  font-variant-numeric: tabular-nums;
+  color:                var(--eggb-text, currentColor);
+}
+
+.eggb-rail-stars {
+  display:    flex;
+  gap:        .1rem;
+  margin-top: .45rem;
+  color:      var(--eggb-accent, currentColor);
+}
+
+.eggb-rail-stars svg {
+  width:  .8125rem;
+  height: .8125rem;
+}
+
+/* chips replacement — a muted middot run, no borders.
+   Deliberately smaller and lightly tracked so it cannot be mistaken for
+   the lede line above it. Badges were tried here and rejected: in a
+   narrow column three tags wrap to two rows, and a second family of
+   filled shapes weakens the CTA, which works precisely because it is the
+   only filled element on the page. */
+.eggb-meta-run {
+  color:          var(--eggb-text-muted, currentColor);
+  font-size:      .8125rem;
+  letter-spacing: .02em;
+  line-height:    1.6;
+}
+
+.eggb-meta-run .eggb-meta-sep {
+  opacity: .5;
+  padding: 0 .4em;
+}
+
+/* Bootstrap ships `.cegg5-container ol, .cegg5-container ul { padding-left: 2rem }`
+   and a 1rem bottom margin, both at (0,1,1). A bare `.eggb-dot-list { padding: 0 }`
+   is (0,1,0) and loses, so these lists must be anchored on .eggb-block the same
+   way .eggb-item-list is in section 0. Themes cannot outspecify this either. */
+.eggb-block .eggb-leaders,
+.eggb-block .eggb-dot-list {
+  padding-left:  0;
+  margin-top:    0;
+  margin-bottom: 0;
+  list-style:    none;
+}
+
+.eggb-block .eggb-leaders li,
+.eggb-block .eggb-dot-list li {
+  margin-bottom: 0;
+}
+
+/* leader-dot rows for scored categories */
+.eggb-leaders {
+  list-style:     none;
+  margin:         0;
+  padding:        0;
+  display:        flex;
+  flex-direction: column;
+  gap:            .5rem;
+}
+
+.eggb-leaders li {
+  display:     flex;
+  align-items: baseline;
+  gap:         .5rem;
+}
+
+/* --eggb-border is a panel hairline (around 10% opacity) — fine for a
+   divider, far too faint for a connector the eye has to follow across a
+   gap. currentColor inherits the block's ink instead, so the leader stays
+   legible in every theme and flips correctly in dark mode. */
+.eggb-leader-fill {
+  flex:          1 1 auto;
+  border-bottom: 2px dotted currentColor;
+  opacity:       .28;
+  /* Centred on the lowercase x-height, not the cap/figure height. These
+     rows are mostly lowercase labels, so aligning to caps leaves the
+     leader visibly riding above the text it belongs to. */
+  transform:     translateY(-.19em);
+}
+
+.eggb-leader-val {
+  font-weight:          700;
+  letter-spacing:       -.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* dot-marker list — replaces the circled check / cross icons */
+.eggb-dot-list {
+  list-style:     none;
+  margin:         0;
+  padding:        0;
+  display:        flex;
+  flex-direction: column;
+  gap:            .45rem;
+}
+
+.eggb-dot-list li {
+  position:     relative;
+  padding-left: 1rem;
+  line-height:  1.55;
+}
+
+.eggb-dot-list li::before {
+  content:       "";
+  position:      absolute;
+  left:          0;
+  top:           .6em;
+  width:         6px;
+  height:        6px;
+  border-radius: 50%;
+  background:    currentColor;
+}
+
+.eggb-dot-list--positive li::before { color: var(--eggb-positive, currentColor); }
+.eggb-dot-list--negative li::before { color: var(--eggb-negative, currentColor); }
+.eggb-dot-list--muted    li::before { color: var(--eggb-text-muted, currentColor); }
+
+/* Plain family CTA.
+   Scoped to .eggb-plain so every other block keeps the shared button.
+   Specificity is (0,3,0) to beat section 0's
+   `.cegg5-container .eggb-btn { border-radius: var(--eggb-radius) }`
+   without depending on source order.
+
+   The fill and contrast are unchanged — this is the page's one saturated
+   element and its pull has to survive. Only the shape softens, and the
+   playfulness lives in the hover nudge, which costs nothing on first paint. */
+.cegg5-container .eggb-plain .eggb-btn {
+  border-radius: 999px;
+  padding:       .62em 1.35em;
+  font-size:     .875rem;
+}
+
+.cegg5-container .eggb-plain .eggb-btn svg {
+  transition: transform .18s ease;
+}
+
+.cegg5-container .eggb-plain .eggb-btn:hover svg {
+  transform: translateX(.18em);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cegg5-container .eggb-plain .eggb-btn svg,
+  .cegg5-container .eggb-plain .eggb-btn:hover svg {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* sentence-case label for use inside the family */
+.eggb-section-title--plain {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size:      .9375rem;
+  font-weight:    600;
+}
+
+/* Mobile: the rail stops being a column and becomes one baseline row,
+   so a block costs three or four short lines instead of eight. */
+@media (max-width: 700px) {
+  .eggb-plain {
+    grid-template-columns: 1fr;
+    row-gap:               .35rem;
+  }
+
+  /* One row-gap would space a label from its own content exactly as far
+     as from the previous group. Bind the label to what follows it and
+     open a gap only between groups. */
+  .eggb-plain-col + .eggb-plain-rail {
+    margin-top: .9rem;
+  }
+
+  .eggb-plain-rail {
+    display:     flex;
+    flex-wrap:   wrap;
+    align-items: baseline;
+    gap:         .15rem .7rem;
+    padding-top: 0;
+  }
+
+  .eggb-plain-rail > * {
+    margin-top: 0;
+  }
+
+  .eggb-rail-score { font-size: 1.75rem; }
+  .eggb-rail-rank  { font-size: 1.5rem; }
+  .eggb-rail-stars { align-self: center; }
+
+}

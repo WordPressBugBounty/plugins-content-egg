@@ -6,6 +6,7 @@ use ContentEgg\application\EggBlocks\blocks\proscons\variants\DefaultVariant;
 use ContentEgg\application\EggBlocks\blocks\proscons\variants\CompactVariant;
 use ContentEgg\application\EggBlocks\blocks\proscons\variants\HighlightVariant;
 use ContentEgg\application\EggBlocks\blocks\proscons\variants\InlineVariant;
+use ContentEgg\application\EggBlocks\blocks\proscons\variants\PlainVariant;
 use ContentEgg\application\EggBlocks\shared\EggbSchemaCollector;
 use ContentEgg\application\EggBlocks\shared\traits\RendersWithTheme;
 
@@ -58,6 +59,9 @@ class ProsConsRenderer
                 break;
             case 'highlight':
                 HighlightVariant::render($pros, $cons, $best_for, $not_for, $quick_take, $pros_col, $cons_col, $labels, $theme_class, $data_theme);
+                break;
+            case 'plain':
+                PlainVariant::render($pros, $cons, $best_for, $not_for, $quick_take, $labels, $theme_class, $data_theme);
                 break;
             default:
                 DefaultVariant::render($pros, $cons, $best_for, $not_for, $pros_col, $cons_col, $labels, $theme_class, $data_theme);
