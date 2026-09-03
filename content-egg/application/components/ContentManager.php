@@ -36,6 +36,22 @@ class ContentManager
 
     private static $_view_data = array();
 
+    /**
+     * Depth of ContentManager::updateItems() saves currently in progress.
+     *
+     * An items update is the one caller that legitimately re-supplies a module's
+     * remote `img` over the local URL already saved for that offer, so
+     * ParserModule::presavePrepare() must not read it as a metabox edit. A depth
+     * counter rather than a flag: saveData() fires content_egg_save_data, and a
+     * listener (WooIntegrator) can save a post and re-enter saveData() from there.
+     */
+    private static $items_update_depth = 0;
+
+    public static function isItemsUpdateInProgress()
+    {
+        return self::$items_update_depth > 0;
+    }
+
     public static function saveData(array $data, $module_id, $post_id, $is_last_iteration = true, $add_group = '')
     {
         if (!$data)
@@ -932,7 +948,15 @@ class ContentManager
         }
 
         // save & update time
-        ContentManager::saveData($updated_data, $module_id, $post_id);
+        self::$items_update_depth++;
+        try
+        {
+            ContentManager::saveData($updated_data, $module_id, $post_id);
+        }
+        finally
+        {
+            self::$items_update_depth--;
+        }
         ContentManager::touchUpdateItemsTime($post_id, $module_id);
     }
 

@@ -4,7 +4,7 @@ Tags: affiliate marketing, price comparison, csv import, affiliate links, gutenb
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 11.8.0
+Stable tag: 11.8.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -250,6 +250,10 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 
 
 == Changelog ==
+
+= 11.8.1 =
+
+* Fixed: "Save images on server" — every automatic price update downloaded the product image again, filling the uploads folder with product-1.jpg, product-2.jpg and so on. Affects AE and custom feed modules.
 
 = 11.8.0 =
 

@@ -123,8 +123,15 @@ abstract class ParserModule extends Module
                 // already has a locally saved image. If its img no longer matches the saved one,
                 // the user edited or removed the image URL in the metabox and we must honor that
                 // instead of restoring the previously saved value.
+                //
+                // An automatic items update is the one caller that legitimately re-supplies the
+                // module's remote img over the local URL saved for the offer - several modules
+                // refresh it in doRequestItems() - which by value alone is indistinguishable from
+                // such an edit. Reading it as one re-downloads an image we already have on every
+                // price update, leaving product-1.jpg, product-2.jpg, ... behind.
                 $old_img = isset($old_data[$key]['img']) ? $old_data[$key]['img'] : '';
-                $user_changed_img = (!empty($item['img_file']) && $item['img'] !== $old_img);
+                $user_changed_img = (!empty($item['img_file']) && $item['img'] !== $old_img
+                    && !ContentManager::isItemsUpdateInProgress());
                 if ($user_changed_img)
                 {
                     // drop the stale local reference so a new URL is downloaded and a removed image stays removed
