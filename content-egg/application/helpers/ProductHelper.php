@@ -31,19 +31,26 @@ class ProductHelper
 	 *   %PRODUCT.specifications% / %PRODUCT.reviews%
 	 *   %SOURCE.extra.KEY% / %PRODUCT.extra.KEY%
 	 *   %SOURCE.ATTRIBUTE.NAME% / %PRODUCT.ATTRIBUTE.NAME%
+	 *
+	 * Pass $sanitizeValues when the result is saved as post content. Only the
+	 * resolved values are filtered, as they come from imported product data;
+	 * the template is the preset's own markup and shortcodes, kept as written.
 	 */
 	public static function replaceImportPatterns(
 		string $template,
 		array  $sourceProduct,
 		array  $product,
 		array  $ai = [],
-		string $keyword = ''
+		string $keyword = '',
+		bool   $sanitizeValues = false
 	): string
 	{
 		if ($template === '')
 		{
 			return '';
 		}
+
+		$clean = static fn(string $value): string => $sanitizeValues ? \wp_kses_post($value) : $value;
 
 		// Process spin-syntax first (“{a|b|c}” → one random variant)
 		$template = TextHelper::spin($template);
@@ -70,7 +77,7 @@ class ProductHelper
 			// ---------- 0.  %KEYWORD% ----------
 			if ($token === 'KEYWORD')
 			{
-				$replacements[$placeholder] = (string) $keyword;
+				$replacements[$placeholder] = $clean((string) $keyword);
 				continue;
 			}
 
@@ -92,7 +99,7 @@ class ProductHelper
 				// 2-a. Whole-object placeholders — %PRODUCT% / %SOURCE%
 				if (empty($segments))
 				{
-					$replacements[$placeholder] = ImportPrompt::getProductDataJsonStr($record);
+					$replacements[$placeholder] = $clean(ImportPrompt::getProductDataJsonStr($record));
 					continue;
 				}
 
@@ -101,25 +108,25 @@ class ProductHelper
 
 				if ($firstSeg === 'SPECIFICATIONS')
 				{
-					$replacements[$placeholder] = ImportPrompt::getProductDataJsonStr($record, ['specifications']);
+					$replacements[$placeholder] = $clean(ImportPrompt::getProductDataJsonStr($record, ['specifications']));
 					continue;
 				}
 
 				if ($firstSeg === 'REVIEWS')
 				{
-					$replacements[$placeholder] = ImportPrompt::getProductDataJsonStr($record, ['userReviews']);
+					$replacements[$placeholder] = $clean(ImportPrompt::getProductDataJsonStr($record, ['userReviews']));
 					continue;
 				}
 
 				// 2-c. Nested placeholders
-				$replacements[$placeholder] = self::resolveProductPlaceholder($record, $segments);
+				$replacements[$placeholder] = $clean(self::resolveProductPlaceholder($record, $segments));
 				continue;
 			}
 
 			// ---------- 3. %AI.title% / %AI.content% ----------
 			if ($root === 'AI' && !empty($segments))
 			{
-				$replacements[$placeholder] = self::resolveAIPlaceholder($segments[0], $ai);
+				$replacements[$placeholder] = $clean(self::resolveAIPlaceholder($segments[0], $ai));
 				continue;
 			}
 

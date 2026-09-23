@@ -32,7 +32,10 @@ foreach ($items as $i => $item)
     $items[$i]['rating'] = $items[$i]['ratingDecimal'];
 }
 
-if (!isset($items[0]['_source_order']))
+// Skipped for a sources render (_source_order) and for an explicit sort=, both
+// of which this resort would otherwise silently overrule — by number, or by the
+// rating fallback below.
+if (!isset($items[0]['_source_order']) && empty($params['sort_explicit']))
 {
     if (TemplateHelper::isNumbered($items))
         $items = TemplateHelper::sortByNumber($items, $order);

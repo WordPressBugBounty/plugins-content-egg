@@ -25,6 +25,13 @@ class UpdateSettingsService
     const GLOBAL_KEYWORD_META = '_cegg_global_autoupdate_keyword';
 
     /**
+     * Maximum keyword rows. Format 2's preg_split() stops at 30 pieces (the
+     * 30th swallows the rest); format 1 has no cap of its own, but the limit
+     * is enforced uniformly so it never depends on whether groups are in use.
+     */
+    const ROW_LIMIT = 30;
+
+    /**
      * Generic {min,max} -> {realMinKey: float, realMaxKey: float}. A blank or
      * missing bound is omitted (never stored as 0). Empty map -> []. Pure.
      */
@@ -95,6 +102,98 @@ class UpdateSettingsService
     }
 
     /**
+     * The keyword string as group/keyword rows, exactly as the update cron
+     * will read it — parsed by the one parser production uses, never by a
+     * client-side guess.
+     *
+     * `notice` flags a row that parsed faithfully but probably not as its
+     * author intended: "comma" means the keyword still holds a comma, i.e. it
+     * was written as "kw1, kw2" and the spaced comma defeated the split.
+     */
+    public static function keywordRows(string $keyword): array
+    {
+        list($keywords, $groups) = ContentManager::prepareMultipleKeywords($keyword);
+
+        $rows = array();
+        foreach ($keywords as $i => $kw)
+        {
+            if ($kw === '')
+                continue;
+
+            $rows[] = array(
+                'keyword' => $kw,
+                'group' => isset($groups[$i]) ? $groups[$i] : '',
+                'notice' => strpos($kw, ',') !== false ? 'comma' : '',
+            );
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Whether the rows view can represent this string without changing what
+     * the cron would search — parse(compose(parse($s))) === parse($s).
+     *
+     * False for a string whose keyword survived the format 2 split holding a
+     * spaced comma: recomposing sends it through format 1, whose explode(",")
+     * splits that comma too, yielding a different set of searches. The panel
+     * shows the raw field for those instead of silently rewriting them.
+     */
+    public static function rowsAreFaithful(string $keyword): bool
+    {
+        $rows = self::keywordRows($keyword);
+
+        return self::keywordRows(ContentManager::composeMultipleKeywords($rows)) === $rows;
+    }
+
+    /**
+     * Rows -> ['keyword' => composed string, 'errors' => [row index => field]].
+     *
+     * Sanitizes EACH ROW and then composes; never sanitizes the composed
+     * string. sanitizeKeyword() routes a value starting with "[" (or a URL)
+     * through FILTER_SANITIZE_URL, which strips spaces — run over a composed
+     * string, one such row would silently eat the spaces out of every other
+     * row's group name.
+     */
+    public static function composeRows(array $rows): array
+    {
+        $errors = ContentManager::invalidKeywordRows($rows);
+        if ($errors)
+            return array('keyword' => '', 'errors' => $errors);
+
+        // Blank rows are dropped rather than stored, so they do not count.
+        $kept = 0;
+        foreach ($rows as $i => $row)
+        {
+            if (trim((string) ($row['keyword'] ?? '')) === '')
+                continue;
+
+            if (++$kept > self::ROW_LIMIT)
+                $errors[$i] = 'limit';
+        }
+        if ($errors)
+            return array('keyword' => '', 'errors' => $errors);
+
+        $clean = array();
+        foreach ($rows as $row)
+        {
+            $keyword = ContentManager::sanitizeKeyword((string) ($row['keyword'] ?? ''));
+            if (trim($keyword) === '')
+                continue;
+
+            $clean[] = array(
+                'keyword' => $keyword,
+                'group' => \sanitize_text_field((string) ($row['group'] ?? '')),
+            );
+        }
+
+        return array(
+            'keyword' => ContentManager::composeMultipleKeywords($clean),
+            'errors' => array(),
+        );
+    }
+
+    /**
      * Read the post's auto-update settings for a family's active modules.
      * `keyword` is the RAW per-module value (blank = inherit global). The
      * post-global keyword is a PRODUCT concept — see getAutoupdateKeyword() — so
@@ -126,7 +225,46 @@ class UpdateSettingsService
             $modules[] = $entry;
         }
 
-        return array('global_keyword' => $global, 'modules' => $modules);
+        $result = array('global_keyword' => $global, 'modules' => $modules);
+
+        // The rows view of the global keyword. Product-scoped, like the global
+        // keyword itself — see getAutoupdateKeyword().
+        if ($family === null || $family === '' || $family === 'PRODUCT')
+        {
+            $result['global_rows'] = self::keywordRows($global);
+            $result['global_rows_ok'] = self::rowsAreFaithful($global);
+            $result['rows_supported'] = self::rowsSupported();
+        }
+
+        return $result;
+    }
+
+    /**
+     * The global keyword as it should be stored.
+     *
+     * A raw value typed into the keyword field is sanitized exactly as the
+     * metabox sanitizes it. A value composed from rows is NOT: composeRows()
+     * already sanitized each row, and sanitizing the composed string would
+     * send a value that starts with "[" (or is URL-shaped) through
+     * FILTER_SANITIZE_URL, stripping the spaces out of every row's group name.
+     */
+    public static function normalizeGlobalKeyword($global, bool $already_composed): string
+    {
+        $global = (string) $global;
+
+        return $already_composed ? $global : ContentManager::sanitizeKeyword($global);
+    }
+
+    /**
+     * Whether a site still parses group/multi-keyword syntax. Either filter
+     * turned on makes the rows a lie — without group matching a group column
+     * cannot be expressed, without multiple keywords a second row cannot — so
+     * the panel falls back to the raw keyword field.
+     */
+    public static function rowsSupported(): bool
+    {
+        return !\apply_filters('cegg_disable_group_matching', false)
+            && !\apply_filters('cegg_disable_multiple_keywords', false);
     }
 
     /**
@@ -135,7 +273,7 @@ class UpdateSettingsService
      * - params written only when the keyword is set (metabox coupling); empty -> delete.
      * Unknown/inactive module ids are ignored. Returns the re-read settings.
      */
-    public static function saveUpdateSettings(int $post_id, $global, array $modules, ?string $family = null): array
+    public static function saveUpdateSettings(int $post_id, $global, array $modules, ?string $family = null, bool $global_is_composed = false): array
     {
         // The global keyword is PRODUCT-only. Never let a non-product family's
         // Settings tab write it, even if a client sends it — guard server-side.
@@ -144,7 +282,7 @@ class UpdateSettingsService
 
         if ($global !== null)
         {
-            $global = ContentManager::sanitizeKeyword((string) $global);
+            $global = self::normalizeGlobalKeyword($global, $global_is_composed);
             if ($global !== '')
                 \update_post_meta($post_id, self::GLOBAL_KEYWORD_META, $global);
             else

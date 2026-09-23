@@ -54,7 +54,7 @@ abstract class AffiliateParserModuleConfig extends ParserModuleConfig
 				'cron'       => __('Cron Job', 'content-egg'),
 				'visit_cron' => __('Page View + Cron Job', 'content-egg'),
 			),
-			'default'          => 'visit',
+			'default'          => 'cron',
 		);
 
 		$options['set_local_redirect'] = [

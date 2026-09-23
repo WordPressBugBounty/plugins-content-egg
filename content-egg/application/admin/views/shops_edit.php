@@ -129,6 +129,23 @@ $rows[] = $blank;
                 </td>
             </tr>
             <tr>
+                <th scope="row"><label for="cegg-shop-badge-text"><?php \esc_html_e('Badge', 'content-egg'); ?></label></th>
+                <td>
+                    <input name="shop[badge_text]" id="cegg-shop-badge-text" type="text" class="regular-text"
+                        value="<?php echo \esc_attr($shop['badge_text']); ?>"
+                        placeholder="<?php \esc_attr_e('e.g. Excl. VAT', 'content-egg'); ?>" />
+                    <select name="shop[badge_color]" id="cegg-shop-badge-color">
+                        <option value=""><?php \esc_html_e('- Badge color -', 'content-egg'); ?></option>
+                        <?php foreach (array('primary', 'secondary', 'success', 'danger', 'warning', 'info', 'light', 'dark') as $color): ?>
+                            <option value="<?php echo \esc_attr($color); ?>" <?php \selected($shop['badge_color'], $color); ?>><?php echo \esc_html($color); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="description">
+                        <?php \esc_html_e('Shown automatically on every offer from this domain that doesn\'t already have its own badge. Prefix with an icon name and a colon, e.g. "coin:Excl. VAT", to show an icon.', 'content-egg'); ?>
+                    </p>
+                </td>
+            </tr>
+            <tr>
                 <th scope="row"><?php \esc_html_e('Shop info', 'content-egg'); ?></th>
                 <td>
                     <?php \wp_editor($shop['info'], 'cegg_shop_info', array(

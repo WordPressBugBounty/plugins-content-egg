@@ -558,6 +558,20 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
     }
 
     /**
+     * Re-arm a stalled background sync from the admin UI.
+     *
+     * Both queues are cleared first: wp_schedule_single_event() ignores a new
+     * event when an identical one is already due within 10 minutes, and for an
+     * event overdue by more than that it adds a second copy instead. Scheduling
+     * on top of the old entry is therefore never correct.
+     */
+    public function rescheduleImport(): void
+    {
+        $this->unscheduleImportEvent();
+        $this->scheduleImportEvent();
+    }
+
+    /**
      * Schedule the background import via WP-Cron and, when available (e.g.
      * WooCommerce loaded ActionScheduler), also via ActionScheduler as a more
      * reliable backup trigger — WP-Cron only fires on a page visit, so a
@@ -604,6 +618,15 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         $ttl = (int) \apply_filters('cegg_feed_products_ttl', self::PRODUCTS_TTL);
         $ttl = (int) \apply_filters('cegg_feed_products_module_ttl', $ttl, $this->getId());
         return $ttl;
+    }
+
+    /**
+     * How long a scheduled sync may sit unexecuted before the admin UI treats
+     * it as stalled and offers to re-arm it.
+     */
+    public function getImportStalledAfter(): int
+    {
+        return (int) \apply_filters('cegg_feed_import_stalled_after', 600, $this->getId());
     }
 
     public function isImportTime()
@@ -2260,6 +2283,90 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         }
 
         return false;
+    }
+
+    /**
+     * Timestamp of the pending sync, or 0 when nothing is queued.
+     *
+     * as_next_scheduled_action() returns true rather than a timestamp for an
+     * action that is pending with an unknown run time, so anything non-numeric
+     * counts as "queued but untimed" instead of being cast to a 1970 date that
+     * would read as infinitely overdue.
+     */
+    public function getImportScheduledTime(): int
+    {
+        $hook = 'cegg_' . $this->getId() . '_init_products';
+        $args = array('module_id' => $this->getId());
+
+        $timestamps = array();
+
+        if ($timestamp = \wp_next_scheduled($hook, $args))
+        {
+            $timestamps[] = (int) $timestamp;
+        }
+
+        if (function_exists('as_next_scheduled_action'))
+        {
+            $next = \as_next_scheduled_action($hook, $args, self::AS_GROUP);
+
+            if (is_numeric($next))
+            {
+                $timestamps[] = (int) $next;
+            }
+        }
+
+        if (!$timestamps)
+        {
+            return 0;
+        }
+
+        return min($timestamps);
+    }
+
+    /**
+     * True when the catalog needs a sync that will not happen on its own:
+     * either a scheduled run is long overdue because nothing is draining the
+     * cron queue, or the TTL expired with nothing queued at all — which is
+     * what a low-traffic site looks like, since only a front-end request
+     * reaches maybeScheduleImport().
+     *
+     * Used by the admin UI to offer a manual re-arm.
+     */
+    public function isImportStalled(): bool
+    {
+        // A module without a usable feed URL has nothing to sync, so it is
+        // never "stalled" — it is simply not configured yet. getFeedUrl()
+        // throws on a missing or malformed URL, hence the catch.
+        try
+        {
+            if (!$this->getFeedUrl())
+            {
+                return false;
+            }
+        }
+        catch (\Exception $e)
+        {
+            return false;
+        }
+
+        if ($this->importStatus()->isRunning())
+        {
+            return false;
+        }
+
+        // A failed import is deliberately backing off; the error notice
+        // explains the wait, and a re-arm would be dropped by the throttle.
+        if ($this->isRetryThrottled())
+        {
+            return false;
+        }
+
+        if ($scheduled_at = $this->getImportScheduledTime())
+        {
+            return (time() - $scheduled_at) > $this->getImportStalledAfter();
+        }
+
+        return $this->isImportTime();
     }
 
     public function getLastImportDateReadable()

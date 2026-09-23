@@ -162,6 +162,10 @@ class ProductImportService
             // stuck threshold without being stuck. Keep the whole batch alive.
             $this->heartbeat();
 
+            // processJob() switches to the preset author for the insert. Put the
+            // original user back afterwards so it does not carry into the next job.
+            $userId = get_current_user_id();
+
             try
             {
                 $this->processJob($row);
@@ -183,6 +187,13 @@ class ProductImportService
                 $this->queue->markFailed($row['id'], $this->logger->format([
                     'exception' => $msg,
                 ]), microtime(true) - $this->startTime);
+            }
+            finally
+            {
+                if (get_current_user_id() !== $userId)
+                {
+                    wp_set_current_user($userId);
+                }
             }
         }
     }
@@ -948,9 +959,10 @@ class ProductImportService
         $bodyTemplate = $preset['body_tpl']  ?? '';
         $wooShortDescTemplate = $preset['woo_short_desc_tpl']  ?? '';
 
-        $postTitle = ProductHelper::replaceImportPatterns($titleTemplate, $sourceProduct, $product, $ai);
-        $postBody = ProductHelper::replaceImportPatterns($bodyTemplate, $sourceProduct, $product, $ai);
-        $wooShortDesc = ProductHelper::replaceImportPatterns($wooShortDescTemplate, $sourceProduct, $product, $ai);
+        // Imported values are filtered; the preset template is kept as written.
+        $postTitle = ProductHelper::replaceImportPatterns($titleTemplate, $sourceProduct, $product, $ai, '', true);
+        $postBody = ProductHelper::replaceImportPatterns($bodyTemplate, $sourceProduct, $product, $ai, '', true);
+        $wooShortDesc = ProductHelper::replaceImportPatterns($wooShortDescTemplate, $sourceProduct, $product, $ai, '', true);
 
         // ---------- 2. Construct post array ----------
         $postArr = [

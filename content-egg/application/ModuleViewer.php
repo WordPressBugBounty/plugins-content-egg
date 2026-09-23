@@ -372,6 +372,24 @@ class ModuleViewer
                 $params['sort'] = 'price';
         }
 
+        // A sort= typed in the shortcode is an instruction, not a default, so no
+        // template may quietly overrule it. $user_specified_sort is read before
+        // the $sorted_templates block above fills in a default, so a template's
+        // own price sort never sets this.
+        if ($user_specified_sort)
+            $params['sort_explicit'] = true;
+
+        // Sorting by a price field also outranks the stored manual order
+        // (order_num / a [N] title prefix), which isNumbered() would otherwise
+        // give priority. Clearing the numbering settles that for every sorter at
+        // once — the pipeline below, the templates that re-sort on their own, and
+        // custom templates — and doing it before the splice means limit= keeps
+        // the cheapest rows rather than the lowest-numbered ones. sort="reverse"
+        // is excluded: it reverses the natural order, and for a numbered set the
+        // numbering IS that order.
+        if ($user_specified_sort && $params['sort'] != 'reverse')
+            $data = TemplateHelper::clearNumbering($data);
+
         // next, limit, offset
         if (!isset($this->block_data_pointer[$post_id]))
             $this->block_data_pointer[$post_id] = array();

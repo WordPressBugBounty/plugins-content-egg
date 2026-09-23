@@ -93,6 +93,7 @@ defined('\ABSPATH') || exit; ?>
                     $last_notice    = $module->getLastImportNotice();
                     $is_import_in_progress = $module->isImportInProgress();
                     $is_import_scheduled = $module->isImportScheduled();
+                    $is_import_stalled = $module->isImportStalled();
                     $tools_page_url = admin_url('admin.php?page=content-egg-tools');
 
                     $status_label = '';
@@ -172,7 +173,7 @@ defined('\ABSPATH') || exit; ?>
                                     <div class="notice notice-warning inline">
                                         <p><?php esc_html_e('Feed sync in progress. Please wait until it completes.', 'content-egg'); ?></p>
                                     </div>
-                                <?php elseif ($is_import_scheduled) : ?>
+                                <?php elseif ($is_import_scheduled && !$is_import_stalled) : ?>
                                     <div class="notice notice-info inline">
                                         <p><?php esc_html_e('Feed sync scheduled. It will run automatically soon.', 'content-egg'); ?></p>
                                     </div>
@@ -194,6 +195,29 @@ defined('\ABSPATH') || exit; ?>
                                 <?php endif; ?>
                             <?php else : ?>
                                 <p class="cegg-empty-state"><?php esc_html_e('No imports yet. The feed will be imported automatically by cron.', 'content-egg'); ?></p>
+                            <?php endif; ?>
+
+                            <?php if ($is_import_stalled) :
+                                $reschedule_url = wp_nonce_url(
+                                    add_query_arg([
+                                        'action' => 'feed-reschedule',
+                                        'module' => rawurlencode($module->getId()),
+                                    ], $tools_page_url),
+                                    'cegg_feed-reschedule'
+                                );
+                            ?>
+                                <div class="notice notice-warning inline">
+                                    <p>
+                                        <?php if ($is_import_scheduled) : ?>
+                                            <?php esc_html_e('A feed sync was scheduled but has not run. This usually means WP-Cron is not running on this site.', 'content-egg'); ?>
+                                        <?php else : ?>
+                                            <?php esc_html_e('The feed data is out of date and no sync is queued. A sync is normally triggered by front-end traffic to this module.', 'content-egg'); ?>
+                                        <?php endif; ?>
+                                    </p>
+                                </div>
+                                <p>
+                                    <a href="<?php echo esc_url($reschedule_url); ?>" class="button"><?php esc_html_e('Schedule sync now', 'content-egg'); ?></a>
+                                </p>
                             <?php endif; ?>
                         </div>
 

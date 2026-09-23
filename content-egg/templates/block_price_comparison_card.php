@@ -9,7 +9,12 @@
 use ContentEgg\application\helpers\TemplateHelper;
 
 defined('\ABSPATH') || exit;
-$items = TemplateHelper::sortAllByPrice($data);
+// $items already arrives sorted by the block's own sort=/order=, so an explicit
+// one is taken as given — the local resort below knows neither, and would drop
+// back to price/asc. Without it the two are equivalent: this template always
+// defaults to price/asc.
+if (empty($params['sort_explicit']))
+    $items = TemplateHelper::sortAllByPrice($data);
 
 $item = TemplateHelper::selectItemByDescription($items);
 if ($title)

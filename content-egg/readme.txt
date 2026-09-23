@@ -4,7 +4,7 @@ Tags: affiliate marketing, price comparison, csv import, affiliate links, gutenb
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 11.8.1
+Stable tag: 11.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -145,7 +145,7 @@ Create clean, product-focused landing pages on your site before sending visitors
 
 Every feature is in the free version — feed imports, price comparison and price history, AI content generation, Egg Blocks, Bridge Pages, clicks statistics, WooCommerce sync and autoblogging. PRO widens the reach rather than unlocking the basics:
 
-* **28 more network modules** — Amazon, eBay, AliExpress, Walmart, AWIN, CJ, Rakuten and more
+* **29 more network modules** — Amazon, eBay, AliExpress, Walmart, AWIN, CJ, Rakuten and more
 * **50 feed modules** instead of 3
 * **Write access for AI agents** — your assistant builds and edits pages instead of only researching them
 * **Fully automatic AI prefill** — monetize existing posts unattended, start to finish
@@ -154,7 +154,7 @@ Every feature is in the free version — feed imports, price comparison and pric
 Includes `CSV-XML Feed`, `CJ Links`, `Coupon`, `GdeSlon`, `Google Images`, `Offer`, `Pexels`, `Pexels Videos`, `Pixabay`, `Related Keywords`, `RSS Fetcher`, `Skimlinks Coupons`, `Sovrn`, `Unsplash`, `YouTube`.
 
 **PRO adds:**
-Includes `Aliexpress`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`, `Billigerde`, `Bol.com`, `CJ Products`, `CityAds.com`, `Coupang`, `Clickbank`, `Daisycon`, `eBay`, `Envato`, `Flipkart`, `Geizhalsde`, `Impact Radius`, `Kelkoogroup`, `Kieskeurig.nl`, `Linkwise`, `Lomadee.com`, `Paytm.com`, `Pepperjam`, `Rakuten (LinkShare)`, `Shopee`, `Walmart`, `Webgains`.
+Includes `Aliexpress`, `AllKeyShop`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`, `Billigerde`, `Bol.com`, `CJ Products`, `CityAds.com`, `Coupang`, `Clickbank`, `Daisycon`, `eBay`, `Envato`, `Flipkart`, `Geizhalsde`, `Impact Radius`, `Kelkoogroup`, `Kieskeurig.nl`, `Linkwise`, `Lomadee.com`, `Paytm.com`, `Pepperjam`, `Rakuten (LinkShare)`, `Shopee`, `Walmart`, `Webgains`.
 
 ➡️ Visit us at [www.keywordrush.com/contentegg](https://www.keywordrush.com/contentegg "Content Egg PRO")
 
@@ -187,7 +187,7 @@ Installation Instructions
 
 Every feature: feed and product import, price comparison and price history, AI content generation, all 25+ Egg Blocks, Bridge Pages, WooCommerce sync, autoblogging, clicks statistics, and AI Agents.
 
-PRO adds 28 more affiliate network modules (Amazon, eBay, AliExpress, Walmart and others), 50 feed modules instead of 3, write access for AI agents, and fully automatic AI prefill.
+PRO adds 29 more affiliate network modules (Amazon, eBay, AliExpress, Walmart and others), 50 feed modules instead of 3, write access for AI agents, and fully automatic AI prefill.
 
 = Can I use ChatGPT or Claude to run the plugin? =
 
@@ -250,6 +250,16 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 
 
 == Changelog ==
+
+= 11.9.0 =
+
+* New: Shop badge — a badge text and color on each shop's Content Egg > Shops page, shown automatically on every offer from that domain unless the offer already has its own badge.
+* New: Update keywords by group — one keyword per row with an optional product group, so a single post refreshes several CE Products blocks at once: one EAN per group, one group per block.
+* New: Paste a list into product search — one keyword, product URL or EAN per line — instead of searching for five products one at a time. Results are grouped under the line that found them, each group with its own "Add all", so a URL that finds nothing is one line's problem rather than a failed search.
+* Fixed: Feed setup wizard — analysing a large feed always failed with a 30-second timeout when the feed host ignores range requests, as Admitad and other on-the-fly feed generators do. The analysis now ends the download itself once it has the sample it needs, whatever the feed's size.
+* Fixed: sort=price in a block shortcode was ignored whenever the products carried a manual order (drag-and-drop, the Order field, or a [1] title prefix). An explicit sort now takes priority over that order.
+* Fixed: Security hardening and fixes.
+* Changed: Affiliate modules now default to Cron Job updates instead of Page View, so every post refreshes on the same schedule instead of waiting for a visitor to arrive.
 
 = 11.8.1 =
 

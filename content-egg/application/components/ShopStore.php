@@ -154,6 +154,11 @@ class ShopStore
             'info'         => isset($s['info']) ? (string) $s['info'] : '',
             'coupons_html' => isset($s['coupons_html']) ? (string) $s['coupons_html'] : '',
             'coupons'      => $coupons,
+            // Shown on every offer from this domain that doesn't already carry
+            // its own badge - reuses the same sanitizer (and the same allowed
+            // color list) as the per-item badge field editors already use.
+            'badge_text'   => ProductDataService::sanitizeField('badge', isset($s['badge_text']) ? $s['badge_text'] : ''),
+            'badge_color'  => ProductDataService::sanitizeField('badge_color', isset($s['badge_color']) ? $s['badge_color'] : ''),
         );
     }
 
@@ -196,6 +201,34 @@ class ShopStore
         $all = self::all();
 
         return isset($all[$domain]) ? $all[$domain] : null;
+    }
+
+    /**
+     * Badge defaults, item by item, for whichever ones don't already carry
+     * one.
+     *
+     * Never overwrites - an AI-extracted badge, a manually-set one, or a
+     * block-shortcode override all take precedence, the same way a
+     * hand-written cegg_view_data_prepare filter would keep its own hands off
+     * a badge that is already there.
+     */
+    public static function applyBadgeDefaults(array $data)
+    {
+        foreach ($data as $key => $item)
+        {
+            if (!is_array($item) || !empty($item['badge']) || empty($item['domain']))
+                continue;
+
+            $shop = self::get($item['domain']);
+
+            if (!$shop || $shop['badge_text'] === '')
+                continue;
+
+            $data[$key]['badge'] = $shop['badge_text'];
+            $data[$key]['badge_color'] = $shop['badge_color'] !== '' ? $shop['badge_color'] : 'primary';
+        }
+
+        return $data;
     }
 
     /**

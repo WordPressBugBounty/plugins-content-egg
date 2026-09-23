@@ -772,6 +772,11 @@ class ContentManager
             }
         }
 
+        // Shop-configured badge, for any item that doesn't already carry one -
+        // AI extraction, a manual per-item badge and a block [badge:...]
+        // override all run before this and all take precedence.
+        $data = ShopStore::applyBadgeDefaults($data);
+
         return \apply_filters('cegg_view_data_prepare', $data, $module_id, $post_id, $params);
     }
 
@@ -1349,6 +1354,85 @@ class ContentManager
         $groups = array_pad($groups, count($keywords) - count($groups) + 1, '');
 
         return array($keywords, $groups);
+    }
+
+    /**
+     * Inverse of prepareMultipleKeywords(): render group/keyword rows as a
+     * keyword string the parser reads back as exactly those rows.
+     *
+     * Two rules carry the whole contract, and both exist to dodge a trap in
+     * the parser:
+     *
+     *  - Rows join on a BARE comma. The format 2 split only breaks on commas
+     *    with no whitespace on either side, so ", " would collapse every row
+     *    into a single keyword.
+     *  - Once ANY row carries a group, EVERY row emits "->" — a row with no
+     *    group gets a trailing arrow. Format 1 engages only on more than one
+     *    arrow, so "a->G1,b" would otherwise fall to format 2 and be read as
+     *    the single keyword "a" with the group list "G1,b".
+     *
+     * Rows with a blank keyword are dropped. A keyword or group containing
+     * "," or "->" cannot be represented — see invalidKeywordRows().
+     */
+    public static function composeMultipleKeywords(array $rows): string
+    {
+        $clean = array();
+        $has_group = false;
+
+        foreach ($rows as $row)
+        {
+            $keyword = trim((string) ($row['keyword'] ?? ''));
+            if ($keyword === '')
+                continue;
+
+            $group = trim((string) ($row['group'] ?? ''));
+            if ($group !== '')
+                $has_group = true;
+
+            $clean[] = array('keyword' => $keyword, 'group' => $group);
+        }
+
+        if (!$clean)
+            return '';
+
+        $parts = array();
+        foreach ($clean as $row)
+        {
+            $parts[] = $has_group
+                ? $row['keyword'] . '->' . $row['group']
+                : $row['keyword'];
+        }
+
+        return implode(',', $parts);
+    }
+
+    /**
+     * Rows composeMultipleKeywords() cannot represent, as [row index => field].
+     * A "," or "->" in either field would re-parse as a row boundary. A blank
+     * keyword is not an error: the row is simply dropped.
+     */
+    public static function invalidKeywordRows(array $rows): array
+    {
+        $errors = array();
+
+        foreach ($rows as $i => $row)
+        {
+            $keyword = trim((string) ($row['keyword'] ?? ''));
+            if ($keyword === '')
+                continue;
+
+            $fields = array('keyword' => $keyword, 'group' => trim((string) ($row['group'] ?? '')));
+            foreach ($fields as $field => $value)
+            {
+                if (strpos($value, ',') !== false || strpos($value, '->') !== false)
+                {
+                    $errors[$i] = $field;
+                    break;
+                }
+            }
+        }
+
+        return $errors;
     }
 
     public static function sanitizeKeyword($keyword)

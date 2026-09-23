@@ -91,6 +91,16 @@ abstract class ParserModule extends Module
 
         foreach ($data as $key => $item)
         {
+            // A scraper can return a response that identifies the product but is
+            // missing price/availability data - e.g. a degraded or wrong-locale
+            // page. That parses to price 0 / stock_status "unknown", neither of
+            // which is a real product state, so it must not stomp a previously
+            // known good value.
+            if (isset($old_data[$key]))
+            {
+                $item = $data[$key] = self::preserveStaleFields($item, $old_data[$key]);
+            }
+
             // fill domain
             if (empty($item['domain']))
             {
@@ -160,6 +170,28 @@ abstract class ParserModule extends Module
         }
 
         return $data;
+    }
+
+    /**
+     * Keep a previously stored price/stock_status when the freshly parsed item
+     * reports "no data" (price 0, stock_status 0/unknown) for that field - a
+     * partial scraper response must not erase a previously known good value.
+     */
+    public static function preserveStaleFields(array $item, array $old_item)
+    {
+        if (empty($item['price']) && !empty($old_item['price']))
+        {
+            $item['price'] = $old_item['price'];
+            if (isset($old_item['priceOld']))
+                $item['priceOld'] = $old_item['priceOld'];
+        }
+
+        if (array_key_exists('stock_status', $item) && (int) $item['stock_status'] === 0 && isset($old_item['stock_status']))
+        {
+            $item['stock_status'] = $old_item['stock_status'];
+        }
+
+        return $item;
     }
 
     public static function getFullImgPath($img_path)

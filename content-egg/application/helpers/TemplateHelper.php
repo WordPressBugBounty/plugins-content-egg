@@ -983,6 +983,27 @@ class TemplateHelper
             return TemplateHelper::sortByPrice($items, $order, $field);
     }
 
+    /**
+     * Drop the manual ordering from block data, keyed module_id => unique_id => item.
+     *
+     * `number` (ContentManager fills it from the product's order_num, or from a
+     * [N] title prefix) is read by isNumbered()/sortByNumber() and by nothing
+     * else — the position badge templates draw comes from the loop index — so
+     * resetting it to the 999 "unset" sentinel is what makes every sorter fall
+     * through to price: the merge pipeline, the templates that re-sort on their
+     * own, and custom templates alike. Pure.
+     */
+    public static function clearNumbering(array $data)
+    {
+        foreach ($data as $module_id => $items)
+        {
+            foreach ($items as $key => $item)
+                $data[$module_id][$key]['number'] = 999;
+        }
+
+        return $data;
+    }
+
     public static function isNumbered(array $data)
     {
         foreach ($data as $d)

@@ -412,6 +412,8 @@ class ShopsController
             'info' => isset($submitted['info']) ? \wp_kses_post($submitted['info']) : '',
             'coupons_html' => isset($submitted['coupons_html']) ? \wp_kses_post($submitted['coupons_html']) : '',
             'coupons' => $coupons,
+            'badge_text' => isset($submitted['badge_text']) ? \sanitize_text_field($submitted['badge_text']) : '',
+            'badge_color' => isset($submitted['badge_color']) ? \sanitize_text_field($submitted['badge_color']) : '',
         ));
     }
 
@@ -427,6 +429,8 @@ class ShopsController
         $shop['logo'] = isset($submitted['logo']) ? \esc_url_raw(trim($submitted['logo'])) : '';
         $shop['info'] = isset($submitted['info']) ? \wp_kses_post($submitted['info']) : '';
         $shop['coupons_html'] = isset($submitted['coupons_html']) ? \wp_kses_post($submitted['coupons_html']) : '';
+        $shop['badge_text'] = isset($submitted['badge_text']) ? \sanitize_text_field($submitted['badge_text']) : '';
+        $shop['badge_color'] = isset($submitted['badge_color']) ? \sanitize_text_field($submitted['badge_color']) : '';
 
         $shop['coupons'] = array();
         if (!empty($submitted['coupons']) && is_array($submitted['coupons']))

@@ -183,12 +183,20 @@ abstract class ParserModuleConfig extends ModuleConfig
         return $sorted;
     }
 
+    /**
+     * Override option values on this instance for a single request.
+     *
+     * Gated on the option being declared, not on it already holding a stored
+     * value: an option added by a plugin update is absent from settings saved
+     * before that update, so an isset() check on the stored values silently
+     * dropped every such override until the module was re-saved.
+     */
     public function applyCustomOptions(array $settings)
     {
         foreach ($settings as $name => $value)
         {
-            if (isset($this->option_values[$name]))
-                $this->option_values[$name] = $value;
+            if ($this->option_exists($name))
+                $this->setOptionValue($name, $value);
         }
     }
 

@@ -71,7 +71,7 @@ class ScrapTestController
         $.post(ajaxurl, {
             action: 'cegg_brightdata_test',
             nonce: ceggBrightdataTest.nonce,
-            token: $('#brightdata_token').val()
+            token: $('#label-brightdata_token').val()
         }).done(function (r) {
             if (!r || !r.success) {
                 $out.text((r && r.data && r.data.message) ? r.data.message : 'Error');
@@ -96,7 +96,7 @@ class ScrapTestController
 
     $(document).on('click', '.cegg-bd-zone', function (e) {
         e.preventDefault();
-        $('#brightdata_zone').val($(this).data('zone'));
+        $('#label-brightdata_zone').val($(this).data('zone'));
     });
 })(jQuery);
 JS;
@@ -130,25 +130,6 @@ JS;
             \wp_send_json_error(array('message' => $status['error']));
         }
 
-        $lines = array();
-
-        if (!empty($status['customer']))
-        {
-            /* translators: 1: Bright Data customer id, 2: account status */
-            $lines[] = sprintf(
-                __('Account %1$s — %2$s', 'content-egg'),
-                $status['customer'],
-                isset($status['status']) ? $status['status'] : ''
-            );
-        }
-
-        if (empty($status['can_make_requests']))
-        {
-            $reason = !empty($status['auth_fail_reason']) ? $status['auth_fail_reason'] : __('unknown', 'content-egg');
-            /* translators: %s: reason reported by Bright Data */
-            $lines[] = sprintf(__('Requests blocked: %s', 'content-egg'), $reason);
-        }
-
         $zones = $this->getJson(self::ZONES_URL, $args);
         $names = array();
 
@@ -166,16 +147,61 @@ JS;
             }
         }
 
-        if (!$names)
+        \wp_send_json_success($this->buildTestResult($status, $names));
+    }
+
+    /**
+     * Turn the raw /status + /zone/get_active_zones data into the lines the
+     * admin sees. Split out from ajaxTest() so the two API calls' side
+     * effects don't have to be stubbed to test how the messages are built.
+     *
+     * /status's can_make_requests / auth_fail_reason is an account-level
+     * check (Bright Data's generic account-management API, not a
+     * Web-Unlocker-specific one) — confirmed live to report
+     * can_make_requests=false / auth_fail_reason=zone_not_found for an
+     * account whose zone is not just listed but actively serving real scrape
+     * requests. get_active_zones is the concrete, relevant signal for "can
+     * this zone be used," so once it lists a zone, the account-level flag is
+     * not shown at all rather than qualified — it has been observed to be
+     * simply wrong for a zone that already works.
+     *
+     * @param array $status Decoded /status body (or a subset of it).
+     * @param array $zoneNames Each: array('name' => ..., 'type' => ...).
+     * @return array{ok: bool, lines: string[], zones: array}
+     */
+    protected function buildTestResult(array $status, array $zoneNames)
+    {
+        $lines = array();
+
+        if (!empty($status['customer']))
         {
+            /* translators: 1: Bright Data customer id, 2: account status */
+            $lines[] = sprintf(
+                __('Account %1$s — %2$s', 'content-egg'),
+                $status['customer'],
+                isset($status['status']) ? $status['status'] : ''
+            );
+        }
+
+        $has_zones = !empty($zoneNames);
+
+        if (!$has_zones)
+        {
+            if (empty($status['can_make_requests']))
+            {
+                $reason = !empty($status['auth_fail_reason']) ? $status['auth_fail_reason'] : __('unknown', 'content-egg');
+                /* translators: %s: reason reported by Bright Data */
+                $lines[] = sprintf(__('Requests blocked: %s', 'content-egg'), $reason);
+            }
+
             $lines[] = __('No zones on this account. Create a Web Unlocker zone in the Bright Data control panel.', 'content-egg');
         }
 
-        \wp_send_json_success(array(
-            'ok'    => !empty($status['can_make_requests']) && $names,
+        return array(
+            'ok'    => $has_zones,
             'lines' => $lines,
-            'zones' => $names,
-        ));
+            'zones' => $zoneNames,
+        );
     }
 
     /**

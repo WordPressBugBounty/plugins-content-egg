@@ -64,6 +64,30 @@ class ArrayHelper
 		return json_decode(json_encode($a), false);
 	}
 
+	/**
+	 * Unserialize a raw stored value that should hold an array, without
+	 * instantiating any class.
+	 *
+	 * For meta rows read with $wpdb, which skip WordPress's own decoding:
+	 * maybe_serialize() stores a "C:"-format string verbatim, and a bare
+	 * unserialize() of it would build the object it names.
+	 *
+	 * @param mixed $value
+	 *
+	 * @return array|null null when the value is not a serialized array
+	 */
+	public static function unserializeArray($value)
+	{
+		if (!is_string($value))
+		{
+			return null;
+		}
+
+		$data = @unserialize($value, array('allowed_classes' => false));
+
+		return is_array($data) ? $data : null;
+	}
+
 	public static function asortStable(array $array, $order1 = SORT_ASC, $order2 = SORT_ASC)
 	{
 		if (!$array)

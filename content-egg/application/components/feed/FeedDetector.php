@@ -25,6 +25,12 @@ class FeedDetector
 {
     const SAMPLE_BYTES = 524288; // 512 KiB
 
+    /** Upper bound for cegg_feed_analyze_timeout; the wizard runs in admin-ajax. */
+    const MAX_ANALYZE_TIMEOUT = 300;
+
+    /** Connect budget for the partial-fetch retry, so an unreachable host cannot double the wait. */
+    const PARTIAL_CONNECT_TIMEOUT = 10;
+
     /**
      * Known affiliate-network click domains that findOriginalUrl() cannot
      * unwrap; never report them as the merchant domain.
@@ -648,6 +654,154 @@ class FeedDetector
     // ------------------------------------------------------------------
 
     /**
+     * Timeout (seconds) for the analysis download. Analysis only ever needs
+     * SAMPLE_BYTES, so this guards a slow trickle, not the feed's total size.
+     */
+    protected static function analyzeTimeout(): int
+    {
+        $timeout = (int) \apply_filters('cegg_feed_analyze_timeout', 30);
+
+        if ($timeout < 1)
+        {
+            return 30;
+        }
+
+        return min($timeout, self::MAX_ANALYZE_TIMEOUT);
+    }
+
+    /**
+     * Fetch at most $limit bytes and hang up, for hosts that ignore Range.
+     *
+     * Unlike wp_remote_get()'s limit_response_size, the write callback here
+     * aborts the transfer the moment we have enough, so feed size stops
+     * mattering. Deliberately does not report a total size: CURLOPT_ENCODING
+     * lets curl inflate a Content-Encoding wrapper, after which Content-Length
+     * describes the wire bytes and not the body we return, and fetchSample()
+     * would read a short read as a complete feed.
+     *
+     * @return array|null WP-shaped response array, or null when no usable
+     *   partial body could be read (caller then reports the original error).
+     */
+    protected static function fetchPartial(string $url, int $limit, int $timeout): ?array
+    {
+        if (!function_exists('curl_init'))
+        {
+            return null;
+        }
+
+        // wp_remote_get() applies policy gates before it ever opens a socket;
+        // this retry must not become a way around them. WP strips any scheme
+        // outside http/https/ssl and then fails with the same generic
+        // 'http_request_failed' code as a real transport error, so re-check the
+        // scheme here rather than trusting the caller's gate.
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+        if ($scheme !== 'http' && $scheme !== 'https')
+        {
+            return null;
+        }
+
+        if (function_exists('_wp_http_get_object'))
+        {
+            $http = \_wp_http_get_object();
+            if ($http && $http->block_request($url))
+            {
+                return null;
+            }
+        }
+
+        $ch = @curl_init($url);
+        if (!$ch)
+        {
+            return null;
+        }
+
+        $body = '';
+
+        $verify = (bool) \apply_filters('https_ssl_verify', true, $url);
+
+        $options = array(
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 3,
+            CURLOPT_CONNECTTIMEOUT => min(self::PARTIAL_CONNECT_TIMEOUT, $timeout),
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_ENCODING => '',
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_SSL_VERIFYPEER => $verify,
+            // Requests moves both knobs together; leaving VERIFYHOST at 2 would
+            // make this retry stricter than the path it stands in for.
+            CURLOPT_SSL_VERIFYHOST => $verify ? 2 : 0,
+            CURLOPT_WRITEFUNCTION => function ($handle, $data) use (&$body, $limit)
+            {
+                $room = $limit - strlen($body);
+                if ($room <= 0)
+                {
+                    return 0; // abort: returning short of strlen($data) stops curl
+                }
+
+                $body .= substr($data, 0, $room);
+
+                return strlen($body) >= $limit ? 0 : strlen($data);
+            },
+        );
+
+        if (defined('WPINC') && is_readable(ABSPATH . WPINC . '/certificates/ca-bundle.crt'))
+        {
+            $options[CURLOPT_CAINFO] = ABSPATH . WPINC . '/certificates/ca-bundle.crt';
+        }
+
+        if (function_exists('get_bloginfo'))
+        {
+            $options[CURLOPT_USERAGENT] = 'WordPress/' . \get_bloginfo('version') . '; ' . \get_bloginfo('url');
+        }
+
+        // Honour a site-configured proxy, the way the WP HTTP API would.
+        if (class_exists('\WP_Http_Proxy'))
+        {
+            $proxy = new \WP_Http_Proxy();
+            if ($proxy->is_enabled() && $proxy->send_through_proxy($url))
+            {
+                $options[CURLOPT_PROXYTYPE] = CURLPROXY_HTTP;
+                $options[CURLOPT_PROXY] = $proxy->host();
+                $options[CURLOPT_PROXYPORT] = $proxy->port();
+
+                if ($proxy->use_authentication())
+                {
+                    $options[CURLOPT_PROXYAUTH] = CURLAUTH_ANY;
+                    $options[CURLOPT_PROXYUSERPWD] = $proxy->authentication();
+                }
+            }
+        }
+
+        @curl_setopt_array($ch, $options);
+        @curl_exec($ch);
+
+        $errno = curl_errno($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        curl_close($ch);
+
+        // CURLE_WRITE_ERROR is our own abort above once $limit was reached.
+        $aborted_by_us = ($errno === \CURLE_WRITE_ERROR && strlen($body) >= $limit);
+
+        if (($errno !== 0 && !$aborted_by_us) || $body === '')
+        {
+            return null;
+        }
+
+        if ($code === 0)
+        {
+            return null; // no HTTP status: nothing here is safe to treat as a feed
+        }
+
+        return array(
+            'headers' => array(),
+            'body' => $body,
+            'response' => array('code' => $code, 'message' => ''),
+        );
+    }
+
+    /**
      * Download a decompressed sample of the feed (up to SAMPLE_BYTES of
      * payload; ZIP archives require a full download).
      *
@@ -677,19 +831,41 @@ class FeedDetector
 
         $result = array('head' => '', 'archive' => 'none', 'complete' => false, 'bytes_total' => 0, 'warnings' => array());
 
+        $timeout = self::analyzeTimeout();
+
         $response = \wp_remote_get($url, array(
-            'timeout' => 30,
+            'timeout' => $timeout,
             'redirection' => 3,
             'limit_response_size' => self::SAMPLE_BYTES,
             'headers' => array('Range' => 'bytes=0-' . (self::SAMPLE_BYTES - 1)),
         ));
 
+        // A feed host that ignores our Range header answers 200 with the whole
+        // file, and limit_response_size does NOT stop the transfer: both of
+        // Requests' transports discard the surplus but keep draining the
+        // socket to the end (Curl::stream_body() returns the full $data_length
+        // regardless; Fsockopen `continue`s its read loop). On a multi-hundred-
+        // MB feed that guarantees a timeout no matter how high $timeout goes.
+        // Retry with a fetcher that actually aborts the transfer at the limit.
         if (\is_wp_error($response))
         {
-            throw new \Exception(sprintf(
-                esc_html__('Could not download the feed: %s', 'content-egg'),
-                esc_html($response->get_error_message())
-            ));
+            // Only a transport failure earns a retry. WP_HTTP_BLOCK_EXTERNAL
+            // reports 'http_request_not_executed', and a security plugin
+            // denying the call through pre_http_request returns its own code;
+            // retrying either would walk straight around the block.
+            $partial = ($response->get_error_code() === 'http_request_failed')
+                ? static::fetchPartial($url, self::SAMPLE_BYTES, $timeout)
+                : null;
+
+            if ($partial === null)
+            {
+                throw new \Exception(sprintf(
+                    esc_html__('Could not download the feed: %s', 'content-egg'),
+                    esc_html($response->get_error_message())
+                ));
+            }
+
+            $response = $partial;
         }
 
         $code = (int) \wp_remote_retrieve_response_code($response);

@@ -136,8 +136,26 @@ class OfferModule extends AffiliateParserModule
         return $items;
     }
 
+    /**
+     * Give an item that carries no currency the module's "Default currency".
+     * The Product Manager and the agent's add-products ability save Offers
+     * without one; the classic metabox preselects it client-side.
+     */
+    public static function applyDefaultCurrency(array $item, string $default): array
+    {
+        if ($default !== '' && trim((string) ($item['currencyCode'] ?? '')) === '')
+            $item['currencyCode'] = $default;
+
+        return $item;
+    }
+
     public function presavePrepare($data, $post_id)
     {
+        // Must run before the parent: it derives the `currency` symbol from currencyCode.
+        $default_currency = (string) $this->config('default_currency');
+        foreach ($data as $key => $item)
+            $data[$key] = self::applyDefaultCurrency($item, $default_currency);
+
         $data = parent::presavePrepare($data, $post_id);
         $return = array();
         foreach ($data as $key => $item)

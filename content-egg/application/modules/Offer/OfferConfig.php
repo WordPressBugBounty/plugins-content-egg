@@ -43,6 +43,7 @@ class OfferConfig extends AffiliateParserModuleConfig
 			),
 			'default_currency' => array(
 				'title'            => __('Default currency', 'content-egg'),
+				'description'      => __('Preselected when you add an offer, and applied to any offer saved without a currency.', 'content-egg'),
 				'callback'         => array($this, 'render_dropdown'),
 				'dropdown_options' => array_combine($currencies, $currencies),
 				'default'          => 'USD',

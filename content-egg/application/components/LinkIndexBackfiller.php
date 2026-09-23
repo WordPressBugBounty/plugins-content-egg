@@ -2,6 +2,7 @@
 
 namespace ContentEgg\application\components;
 
+use ContentEgg\application\helpers\ArrayHelper;
 use ContentEgg\application\helpers\ClickStatsHelper;
 use ContentEgg\application\models\LinkIndexModel;
 
@@ -141,7 +142,7 @@ class LinkIndexBackfiller
         $items = [];
         foreach ($metas as $meta)
         {
-            $data = @unserialize($meta->meta_value);
+            $data = ArrayHelper::unserializeArray($meta->meta_value);
             if (!is_array($data))
             {
                 continue; // corrupted/unexpected format

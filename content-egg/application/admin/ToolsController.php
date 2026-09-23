@@ -5,6 +5,7 @@ namespace ContentEgg\application\admin;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\models\PriceAlertModel;
+use ContentEgg\application\helpers\ArrayHelper;
 use ContentEgg\application\helpers\FileHelper;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ContentManager;
@@ -67,6 +68,7 @@ class ToolsController
             'feed-export'             => 'actionFeedDataExport',
             'feed-reset'             => 'actionFeedDataReset',
             'feed-cache-clear'        => 'actionFeedCacheClear',
+            'feed-reschedule'         => 'actionFeedReschedule',
             'export-module-settings'  => 'actionExportModuleSettings',
             'import-module-settings'  => 'actionImportModuleSettings',
             'export-plugin-settings'  => 'actionExportPluginSettings',
@@ -153,7 +155,7 @@ class ToolsController
         $csv_arr = array();
         foreach ($results as $result)
         {
-            if (!$data = unserialize($result['meta_value']))
+            if (!$data = ArrayHelper::unserializeArray($result['meta_value']))
                 continue;
 
             $csv_line = array();
@@ -261,6 +263,40 @@ class ToolsController
 
         $redirect_url = admin_url(sprintf('admin.php?page=content-egg-modules--%s', $module_id));
         $redirect_url = AdminNotice::add2Url($redirect_url, 'feed_cache_cleared', 'success');
+
+        AdminHelper::redirect($redirect_url);
+    }
+
+    private function actionFeedReschedule()
+    {
+        if (!\current_user_can('administrator'))
+            die('You do not have permission to view this page.');
+
+        if (isset($_GET['module']))
+            $module_id = TextHelper::clear(\sanitize_text_field(wp_unslash($_GET['module'])));
+        else
+            die('Module param can not be empty.');
+
+        if (!ModuleManager::getInstance()->moduleExists($module_id))
+            die('The module does not exist.');
+
+        $module = ModuleManager::getInstance()->factory($module_id);
+
+        if (!$module->isFeedModule())
+            die('This module does not support feed sync.');
+
+        $redirect_url = admin_url(sprintf('admin.php?page=content-egg-modules--%s', $module_id));
+
+        // An import can start between rendering the button and clicking it.
+        if ($module->isImportInProgress())
+        {
+            $redirect_url = AdminNotice::add2Url($redirect_url, 'feed_sync_in_progress', 'warning');
+        }
+        else
+        {
+            $module->rescheduleImport();
+            $redirect_url = AdminNotice::add2Url($redirect_url, 'feed_sync_scheduled', 'success');
+        }
 
         AdminHelper::redirect($redirect_url);
     }

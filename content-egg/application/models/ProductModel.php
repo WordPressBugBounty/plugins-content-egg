@@ -8,6 +8,7 @@ use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\components\ProductScanState;
+use ContentEgg\application\helpers\ArrayHelper;
 
 /**
  * ProductModel class file
@@ -144,13 +145,8 @@ class ProductModel extends Model
         $all_products = array();
         foreach ($metas as $meta)
         {
-            if (!$data = @unserialize($meta->meta_value))
-            {
-                continue;
-            }
-
-            // corrupted data?
-            if (!is_array($data))
+            // null for corrupted data
+            if (!$data = ArrayHelper::unserializeArray($meta->meta_value))
             {
                 continue;
             }

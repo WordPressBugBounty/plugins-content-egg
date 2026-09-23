@@ -284,11 +284,13 @@ class ProductManagerLoader
         // active ones, so the button shows even when it's disabled; the add
         // endpoint activates it on first use.
         $manual_module_id = '';
+        $manual_default_currency = '';
         foreach (ModuleManager::getInstance()->getProductParserModules(false) as $module)
         {
             if (!$module->isSearchable())
             {
                 $manual_module_id = $module->getId();
+                $manual_default_currency = (string) $module->config('default_currency', '');
                 break;
             }
         }
@@ -376,6 +378,7 @@ class ProductManagerLoader
                 'isWooProduct' => (\get_post_type($post_id) === 'product' && \class_exists('WooCommerce')),
                 'currencies' => CurrencyHelper::getCurrenciesList(),
                 'manualModuleId' => $manual_module_id,
+                'manualDefaultCurrency' => $manual_default_currency,
                 'couponModuleIds' => array_values($coupon_module_ids),
                 'manualCouponModuleId' => $manual_coupon_module_id,
                 'couponBlockTemplates' => self::couponBlockTemplatesForBuilder(),

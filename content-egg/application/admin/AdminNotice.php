@@ -36,6 +36,8 @@ class AdminNotice
             'settings_import_error' => __('Import failed: no valid settings were found. Please check your file and try again.', 'content-egg'),
             'feed_reseted' => __('The feed data has been reset. Reloading products in the background...', 'content-egg'),
             'feed_cache_cleared' => __('The cached feed file has been deleted. The next sync will download the feed again.', 'content-egg'),
+            'feed_sync_scheduled' => __('Feed sync has been scheduled and will run in the background shortly. Reload this page to check the status.', 'content-egg'),
+            'feed_sync_in_progress' => __('A feed sync is already running. Please wait until it completes.', 'content-egg'),
             'plugin_purged_cached_logos' => __('Cached logos have been purged.', 'content-egg'),
             'product_import_stopped' => __('All pending product import tasks have been stopped.', 'content-egg'),
             'preset_saved'         => __('Preset saved successfully.', 'content-egg'),

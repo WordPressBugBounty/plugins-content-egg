@@ -4,6 +4,7 @@ namespace ContentEgg\application\admin;
 
 defined('\ABSPATH') || exit;
 
+use ContentEgg\application\helpers\ArrayHelper;
 use ContentEgg\application\models\ProductMapModel;
 use ContentEgg\application\models\ProductModel;
 
@@ -274,7 +275,7 @@ class BridgeBackfillService
         foreach ((array) $metas as $meta)
         {
             $module_id = substr((string) $meta['meta_key'], strlen('_cegg_data_'));
-            $data      = @unserialize((string) $meta['meta_value']);
+            $data      = ArrayHelper::unserializeArray($meta['meta_value']);
 
             if ($module_id === '' || !is_array($data))
             {
