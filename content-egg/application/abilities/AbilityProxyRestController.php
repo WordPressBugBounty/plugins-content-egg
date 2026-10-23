@@ -23,9 +23,9 @@ defined('\ABSPATH') || exit;
  * body — no query string at all — and dispatches to the same registered ability,
  * reusing its permission check, audit logging, and error mapping.
  *
- * The ChatGPT OpenAPI profile targets this endpoint, and so does any assistant
- * driving the API over plain HTTP — notably Claude calling curl from its own
- * sandbox, which needs no MCP adapter at all. MCP clients keep using the core
+ * The post OpenAPI profile targets this endpoint, and so does any assistant
+ * driving the API over plain HTTP — notably Claude or ChatGPT Work calling curl
+ * from their own sandboxes, which need no MCP adapter at all. MCP clients keep using the core
  * API through the bridge. Unlike the core router, this route accepts POST for
  * read-only abilities too, so a client has one uniform call shape for
  * everything; the agent guide documents both transports.
@@ -58,7 +58,10 @@ final class AbilityProxyRestController
      */
     public static function run($request)
     {
-        $name = (string) $request['name'];
+        // From the path only: $request['name'] prefers a body field, and set-family
+        // takes a `name` of its own ({"name": "Lodge Skillets"} -> "unknown ability").
+        $url_params = $request->get_url_params();
+        $name = (string) ($url_params['name'] ?? '');
 
         $ability = AbilitiesRegistrar::findEnabledAbility($name);
         if ($ability === null)

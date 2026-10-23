@@ -10,6 +10,7 @@ use ContentEgg\application\helpers\ArrayHelper;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ContentProduct;
+use ContentEgg\application\components\OfferCondition;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\libs\amazon\AmazonLocales;
 use ContentEgg\application\models\LinkIndexModel;
@@ -592,6 +593,21 @@ class TemplateHelper
         return \ContentEgg\application\PriceAlert::isPriceAlertAllowed($unique_id, $module_id);
     }
 
+    /**
+     * Whether an offer may be offered a price-drop alert form: alerts must be on
+     * and the offer must have price history (isPriceAlertAllowed), and it must
+     * not be a used / refurbished offer the owner keeps out of the best price -
+     * those record no history from now on and never send an alert, though they
+     * can still hold history stored before the setting was enabled.
+     */
+    public static function isPriceAlertOffered(array $item): bool
+    {
+        if (OfferCondition::excludedFromBestPrice($item))
+            return false;
+
+        return self::isPriceAlertAllowed($item['unique_id'], $item['module_id']);
+    }
+
     public static function getCurrencyPos($currency)
     {
         return CurrencyHelper::getInstance()->getCurrencyPos($currency);
@@ -805,6 +821,19 @@ class TemplateHelper
         }
         arsort($currency_codes);
         $base_currency = key($currency_codes);
+
+        // An offer that cannot set the best price: out of stock, or a used /
+        // refurbished one the owner asked to keep out of it. It sinks to the
+        // bottom for both directions, so one predicate serves the price pass
+        // below and the descending split at the end.
+        $is_unusable = static function ($d)
+        {
+            if (isset($d['stock_status']) && $d['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+                return true;
+
+            return is_array($d) && OfferCondition::excludedFromBestPrice($d);
+        };
+
         foreach ($data as $key => $d)
         {
             $rate = 1;
@@ -824,7 +853,7 @@ class TemplateHelper
                         $data[$key]['converted_price'] = 0.00001;
                 }
                 elseif ($field == 'total_price')
-                    $data[$key]['converted_price'] = ((float) $d['price'] + (float) $d['shipping_cost']) * $rate;
+                    $data[$key]['converted_price'] = ((float) $d['price'] + (float) ($d['shipping_cost'] ?? 0)) * $rate;
                 else
                     $data[$key]['converted_price'] = (float) $d['price'] * $rate;
             }
@@ -835,7 +864,7 @@ class TemplateHelper
                 if ($field == 'discount' || $field == 'total_price')
                     $data[$key]['converted_price'] = 99999999999;
             }
-            if (isset($d['stock_status']) && $d['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+            if ($is_unusable($d))
             {
                 if ($field == 'discount')
                     $data[$key]['converted_price'] = -1;
@@ -860,11 +889,18 @@ class TemplateHelper
             $modules_priority[$module_id] = (int) $module->config('priority');
         }
 
+        // A module that is not installed any more has no priority: it ranks
+        // after every installed one instead of raising an undefined-key warning.
+        $priority = function ($d) use ($modules_priority)
+        {
+            return $modules_priority[$d['module_id']] ?? PHP_INT_MAX;
+        };
+
         // sort by price and priority
-        usort($data, function ($a, $b) use ($modules_priority)
+        usort($data, function ($a, $b) use ($priority)
         {
             if (!$a['price'] && !$b['price'])
-                return $modules_priority[$a['module_id']] - $modules_priority[$b['module_id']];
+                return $priority($a) <=> $priority($b);
 
             if (!$a['converted_price'] && !$b['converted_price'] && $a['price'] && $b['price'])
                 return ($a['price'] < $b['price']) ? -1 : 1;
@@ -879,19 +915,34 @@ class TemplateHelper
                 return -1;
 
             if ($a['converted_price'] == $b['converted_price'])
-                return $modules_priority[$a['module_id']] - $modules_priority[$b['module_id']];
+                return $priority($a) <=> $priority($b);
 
-            if ($modules_priority[$a['module_id']] != $modules_priority[$b['module_id']])
+            if ($priority($a) != $priority($b))
             {
                 if ($a['converted_price'] >= 30 && $b['converted_price'] >= 30 && abs($a['converted_price'] - $b['converted_price']) < 1)
-                    return $modules_priority[$a['module_id']] - $modules_priority[$b['module_id']];
+                    return $priority($a) <=> $priority($b);
             }
 
             return ($a['converted_price'] < $b['converted_price']) ? -1 : 1;
         });
 
         if ($order == 'desc')
-            $data = array_reverse($data);
+        {
+            // Offers that cannot be bought (out of stock, no price) or that are
+            // left out of the best price sink to the bottom of an ascending
+            // list; reversing the whole list would lift them to the top of a
+            // descending one. Reverse only the usable part.
+            $usable = array();
+            $unusable = array();
+            foreach ($data as $d)
+            {
+                if ($d['converted_price'] && $d['price'] && !$is_unusable($d))
+                    $usable[] = $d;
+                else
+                    $unusable[] = $d;
+            }
+            $data = array_merge(array_reverse($usable), $unusable);
+        }
 
         return $data;
     }
@@ -1913,6 +1964,23 @@ class TemplateHelper
         echo esc_html(Translator::translate($str));
     }
 
+    /**
+     * The label for a used or refurbished offer, in the visitor's language
+     * (editable under Frontend Texts), or '' for anything else. Only offers the
+     * owner keeps out of the best price carry one: with exclude_non_new_offers
+     * off, a site shows exactly what it showed before. Not escaped: the caller
+     * escapes it where it prints.
+     */
+    public static function conditionLabel(array $item): string
+    {
+        if (!OfferCondition::excludedFromBestPrice($item))
+            return '';
+
+        return OfferCondition::resolve($item) === OfferCondition::REFURBISHED
+            ? self::__('Refurbished')
+            : self::__('Used');
+    }
+
     public static function displayImage(array $item, $max_width = 0, $max_height = 0, array $params = array())
     {
         if (!isset($item['img']))
@@ -2638,6 +2706,10 @@ class TemplateHelper
 
     public static function shippingCost(array $item)
     {
+        // Price hidden (out of stock + "hide price"): no delivery line either.
+        if (isset($item['total_price']) && $item['total_price'] === '')
+            return;
+
         if (!isset($item['shipping_cost']) || $item['shipping_cost'] == '')
         {
             self::$delivery_at_checkout = true;
@@ -3952,7 +4024,9 @@ class TemplateHelper
     {
         foreach (TemplateHelper::sortByPrice($items) as $item)
         {
-            if (self::isPriceAlertAllowed($item['unique_id'], $item['module_id']))
+            // isPriceAlertOffered() also turns away a used / refurbished offer
+            // kept out of the best price: it sends no alert, so it is never the target.
+            if (self::isPriceAlertOffered($item))
                 return $item;
         }
 
@@ -4019,6 +4093,11 @@ class TemplateHelper
         $priceHistory = array();
         foreach ($items as $item)
         {
+            // Not a price a new buyer can get: left out of the chart, its
+            // stored points and its current price alike.
+            if (OfferCondition::excludedFromBestPrice($item))
+                continue;
+
             if (!$data = self::getItemPriceHistory($item['unique_id'], $item['module_id'], $currency, $days))
                 continue;
 
@@ -4082,7 +4161,9 @@ class TemplateHelper
             if (self::$price_history_since === null)
                 self::$price_history_since = strtotime($date);
 
-            if ($lowest_item === null || $data['price'] <= $lowest_item['price'])
+            // Strictly lower: the date is when the lowest price was first
+            // reached, not the last day it held (today, while it still holds).
+            if ($lowest_item === null || $data['price'] < $lowest_item['price'])
             {
                 $lowest_item = $data;
                 $lowest_item['date'] = $date;
@@ -4158,8 +4239,10 @@ class TemplateHelper
 
         $canvas_id = TemplateHelper::generateGlobalId('cegg-price-history-chart-');
 
-        \wp_enqueue_script('cegg-chartjs');
-        \wp_enqueue_script('cegg-chartjs-adapter-date-fns');
+        // The chart is drawn by a registered script, not an inline one: inline
+        // scripts travel with the post content, and content filters on some
+        // sites HTML-encode characters such as & inside them.
+        \wp_enqueue_script('cegg-price-history-chart');
 
         $locale = get_locale();
         $locale = str_replace('_', '-', $locale);
@@ -4174,139 +4257,7 @@ class TemplateHelper
         ];
         $data_json = wp_json_encode($localized_data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
 
-        ob_start();
-?>
-        <canvas id="<?php echo esc_attr($canvas_id); ?>" height="100" aria-label="price history chart" role="img" data-price-history="<?php echo esc_attr($data_json); ?>"></canvas>
-        <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                const ctx = document.getElementById('<?php echo esc_attr($canvas_id); ?>');
-                const {
-                    dates,
-                    labels,
-                    prices,
-                    merchants,
-                    currency,
-                    locale
-                } = JSON.parse(ctx.dataset.priceHistory);
-
-                const rootStyles = getComputedStyle(document.documentElement);
-                const borderColor = rootStyles.getPropertyValue('--cegg-primary').trim();
-                const rgb = rootStyles.getPropertyValue('--cegg-primary-rgb').trim();
-                const backgroundColor = `rgba(${rgb}, 0.2)`;
-                const computedStyles = getComputedStyle(ctx);
-                const bodyColorRgb = computedStyles.getPropertyValue('--cegg-body-color-rgb').trim();
-                const color = `rgb(${bodyColorRgb})`;
-                const gridColor = `rgba(${bodyColorRgb}, 0.1)`;
-
-                const points = dates.map(function(d, i) {
-                    return {
-                        x: d,
-                        y: prices[i]
-                    };
-                });
-
-                const isoKey = function(value) {
-                    const dt = new Date(value);
-                    const month = String(dt.getMonth() + 1).padStart(2, '0');
-                    const day = String(dt.getDate()).padStart(2, '0');
-                    return dt.getFullYear() + '-' + month + '-' + day;
-                };
-                const dateLabel = function(value) {
-                    return labels[isoKey(value)] || '';
-                };
-
-                const data = {
-                    datasets: [{
-                        data: points,
-                        stepped: 'before',
-                        borderColor: borderColor,
-                        backgroundColor: backgroundColor,
-                        fill: true,
-                        borderWidth: 1,
-                        radius: 1,
-                        tension: 0.1
-                    }]
-                };
-
-                const config = {
-                    type: 'line',
-                    data: data,
-                    options: {
-                        interaction: {
-                            intersect: false,
-                            mode: 'index'
-                        },
-                        scales: {
-                            x: {
-                                type: 'time',
-                                ticks: {
-                                    color: color,
-                                    source: 'data',
-                                    autoSkip: true,
-                                    maxTicksLimit: 8,
-                                    callback: function(value) {
-                                        return dateLabel(value);
-                                    }
-                                },
-                                grid: {
-                                    color: gridColor,
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: false,
-                                },
-                                beginAtZero: false,
-                                grace: '20%',
-                                ticks: {
-                                    color: color,
-                                    autoSkip: true,
-                                    maxTicksLimit: 6,
-                                    callback: function(value, index, values) {
-                                        return new Intl.NumberFormat(locale, {
-                                            style: 'currency',
-                                            currency: currency
-                                        }).format(value);
-                                    }
-                                },
-                                grid: {
-                                    color: gridColor,
-                                },
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false,
-                                labels: {
-                                    color: color,
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    title: function(tooltipItems) {
-                                        return dateLabel(tooltipItems[0].parsed.x);
-                                    },
-                                    label: function(tooltipItem) {
-                                        const price = tooltipItem.parsed.y;
-                                        const merchant = merchants[tooltipItem.dataIndex];
-                                        const formattedPrice = new Intl.NumberFormat(locale, {
-                                            style: 'currency',
-                                            currency: currency
-                                        }).format(price);
-                                        return `${merchant}: ${formattedPrice}`;
-                                    }
-                                }
-                            },
-                        }
-                    }
-                };
-
-                const priceHistoryChart = new Chart(ctx, config);
-            });
-        </script>
-<?php
-        $code = ob_get_clean();
-        echo self::minifyBasic($code); // phpcs:ignore
+        echo '<canvas id="' . esc_attr($canvas_id) . '" height="100" aria-label="price history chart" role="img" data-price-history="' . esc_attr($data_json) . '"></canvas>';
     }
 
     public static function minifyBasic($input)

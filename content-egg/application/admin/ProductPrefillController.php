@@ -359,6 +359,7 @@ class ProductPrefillController
 
         $config['keyword_source'] = sanitize_text_field($_POST['keyword_source'] ?? 'post_title');
         $config['meta_field_name'] = sanitize_text_field(wp_unslash($_POST['meta_field_name']) ?? '');
+        $config['meta_field_feed_ids'] = !empty($_POST['meta_field_feed_ids']) ? 1 : 0;
         $config['source_module_gtin'] = sanitize_text_field($_POST['source_module_gtin'] ?? '');
         $config['source_module_title'] = sanitize_text_field($_POST['source_module_title'] ?? '');
 

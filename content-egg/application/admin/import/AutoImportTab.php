@@ -321,6 +321,8 @@ class AutoImportTab extends AbstractTab
             'stop_after_imports' => '',
             'stop_if_no_new_results' => 20,
             'max_keyword_no_products' => 10,
+            'min_discount'       => '',
+            'in_stock_only'      => 0,
         ]);
 
         $keywords = KeywordCollection::toLines($rule['keywords_json']);
@@ -371,6 +373,11 @@ class AutoImportTab extends AbstractTab
         $stop_imports    = absint($_POST['stop_after_imports'] ?? 0) ?: null;
         $stop_no_results = absint($_POST['stop_if_no_new_results'] ?? 0) ?: null;
         $max_keyword_no_products = absint($_POST['max_keyword_no_products'] ?? 0) ?: null;
+
+        // "Real discounts only"
+        $min_discount  = absint($_POST['min_discount'] ?? 0);
+        $min_discount  = $min_discount ? min(99, $min_discount) : null;
+        $in_stock_only = isset($_POST['in_stock_only']) ? 1 : 0;
 
         // Determine next_run_at
         if ($id === 0)
@@ -423,6 +430,8 @@ class AutoImportTab extends AbstractTab
             'stop_after_imports'    => $stop_imports,
             'stop_if_no_new_results' => $stop_no_results,
             'max_keyword_no_products' => $max_keyword_no_products,
+            'min_discount'          => $min_discount,
+            'in_stock_only'         => $in_stock_only,
             'next_run_at'           => $next_run_at,
         ];
 

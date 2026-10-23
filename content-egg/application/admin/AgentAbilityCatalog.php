@@ -6,7 +6,6 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\Plugin;
 use ContentEgg\application\abilities\AbilitiesRegistrar;
-use ContentEgg\application\abilities\OpenApiGenerator;
 
 /**
  * AgentAbilityCatalog class file
@@ -32,14 +31,6 @@ final class AgentAbilityCatalog
     {
         $paid = Plugin::isPaidBuild();
         $tiers = self::tierMap();
-        // Badge only what the ChatGPT profile ACTUALLY drops on this build. Reading
-        // the raw constant meant a free install (17 abilities, nothing trimmed)
-        // still showed "Not in ChatGPT" on three abilities its schema does include.
-        // enabledAbilityNames() is map-derived and safe to call on an admin request
-        // -- wp_get_abilities() here would force-init the shared registry.
-        $chatgpt_excluded = array_flip(
-            OpenApiGenerator::chatGptExcludes(count(AbilitiesRegistrar::enabledAbilityNames()))
-        );
         $groups = self::definitions();
 
         foreach ($groups as &$group)
@@ -49,10 +40,6 @@ final class AgentAbilityCatalog
                 $tier = $tiers[$ability['name']] ?? 'pro';
                 $ability['tier'] = $tier;
                 $ability['available'] = ($tier === 'free') || $paid;
-                // Trimmed from the ChatGPT Actions profile (30-operation cap);
-                // still reachable via Claude/MCP/REST. Single source of truth:
-                // OpenApiGenerator::CHATGPT_EXCLUDE.
-                $ability['chatgpt_excluded'] = isset($chatgpt_excluded[$ability['name']]);
             }
         }
 
@@ -115,8 +102,16 @@ final class AgentAbilityCatalog
                     array('name' => 'content-egg/search-products', 'label' => __('Search products', 'content-egg'), 'desc' => __('Find products from your networks by keyword.', 'content-egg'), 'example' => __('Search Amazon for robot vacuums — top 5 with prices.', 'content-egg')),
                     array('name' => 'content-egg/search-all-products', 'label' => __('Search several networks', 'content-egg'), 'desc' => __('Search several product modules at once and compare the results.', 'content-egg'), 'example' => __('Compare robot vacuums across Amazon, eBay and Walmart.', 'content-egg')),
                     array('name' => 'content-egg/get-post-products', 'label' => __('A post’s products', 'content-egg'), 'desc' => __('List the products attached to a post.', 'content-egg'), 'example' => __('What products are on my “Best Drills” post?', 'content-egg')),
+                    array('name' => 'content-egg/get-passport', 'label' => __('A page’s product passport', 'content-egg'), 'desc' => __('Read which product a page compares: its GTINs with their sources, brand, model, variant and the offer decisions taken so far.', 'content-egg'), 'example' => __('What product does my “Sony WH-1000XM5” page compare, and which offers were rejected?', 'content-egg')),
+                    array('name' => 'content-egg/match-offers', 'label' => __('Match offers', 'content-egg'), 'desc' => __('Check search results or a page’s offers against its product passport: GTIN, brand, MPN, sizes, condition and price. Read-only, no requests to shops; the grey zone stays your call.', 'content-egg'), 'example' => __('Check these 12 search results against the passport and tell me which are the same product.', 'content-egg')),
+                    array('name' => 'content-egg/audit-offers', 'label' => __('Audit offers', 'content-egg'), 'desc' => __('Check your pages and list what needs attention: offers nobody verified, accepted offers whose title or GTIN changed, out-of-stock, used or off-price offers, stale GTIN searches, and pages without a passport. Read-only, no requests to shops.', 'content-egg'), 'example' => __('Check my price comparison pages and tell me what needs attention.', 'content-egg')),
+                    array('name' => 'content-egg/get-family', 'label' => __('A product family', 'content-egg'), 'desc' => __('Read a family of variant pages (one page per size, color or memory): its dimensions and each page with its variant and lowest price.', 'content-egg'), 'example' => __('Which pages are in my iPhone 15 family, and which variant is missing?', 'content-egg')),
+                    array('name' => 'content-egg/set-passport', 'label' => __('Set a product passport', 'content-egg'), 'desc' => __('Fix the one product (and variant) a page compares. GTINs need a source. From then on, offers you rejected stay off the page and keyword updates no longer replace its product offers; every other offer stays.', 'content-egg'), 'example' => __('This page compares the black WH-1000XM5. The GTIN is on the Sony page I linked; use it as the passport.', 'content-egg')),
+                    array('name' => 'content-egg/set-offer-decisions', 'label' => __('Record offer decisions', 'content-egg'), 'desc' => __('Mark offers as the page’s product or not, and log the searches done. A rejected offer is removed; automatic updates never bring it back, only adding it again on purpose does.', 'content-egg'), 'example' => __('The Sony XM4 and the 2-pack are not the XM5 this page compares: reject them.', 'content-egg')),
+                    array('name' => 'content-egg/set-family', 'label' => __('Link variant pages', 'content-egg'), 'desc' => __('Create a family of variant pages, add or remove pages, or delete it. Each page then shows a switcher to its siblings, and shop lists can show the family once.', 'content-egg'), 'example' => __('Link my iPhone 15 128 GB, 256 GB and 512 GB pages as one family by memory.', 'content-egg')),
                     array('name' => 'content-egg/add-products-to-post', 'label' => __('Add products', 'content-egg'), 'desc' => __('Attach products to a post — from your networks, or a custom one you describe.', 'content-egg'), 'example' => __('Add this deal as a custom product: “Acme Drill”, $99, example.com/drill.', 'content-egg')),
                     array('name' => 'content-egg/update-product', 'label' => __('Edit a product', 'content-egg'), 'desc' => __('Change a product’s title, price, or other fields.', 'content-egg'), 'example' => __('Set the DeWalt’s price to 129 on that post.', 'content-egg')),
+                    array('name' => 'content-egg/update-woo-product', 'label' => __('Edit a WooCommerce product', 'content-egg'), 'desc' => __('Set a WooCommerce product’s type, categories, GTIN and catalog visibility. The price always follows the offers.', 'content-egg'), 'example' => __('Make that product an External product in the Headphones category and hide it from the shop.', 'content-egg')),
                     array('name' => 'content-egg/refresh-post-products', 'label' => __('Refresh prices', 'content-egg'), 'desc' => __('Re-pull current prices and stock for a post’s products.', 'content-egg'), 'example' => __('Refresh the prices on my “Best Drills” post.', 'content-egg')),
                     array('name' => 'content-egg/reorder-products', 'label' => __('Reorder products', 'content-egg'), 'desc' => __('Change the order products appear in.', 'content-egg'), 'example' => __('Put the Makita first on that post.', 'content-egg')),
                     array('name' => 'content-egg/remove-products', 'label' => __('Remove products', 'content-egg'), 'desc' => __('Remove products from a post.', 'content-egg'), 'example' => __('Remove the discontinued Ryobi from that post.', 'content-egg')),

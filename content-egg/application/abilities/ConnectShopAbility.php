@@ -37,8 +37,6 @@ final class ConnectShopAbility extends AbilityBase
 
     public function description(): string
     {
-        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
-        // known-vs-custom-domain contract must be complete before the cut.
         return 'Connects a new Affiliate Egg-backed product module from a shop domain '
             . '(e.g. "walmart.com"), so its products become searchable via '
             . 'content-egg/search-products. Shops Affiliate Egg already recognizes '

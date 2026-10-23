@@ -74,6 +74,7 @@ $templates = $tpl_manager->getTemplatesList(true);
 
                     <div class="input-group input-group-sm" ng-show="!models.<?php echo esc_attr($module_id); ?>.processing">
                         <?php $module->isUrlSearchAllowed() ? $placeholder = __('Keyword or Product URL', 'content-egg') : $placeholder = __('Keyword to search', 'content-egg'); ?>
+                        <?php if ($module->getSearchPlaceholder()) $placeholder = $module->getSearchPlaceholder(); ?>
                         <?php $placeholder = \apply_filters('content_egg_keyword_input_placeholder', $placeholder, $module_id); ?>
                         <input type="text" select-on-click ng-model="keywords.<?php echo esc_attr($module_id); ?>" on-enter="find('<?php echo esc_attr($module_id); ?>')" class="form-control form-control-sm" placeholder="<?php echo \esc_attr($placeholder); ?>" />
                         <button title="<?php echo esc_html(__('Search', 'content-egg')); ?>" ng-disabled="!keywords.<?php echo esc_attr($module_id); ?>" ng-click="find('<?php echo esc_attr($module_id); ?>')" type="button" class="btn btn-primary" aria-label="Search">

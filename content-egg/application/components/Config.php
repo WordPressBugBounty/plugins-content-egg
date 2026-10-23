@@ -221,6 +221,11 @@ abstract class Config
             {
                 $params['help_url'] = $field['help_url'];
             }
+            // WordPress puts args['class'] on the field's <tr>, so a page can show or hide the whole row.
+            if (!empty($field['row_class']))
+            {
+                $params['class'] = $field['row_class'];
+            }
             if (!empty($field['is_pro']))
             {
                 $params['is_pro'] = true;
@@ -423,11 +428,16 @@ abstract class Config
 
         echo '<div class="cegg-checkboxgroup">';
 
+        // value => note: shown checked and disabled, because something else
+        // keeps them on. A disabled box is not submitted, so the stored value
+        // stays whatever the user chose.
+        $locked = isset($args['locked_options']) && is_array($args['locked_options']) ? $args['locked_options'] : array();
+
         if ($args['checkbox_options'] && is_array($args['checkbox_options']))
         {
             foreach ($args['checkbox_options'] as $value => $name)
             {
-                if (in_array($value, $args['value']))
+                if (isset($locked[$value]) || in_array($value, (array) $args['value']))
                 {
                     $checked = ' checked="checked" ';
                 }
@@ -443,8 +453,12 @@ abstract class Config
                     . esc_attr($args['label_for'] . '-' . $value), '"';
                 if ($checked)
                     echo ' checked="checked" ';
+                if (isset($locked[$value]))
+                    echo ' disabled="disabled" ';
                 echo ' value="' . esc_attr($value) . '" />';
                 echo ' ' . esc_html($name);
+                if (isset($locked[$value]))
+                    echo ' <span class="description">(' . esc_html($locked[$value]) . ')</span>';
                 echo '</label>';
                 echo '</div>';
             }
@@ -887,6 +901,11 @@ abstract class Config
     public static function updateOption($option, $value, $slug)
     {
         $options = get_option($slug, []);
+
+        // A site that has never saved its settings holds '' (see __construct()).
+        if (!is_array($options))
+            $options = [];
+
         $options[$option] = $value;
 
         return update_option($slug, $options);

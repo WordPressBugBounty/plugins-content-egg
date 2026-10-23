@@ -76,6 +76,17 @@ abstract class ParserModule extends Module
         return false;
     }
 
+    /**
+     * The module's own search-input hint, or '' for the generic one derived
+     * from its search capabilities. For modules that can't take a keyword
+     * (e.g. Magalu: product URL or SKU only). The
+     * content_egg_keyword_input_placeholder filter still has the last word.
+     */
+    public function getSearchPlaceholder()
+    {
+        return '';
+    }
+
     public function presavePrepare($data, $post_id)
     {
         global $post;
@@ -95,8 +106,9 @@ abstract class ParserModule extends Module
             // missing price/availability data - e.g. a degraded or wrong-locale
             // page. That parses to price 0 / stock_status "unknown", neither of
             // which is a real product state, so it must not stomp a previously
-            // known good value.
-            if (isset($old_data[$key]))
+            // known good value. Automatic items updates only: in a manual save
+            // (metabox, Product Manager) an empty price is the user clearing it.
+            if (isset($old_data[$key]) && ContentManager::isItemsUpdateInProgress())
             {
                 $item = $data[$key] = self::preserveStaleFields($item, $old_data[$key]);
             }

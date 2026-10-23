@@ -4,6 +4,7 @@ namespace ContentEgg\application\abilities;
 
 defined('\ABSPATH') || exit;
 
+use ContentEgg\application\components\AffiliateFeedParserModule;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ProductSearchService;
 use ContentEgg\application\components\feed\FeedImportPendingException;
@@ -41,6 +42,31 @@ abstract class AbstractSearchAbility extends AbilityBase
     /** Map raw result items to this type's lean envelope. */
     abstract protected function mapLean(array $items): array;
 
+    /**
+     * The `fields` profiles this ability accepts. Only the product searches add
+     * 'match' (identity fields, see LeanProduct::matchItem()); images, videos
+     * and coupons have no identity to compare.
+     */
+    protected function fieldsEnum(): array
+    {
+        return array('lean', 'full');
+    }
+
+    /**
+     * Map raw result items to the fields="match" profile. Abilities that do not
+     * list 'match' in fieldsEnum() never reach this.
+     */
+    protected function mapMatch(array $items, string $module_id): array
+    {
+        return $this->mapLean($items);
+    }
+
+    /** Whether the response says how the module treated the query (search_mode). */
+    protected function echoesSearchMode(): bool
+    {
+        return false;
+    }
+
     public function inputSchema(): array
     {
         return array(
@@ -61,10 +87,12 @@ abstract class AbstractSearchAbility extends AbilityBase
                     'minimum' => 1,
                     'maximum' => self::MAX_LIMIT,
                     'default' => self::DEFAULT_LIMIT,
+                    'description' => 'Default ' . self::DEFAULT_LIMIT . '; '
+                        . ModuleCapabilities::MARKETPLACE_DEFAULT_LIMIT . ' on a marketplace module (capabilities.marketplace).',
                 ),
                 'fields' => array(
                     'type' => 'string',
-                    'enum' => array('lean', 'full'),
+                    'enum' => $this->fieldsEnum(),
                     'default' => 'lean',
                 ),
                 'filters' => self::freeFormObject(
@@ -79,7 +107,7 @@ abstract class AbstractSearchAbility extends AbilityBase
 
     public function outputSchema(): array
     {
-        return array(
+        $schema = array(
             'type' => 'object',
             'properties' => array(
                 'module_id' => array('type' => 'string'),
@@ -95,6 +123,46 @@ abstract class AbstractSearchAbility extends AbilityBase
                 ),
             ),
         );
+
+        if ($this->echoesSearchMode())
+        {
+            $schema['properties']['search_mode'] = self::searchModeSchema();
+        }
+
+        return $schema;
+    }
+
+    /** Output-schema fragment for the search_mode field. */
+    public static function searchModeSchema(): array
+    {
+        return array(
+            'type' => 'string',
+            'enum' => array('gtin', 'url', 'native_id', 'keyword'),
+            'description' => 'How the module treated the query: a GTIN lookup, a product URL, a native id '
+                . '(ASIN, feed id:...) or a plain keyword search.',
+        );
+    }
+
+    /** The limit of a search that sets none. */
+    public static function defaultLimit(string $module_id): int
+    {
+        return ModuleCapabilities::isMarketplace($module_id) ? ModuleCapabilities::MARKETPLACE_DEFAULT_LIMIT : self::DEFAULT_LIMIT;
+    }
+
+    /**
+     * How many results to request from the module for a caller's $limit.
+     * Scrapers (Affiliate Egg shops, Amazon without the API) cost one extra
+     * request per result, so they fetch exactly $limit; API modules fetch at
+     * least a page, because some reject a tiny page size.
+     */
+    public static function fetchSize(string $module_id, int $limit): int
+    {
+        if (ModuleCapabilities::isScraper($module_id))
+        {
+            return $limit;
+        }
+
+        return min(self::MAX_LIMIT, max($limit, self::MIN_FETCH_PAGE));
     }
 
     public function checkPermission($input = null): bool
@@ -106,7 +174,7 @@ abstract class AbstractSearchAbility extends AbilityBase
     {
         $module_id = trim((string) ($input['module_id'] ?? ''));
         $keyword = trim((string) ($input['keyword'] ?? ''));
-        $limit = min(self::MAX_LIMIT, max(1, (int) ($input['limit'] ?? self::DEFAULT_LIMIT)));
+        $limit = min(self::MAX_LIMIT, max(1, (int) ($input['limit'] ?? self::defaultLimit($module_id))));
 
         $rate = (int) \apply_filters('content_egg_abilities_search_rate_limit', self::DEFAULT_RATE_PER_MINUTE);
         $wait = RateLimiter::hit('search:' . \get_current_user_id(), $rate);
@@ -118,7 +186,11 @@ abstract class AbstractSearchAbility extends AbilityBase
         $filters = (!empty($input['filters']) && is_array($input['filters'])) ? $input['filters'] : array();
         $found = self::searchOneModule($module_id, $keyword, $limit, $filters, $this->moduleType(), $this->moduleKind());
 
-        $full = (($input['fields'] ?? 'lean') === 'full');
+        $fields = (string) ($input['fields'] ?? 'lean');
+        if (!in_array($fields, $this->fieldsEnum(), true))
+        {
+            $fields = 'lean';
+        }
 
         $full_items = array_values(array_map(array(LeanProduct::class, 'fullItem'), $found['items']));
 
@@ -127,8 +199,14 @@ abstract class AbstractSearchAbility extends AbilityBase
             'keyword' => $keyword,
             'count' => count($found['items']),
             'notice' => $found['notice'],
-            'results' => $full ? $full_items : $this->mapLean($found['items']),
+            'results' => $fields === 'full'
+                ? $full_items
+                : ($fields === 'match' ? $this->mapMatch($found['items'], $module_id) : $this->mapLean($found['items'])),
         );
+        if ($this->echoesSearchMode())
+        {
+            $out['search_mode'] = $found['search_mode'];
+        }
 
         // Rehydrate-by-id (design spec 2026-07-30): stash the mapped items so add-*
         // can attach them by unique_id via SearchTokenResolver — the server, not the
@@ -153,7 +231,7 @@ abstract class AbstractSearchAbility extends AbilityBase
      * AbilityInputException for a bad/wrong-type/unsearchable module, or
      * AbilitySearchException when the module's own API fails.
      *
-     * @return array{notice: string, items: array}
+     * @return array{notice: string, items: array, search_mode: string}
      */
     public static function searchOneModule(string $module_id, string $keyword, int $limit, array $filters, string $module_type, string $module_kind): array
     {
@@ -205,9 +283,11 @@ abstract class AbstractSearchAbility extends AbilityBase
 
         // Same per-call overlay the editor UI and TMN use; configFactory()
         // returns the cached per-module instance the parser reads from. Fetch a
-        // sane minimum page (some APIs reject per_page < 3) and slice to $limit.
-        $fetch = min(self::MAX_LIMIT, max($limit, self::MIN_FETCH_PAGE));
-        ModuleManager::configFactory($module_id)->applayCustomOptions(array('entries_per_page' => $fetch));
+        // sane minimum page (some APIs reject per_page < 3) and slice to $limit;
+        // scrapers fetch only $limit (see fetchSize()).
+        ModuleManager::configFactory($module_id)->applayCustomOptions(
+            array('entries_per_page' => self::fetchSize($module_id, $limit))
+        );
 
         // Allowlist agent-supplied filters to the module's declared search
         // filter keys, mirroring ModulesRestController::search().
@@ -247,6 +327,12 @@ abstract class AbstractSearchAbility extends AbilityBase
         return array(
             'notice' => (string) $result['notice'],
             'items' => array_slice((array) $result['results'], 0, $limit),
+            'search_mode' => SearchMode::detect(
+                $keyword,
+                $module,
+                $module_id,
+                $module instanceof AffiliateFeedParserModule
+            ),
         );
     }
 }

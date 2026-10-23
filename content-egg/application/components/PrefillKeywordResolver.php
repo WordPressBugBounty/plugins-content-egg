@@ -45,6 +45,10 @@ class PrefillKeywordResolver
 
             case 'meta_field':
                 $meta_key = $config['meta_field_name'] ?? '';
+                if (!empty($config['meta_field_feed_ids']))
+                {
+                    return $this->feedIdsFromMetaField($post, $meta_key);
+                }
                 return $this->fromMetaField($post, $meta_key);
 
             case 'gtin_woocommerce':
@@ -104,6 +108,52 @@ class PrefillKeywordResolver
         }
 
         return is_string($value) ? trim($value) : '';
+    }
+
+    /**
+     * Keyword = feed product IDs from a custom field, as "id:" lookups.
+     * Every meta row and every comma-separated value becomes its own exact ID
+     * search; values that already carry the prefix are kept as they are.
+     */
+    protected function feedIdsFromMetaField(\WP_Post $post, string $meta_key): string
+    {
+        if (empty($meta_key))
+        {
+            $this->logNotice(__('Meta field key is empty.', 'content-egg'));
+            return '';
+        }
+
+        $ids = array();
+        foreach (get_post_meta($post->ID, $meta_key, false) as $value)
+        {
+            foreach ((array) $value as $part)
+            {
+                if (!is_scalar($part))
+                {
+                    continue;
+                }
+
+                foreach (explode(',', (string) $part) as $id)
+                {
+                    $id = trim($id);
+                    if ($id === '')
+                    {
+                        continue;
+                    }
+
+                    $ids[] = AffiliateFeedParserModule::isIdKeyword($id) ? $id : AffiliateFeedParserModule::ID_KEYWORD_PREFIX . $id;
+                }
+            }
+        }
+
+        if (!$ids)
+        {
+            $this->logNotice(sprintf(__('Meta field "%s" not found for post ID %d.', 'content-egg'), $meta_key, $post->ID));
+            return '';
+        }
+
+        // Comma with no spaces is the multiple-keyword separator.
+        return implode(',', array_unique($ids));
     }
 
     /**

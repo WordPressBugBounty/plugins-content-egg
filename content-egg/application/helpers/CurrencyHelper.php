@@ -21,6 +21,13 @@ class CurrencyHelper
     private static $instance = null;
     private static $currencyRates = array();
 
+    /**
+     * How long a failed rate lookup is remembered. A download that fails (a
+     * network hiccup, a blocked request) used to be cached like a good one, so
+     * currency conversion stayed off for a day; now it is retried soon.
+     */
+    const FAILED_RATE_TTL = 900;
+
     public static function getInstance($locale = null)
     {
         if (self::$instance === null)
@@ -743,16 +750,18 @@ class CurrencyHelper
             if ($response && !\is_wp_error($response))
             {
                 $results = TextHelper::unserialize_xml(\wp_remote_retrieve_body($response));
-                if (!isset($results['Cube']['Cube']['Cube']))
+                if (isset($results['Cube']['Cube']['Cube']) && is_array($results['Cube']['Cube']['Cube']))
                 {
-                    return 0;
-                }
-                foreach ($results['Cube']['Cube']['Cube'] as $r)
-                {
-                    $rates[$r['@attributes']['currency']] = (float) $r['@attributes']['rate'];
+                    foreach ($results['Cube']['Cube']['Cube'] as $r)
+                    {
+                        if (isset($r['@attributes']['currency'], $r['@attributes']['rate']))
+                        {
+                            $rates[$r['@attributes']['currency']] = (float) $r['@attributes']['rate'];
+                        }
+                    }
                 }
             }
-            \set_transient($transient_name, $rates, 6 * 3600);
+            \set_transient($transient_name, $rates, $rates ? 6 * 3600 : self::FAILED_RATE_TTL);
         }
 
         if ($from == 'EUR' && isset($rates[$to]))
@@ -792,12 +801,79 @@ class CurrencyHelper
             if ($rate === false)
             {
                 $rate = self::queryCurrencyRate($from, $to);
-                \set_transient($transient_name, $rate, 24 * 3600);
+                \set_transient($transient_name, $rate, $rate ? 24 * 3600 : self::FAILED_RATE_TTL);
             }
             self::$currencyRates[$transient_name] = $rate;
         }
 
         return self::$currencyRates[$transient_name];
+    }
+
+    /**
+     * A currency rate from what is already stored, never from a request.
+     *
+     * getCurrencyRate() asks the ECB when it finds nothing. Callers that must
+     * not make HTTP requests (the match-offers ability) use this instead: it
+     * reads the same sources in the same order, the content_egg_currency_rate
+     * filter, getCurrencyRate()'s in-memory cache, then the stored transient,
+     * and stops there.
+     *
+     * @param string $from Currency code, such as USD.
+     * @param string $to   Currency code, such as EUR.
+     * @return float 1.0 for the same currency, 0.0 when no rate is stored.
+     */
+    /**
+     * The rate the agent's price checks use (match-offers, audit-offers): the
+     * stored rate, else the same ECB daily lookup that sorting and the
+     * WooCommerce sync use, so a check sees the prices the page shows. At most
+     * one request to the ECB, which is then cached for the site.
+     *
+     * @return float 1.0 for the same currency, 0.0 when no rate is known.
+     */
+    public static function comparisonRate($from, $to): float
+    {
+        $rate = self::cachedRate($from, $to);
+        if ($rate > 0)
+        {
+            return $rate;
+        }
+
+        $from = strtoupper(trim((string) $from));
+        $to = strtoupper(trim((string) $to));
+        if ($from === '' || $to === '')
+        {
+            return 0.0;
+        }
+
+        $rate = self::getCurrencyRate($from, $to);
+
+        return (is_numeric($rate) && (float) $rate > 0) ? (float) $rate : 0.0;
+    }
+
+    public static function cachedRate($from, $to): float
+    {
+        $from = strtoupper(trim((string) $from));
+        $to = strtoupper(trim((string) $to));
+        if ($from === '' || $to === '')
+        {
+            return 0.0;
+        }
+        if ($from === $to)
+        {
+            return 1.0;
+        }
+
+        $rate = \apply_filters('content_egg_currency_rate', 0, $from, $to);
+        if (is_numeric($rate) && (float) $rate > 0)
+        {
+            return (float) $rate;
+        }
+
+        $transient_name = 'currency-rate-' . $from . $to;
+        $rate = isset(self::$currencyRates[$transient_name]) ? self::$currencyRates[$transient_name] : \get_transient($transient_name);
+
+        // false is a miss, and 0 is a lookup that failed: both are unknown.
+        return (is_numeric($rate) && (float) $rate > 0) ? (float) $rate : 0.0;
     }
 
     public static function convertCurrency($price, $from, $to)
@@ -806,5 +882,31 @@ class CurrencyHelper
             return $price;
 
         return round($price * $rate, 2);
+    }
+
+    /**
+     * Express every money field of an offer in another currency.
+     *
+     * price, priceOld, shipping_cost and total_price all travel together: if
+     * one stayed behind in the source currency, the offer would show a price
+     * in EUR next to a shipping cost in USD under a single currency code.
+     * Empty and non-numeric values are left as they are.
+     *
+     * @param array  $item Offer in its source currency.
+     * @param string $to   Target currency code.
+     * @param float  $rate Multiplier from the item's currency to $to.
+     * @return array
+     */
+    public static function convertItem(array $item, $to, $rate)
+    {
+        foreach (array('price', 'priceOld', 'shipping_cost', 'total_price') as $field)
+        {
+            if (!empty($item[$field]) && is_numeric($item[$field]))
+                $item[$field] = (float) $item[$field] * $rate;
+        }
+
+        $item['currencyCode'] = $to;
+
+        return $item;
     }
 }

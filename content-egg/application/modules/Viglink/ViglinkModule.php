@@ -294,6 +294,20 @@ class ViglinkModule extends AffiliateParserModule
 			'Tractor Supply' => 'tractorsupply.com',
 			'JCPenney' => 'jcpenney.com',
 			'Verizon' => 'verizon.com',
+			'Target' => 'target.com',
+			'The Home Depot' => 'homedepot.com',
+			'Lowe\'s' => 'lowes.com',
+			'Ace Hardware' => 'acehardware.com',
+			'Wayfair' => 'wayfair.com',
+			'REI' => 'rei.com',
+			'Scheels' => 'scheels.com',
+			'Sur La Table' => 'surlatable.com',
+			'Crate & Barrel' => 'crateandbarrel.com',
+			'WebstaurantStore' => 'webstaurantstore.com',
+			'Blain Farm & Fleet' => 'farmandfleet.com',
+			'MidwayUSA' => 'midwayusa.com',
+			'Public Lands' => 'publiclands.com',
+			'Barnes and Noble' => 'barnesandnoble.com',
 		);
 
 		return \apply_filters('cegg_viglink_merchant2domain', $m2d);

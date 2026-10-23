@@ -5,6 +5,7 @@ namespace ContentEgg\application\abilities;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\ProductDataService;
+use ContentEgg\application\components\matching\ProductPassport;
 
 /**
  * RefreshPostProductsAbility class file
@@ -33,7 +34,10 @@ final class RefreshPostProductsAbility extends AbilityBase
             . 'lists. Runs synchronously and may take up to a minute on posts with many '
             . 'modules; it consumes the site\'s affiliate API quota — do not call in a '
             . 'loop. Returns after all modules are refreshed. This rewrites stored product '
-            . 'data, so any revision tokens you hold go stale — re-read get-post-products before further edits.';
+            . 'data, so any revision tokens you hold go stale — re-read get-post-products before further edits. '
+            . 'On a post with a product passport, "listings" does not re-search the product modules '
+            . '(listings_suspended is true): its product offers change only by an explicit add or '
+            . 'decision. Coupon lists (and other non-product modules) still refresh.';
     }
 
     public function inputSchema(): array
@@ -57,6 +61,10 @@ final class RefreshPostProductsAbility extends AbilityBase
             'properties' => array(
                 'post_id' => array('type' => 'integer'),
                 'ok' => array('type' => 'boolean'),
+                'listings_suspended' => array(
+                    'type' => 'boolean',
+                    'description' => 'True when type is "listings" and the post has a product passport: the product modules\' keyword re-search was skipped. Coupon lists still refresh.',
+                ),
             ),
         );
     }
@@ -96,6 +104,10 @@ final class RefreshPostProductsAbility extends AbilityBase
         // type; the registrar maps it to cegg_validation_failed.
         ProductDataService::refresh($post_id, $type);
 
-        return array('post_id' => $post_id, 'ok' => true);
+        return array(
+            'post_id' => $post_id,
+            'ok' => true,
+            'listings_suspended' => $type === 'listings' && ProductPassport::has($post_id),
+        );
     }
 }

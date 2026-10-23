@@ -11,6 +11,7 @@ use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ContentProduct;
+use ContentEgg\application\components\OfferCondition;
 
 /**
  * PriceAlert class file
@@ -110,6 +111,11 @@ class PriceAlert
             'status' => PriceAlertModel::STATUS_INACTIVE,
             'activkey' => TextHelper::randomPassword(16),
         );
+
+        // Only when it differs from 1: the column arrives with the schema
+        // upgrade (admin_init), and a frontend subscription can come before it.
+        if (!empty($product['vat_factor']) && abs((float) $product['vat_factor'] - 1) > 0.000001)
+            $alert['price_factor'] = (float) $product['vat_factor'];
 
         // save
         if (PriceAlertModel::model()->save($alert))
@@ -325,6 +331,10 @@ class PriceAlert
         {
             $stock_status = isset($d['stock_status']) ? $d['stock_status'] : ContentProduct::STOCK_STATUS_UNKNOWN;
             if (empty($d['unique_id']) || empty($d['price']) || $stock_status == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+                continue;
+
+            // A used / refurbished offer kept out of the best price sends no alert.
+            if (OfferCondition::excludedFromBestPrice($d))
                 continue;
 
             // Price drops?

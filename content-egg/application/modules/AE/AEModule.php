@@ -291,8 +291,11 @@ class AEModule extends AffiliateParserModule
         $has_hints = class_exists('\Keywordrush\AffiliateEgg\IngestClassifier')
             && class_exists('\Keywordrush\AffiliateEgg\Recommendations');
 
+        // A failure of the scraping service or the proxy itself (newer Affiliate Egg names it): not the store.
+        $from_service = stripos($message, 'The scraping service') === 0 || stripos($message, 'The proxy server') === 0;
+
         // Timeout (case 7): clearer and more actionable than a generic "could not connect".
-        if (in_array($code, array(408, 504), true) || preg_match('/timed out|timeout|curl error 28/i', $message))
+        if (!$from_service && (in_array($code, array(408, 504), true) || preg_match('/timed out|timeout|curl error 28/i', $message)))
         {
             $lead_html = ($lead !== null) ? esc_html($lead) : esc_html__('The store took too long to respond.', 'content-egg');
             $html = '<strong>' . $lead_html . '</strong> '
@@ -303,7 +306,7 @@ class AEModule extends AffiliateParserModule
                     . esc_html__('Enable a scraping service', 'content-egg') . ' &rarr;</a>';
 
             if ($message !== '')
-                $html .= '<br><small>' . esc_html(wp_strip_all_tags($message)) . '</small>';
+                $html .= ' <br><small>' . esc_html(wp_strip_all_tags($message)) . '</small>';
 
             return $html;
         }
@@ -330,9 +333,14 @@ class AEModule extends AffiliateParserModule
 
         if ($action_url)
         {
-            $link_label = ($category === 'blocked')
-                ? __('Enable a scraping service', 'content-egg')
-                : __('Open extractor settings', 'content-egg');
+            if ($category === 'blocked')
+                $link_label = __('Enable a scraping service', 'content-egg');
+            elseif ($category === 'service')
+                $link_label = __('Open scraping settings', 'content-egg');
+            elseif ($category === 'proxy')
+                $link_label = __('Open proxy settings', 'content-egg');
+            else
+                $link_label = __('Open extractor settings', 'content-egg');
 
             $html .= ' <a href="' . esc_url($action_url) . '" target="_blank" rel="noopener noreferrer">'
                 . esc_html($link_label) . ' &rarr;</a>';
@@ -341,8 +349,8 @@ class AEModule extends AffiliateParserModule
         // Raw technical reason, de-emphasized, for support. Only worth showing
         // when it adds detail the friendly hint lacks (HTTP status, transport
         // error); for other categories the hint already says everything.
-        if ($message !== '' && in_array($category, array('blocked', 'network'), true))
-            $html .= '<br><small>' . esc_html(wp_strip_all_tags($message)) . '</small>';
+        if ($message !== '' && in_array($category, array('blocked', 'network', 'service', 'proxy'), true))
+            $html .= ' <br><small>' . esc_html(wp_strip_all_tags($message)) . '</small>';
 
         return $html;
     }

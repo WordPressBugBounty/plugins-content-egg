@@ -38,6 +38,7 @@ class PriceAlertModel extends Model
                     email varchar(255) NOT NULL,
                     price float(12,2) DEFAULT NULL,
                     start_price float(12,2) DEFAULT NULL,
+                    price_factor float(10,6) NOT NULL DEFAULT 1,
                     status tinyint(1) DEFAULT 0,
                     activkey varchar(16) NOT NULL,
                     PRIMARY KEY  (id),
@@ -82,6 +83,21 @@ class PriceAlertModel extends Model
 	{
 		$sql = 'DELETE FROM ' . $this->tableName() . ' WHERE email = %s AND status != %d';
 		$this->getDb()->query($this->getDb()->prepare($sql, $email, self::STATUS_DELETED));
+	}
+
+	/**
+	 * Targets set in one basis, restated in another. price_factor is the
+	 * factor in effect when the subscriber typed the target. Idempotent.
+	 */
+	public function convertForItem($unique_id, $module_id, $factor)
+	{
+		$t = $this->tableName();
+		$sql = "UPDATE {$t} SET
+			price = ROUND(price / price_factor * %.10F, 2),
+			start_price = ROUND(start_price / price_factor * %.10F, 2),
+			price_factor = %.10F
+			WHERE unique_id = %s AND module_id = %s AND status != %d AND ABS(price_factor - %.10F) > 0.000001";
+		$this->getDb()->query($this->getDb()->prepare($sql, (float) $factor, (float) $factor, (float) $factor, $unique_id, $module_id, self::STATUS_DELETED, (float) $factor));
 	}
 
 	public static function getStatus($id)

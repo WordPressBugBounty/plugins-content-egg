@@ -294,38 +294,62 @@ class PresetRepository
 
         foreach (self::getBuiltInPresets() as $preset)
         {
-            // 1) Clean up the title
-            $title = sanitize_text_field($preset['title']);
-
-            // 2) Author fallback
-            $author_id = get_current_user_id() ?: (
-                ($admin = get_user_by('login', 'admin'))
-                ? (int) $admin->ID
-                : 0
-            );
-
-            // 3) Build & clean meta
-            $meta       = (array) $preset['data'];
-            $meta['author_id']       = $author_id;
-            $meta['default_cat']     = absint(get_option('default_category', 1));
-            $meta['default_woo_cat'] = absint(get_option('default_product_cat', 1));
-            $clean_meta = PresetForm::build_clean_array(PresetNormalizer::normalize($meta));
-
-            // 4) Prepare post args
-            $post_arr = [
-                'post_type'   => PresetPostType::POST_TYPE,
-                'post_title'  => $title,
-                'post_name'   => sanitize_title($title),
-                'post_status' => 'publish',
-                'post_author' => $author_id,
-                'meta_input'  => [
-                    PresetRepository::META_KEY => $clean_meta,
-                ],
-            ];
-
-            // 5) Insert
-            wp_insert_post($post_arr, true);
+            self::installPreset($preset);
         }
+    }
+
+    /**
+     * Install one preset shaped like a getBuiltInPresetsData() entry.
+     * Returns the preset post id, or 0 on failure.
+     */
+    /**
+     * Imports run as a preset's author, so an installed preset belongs to an
+     * administrator: the current user when they are one, else the first admin.
+     */
+    public static function defaultAuthorId(): int
+    {
+        if (current_user_can('manage_options'))
+            return (int) get_current_user_id();
+
+        $admins = get_users(array('role' => 'administrator', 'number' => 1, 'orderby' => 'ID', 'order' => 'ASC', 'fields' => 'ID'));
+
+        return $admins ? (int) $admins[0] : 0;
+    }
+
+    public static function installPreset(array $preset): int
+    {
+        PresetPostType::register();
+
+        // 1) Clean up the title
+        $title = sanitize_text_field($preset['title']);
+
+        // 2) Author: imports run as this user
+        $author_id = self::defaultAuthorId();
+
+        // 3) Build & clean meta
+        $meta       = (array) $preset['data'];
+        $meta['author_id']       = $author_id;
+        $meta['default_cat']     = absint(get_option('default_category', 1));
+        $meta['default_woo_cat'] = absint(get_option('default_product_cat', 1));
+        $clean_meta = PresetForm::build_clean_array(PresetNormalizer::normalize($meta));
+
+        // 4) Prepare post args
+        $post_arr = [
+            'post_type'   => PresetPostType::POST_TYPE,
+            'post_title'  => $title,
+            'post_name'   => sanitize_title($title),
+            'post_status' => 'publish',
+            'post_author' => $author_id,
+            'meta_input'  => [
+                PresetRepository::META_KEY => $clean_meta,
+            ],
+        ];
+
+        // 5) Insert
+        $id = wp_insert_post($post_arr, true);
+        self::clearCache();
+
+        return is_wp_error($id) ? 0 : (int) $id;
     }
 
     public static function getBuiltInPresets(): array

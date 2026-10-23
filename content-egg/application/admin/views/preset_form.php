@@ -53,6 +53,9 @@ $prompt_names = array_column($prompt_rows, 'name');
                     <select id="cegg_preset_post_type" name="cegg_preset[post_type]">
                         <option value="post" <?php selected($data['post_type'], 'post'); ?>><?php esc_html_e('Post', 'content-egg'); ?></option>
                         <option value="product" <?php selected($data['post_type'], 'product'); ?>><?php esc_html_e('Woo Product', 'content-egg'); ?></option>
+                        <?php if (\ContentEgg\application\deals\DealsSettings::enabled() || $data['post_type'] === \ContentEgg\application\deals\DealPostType::POST_TYPE) : ?>
+                            <option value="<?php echo esc_attr(\ContentEgg\application\deals\DealPostType::POST_TYPE); ?>" <?php selected($data['post_type'], \ContentEgg\application\deals\DealPostType::POST_TYPE); ?>><?php esc_html_e('Deal', 'content-egg'); ?></option>
+                        <?php endif; ?>
                     </select>
                 </td>
             </tr>
@@ -131,11 +134,14 @@ $prompt_names = array_column($prompt_rows, 'name');
                             'content-egg'
                         ); ?>
                     </p>
+                    <p class="description cegg-deal-only" style="display:none">
+                        <?php esc_html_e('Deals are filed under Deal Categories. Use Dynamic categories to create them from the product\'s category, or set them after import.', 'content-egg'); ?>
+                    </p>
                 </td>
             </tr>
 
-            <!-- Category Mapping -->
-            <tr>
+            <!-- Category Mapping (post/Woo targets only, hidden for deals) -->
+            <tr class="cegg-not-deal">
                 <th><label for="cegg_preset_category_map"><?php esc_html_e('Category Mapping', 'content-egg'); ?></label></th>
                 <td>
                     <?php
@@ -925,13 +931,18 @@ $prompt_names = array_column($prompt_rows, 'name');
     (function($) {
         const toggleFields = () => {
             const pt = $("#cegg_preset_post_type").val();
+            // A deal is a post for every field except categories: its terms
+            // live in deal_category, so the post-category pickers would be ignored.
+            const isDeal = pt === "<?php echo esc_js(\ContentEgg\application\deals\DealPostType::POST_TYPE); ?>";
             if (pt === "product") {
                 $(".cegg-product-only").show();
                 $(".cegg-post-only").hide();
             } else {
                 $(".cegg-product-only").hide();
-                $(".cegg-post-only").show();
+                $(".cegg-post-only").toggle(!isDeal);
             }
+            $(".cegg-not-deal").toggle(!isDeal);
+            $(".cegg-deal-only").toggle(isDeal);
         };
 
         $(document).ready(() => {

@@ -32,6 +32,7 @@ class ModulePrompt extends SystemPrompt
         'direct link'   => 'Direct (non‑affiliate) URL to the original product page',
         'additional image link' => 'Additional product image (or images) beyond the main image',
         'brand'         => 'Product brand or manufacturer',
+        'condition'     => 'Item condition: new, used or refurbished',
         'gtin'          => 'A Global Trade Item Number — EAN, GTIN‑13 or GTIN‑14',
         'category'      => 'Product category or full category path',
         'shipping cost' => 'Shipping cost',

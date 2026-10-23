@@ -7,6 +7,7 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\helpers\ImageHelper;
 use ContentEgg\application\helpers\ArrayHelper;
 use ContentEgg\application\admin\GeneralConfig;
+use ContentEgg\application\models\PriceAlertModel;
 use ContentEgg\application\models\PriceHistoryModel;
 use ContentEgg\application\PriceAlert;
 use ContentEgg\application\helpers\CurrencyHelper;
@@ -15,6 +16,8 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\ImageProxy;
 use ContentEgg\application\LocalRedirector;
 use ContentEgg\application\models\ProductMapModel;
+use ContentEgg\application\components\matching\OfferDecisions;
+use ContentEgg\application\components\matching\ProductPassport;
 
 use function ContentEgg\prnx;
 
@@ -54,6 +57,12 @@ class ContentManager
 
     public static function saveData(array $data, $module_id, $post_id, $is_last_iteration = true, $add_group = '')
     {
+        // A page with a product passport: an automated save drops the offers the
+        // agent rejected, a person's save (OfferDecisions::runManual()) forgets
+        // their rejection instead (unless the person's form predates it). On a
+        // page without a passport the data comes back unchanged.
+        $data = OfferDecisions::applyOnSave($data, (string) $module_id, (int) $post_id);
+
         if (!$data)
         {
             self::deleteData($module_id, $post_id, $is_last_iteration);
@@ -90,18 +99,48 @@ class ContentManager
             self::touchUpdateTime($post_id, $module_id);
         }
 
+        // Items now stored in another VAT basis than before, whether or not the
+        // shop price moved in the same save.
+        $factor_changes = $old_data ? VatNormalizer::factorChanges($old_data, $data) : array();
+
         // save price history
         if (GeneralConfig::getInstance()->option('price_history_days'))
         {
-            PriceHistoryModel::model()->saveData($data, $module_id, $post_id);
-            // ...and send price alerts
-            if (GeneralConfig::getInstance()->option('price_alert_enabled'))
+            $alerts = (bool) GeneralConfig::getInstance()->option('price_alert_enabled');
+
+            // History and alert targets follow the item into the new basis
+            // first - including out-of-stock and price-less items - so the
+            // new point's price_old and the alert check compare like with like.
+            foreach ($factor_changes as $key)
             {
-                PriceAlert::getInstance()->sendAlerts($data, $module_id, $post_id);
+                if (empty($data[$key]['unique_id']))
+                    continue;
+
+                $factor = VatNormalizer::storedFactor($data[$key]);
+                PriceHistoryModel::model()->convertForItem($data[$key]['unique_id'], $module_id, $factor);
+                if ($alerts)
+                    PriceAlertModel::model()->convertForItem($data[$key]['unique_id'], $module_id, $factor);
             }
+
+            // A VAT basis change is not a price change: no new point, no alert.
+            $basis_only = $old_data ? VatNormalizer::basisOnlyChanges($old_data, $data) : array();
+
+            PriceHistoryModel::model()->saveData($data, $module_id, $post_id, $basis_only);
+            // ...and send price alerts
+            if ($alerts)
+                PriceAlert::getInstance()->sendAlerts(array_diff_key($data, array_flip($basis_only)), $module_id, $post_id);
         }
 
         self::resetViewDataCache($module_id, $post_id);
+
+        // Values kept outside the item (e.g. a deal's base price) follow it into
+        // the new basis. Before content_egg_save_data, whose listeners compare
+        // against them.
+        foreach ($factor_changes as $key)
+        {
+            $unique_id = isset($data[$key]['unique_id']) ? $data[$key]['unique_id'] : $key;
+            \do_action('cegg_vat_factor_changed', $post_id, $module_id, $unique_id, VatNormalizer::storedFactor($old_data[$key]), VatNormalizer::storedFactor($data[$key]));
+        }
 
         \do_action('content_egg_save_data', $data, $module_id, $post_id, $is_last_iteration);
 
@@ -152,6 +191,8 @@ class ContentManager
         array_walk_recursive($data, array(__CLASS__, 'sanitizeData'));
         $module = ModuleManager::getInstance()->factory($module_id);
         $data = $module->presavePrepare($data, $post_id);
+        $data = self::normalizeVat($data, $module_id, $post_id);
+        $data = self::normalizeCondition($data, $module_id);
 
         foreach ($data as $id => $d)
         {
@@ -160,6 +201,56 @@ class ContentManager
                 if ($field[0] == '_')
                     $data[$id][$field] = null;
             }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Every product offer carries a canonical `condition` (new, used,
+     * refurbished or unknown), whatever the module stored it as. Runs last so
+     * it reads the module's own fields as presavePrepare() left them.
+     */
+    private static function normalizeCondition(array $data, $module_id)
+    {
+        if (!ModuleManager::getInstance()->isProductParserModule($module_id))
+            return $data;
+
+        foreach ($data as $key => $item)
+        {
+            if (is_array($item))
+                $data[$key]['condition'] = OfferCondition::fromItem($item);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Shop prices -> the site's VAT basis, before anything reads them
+     * (meta write, price history, alerts, WooCommerce). Runs after
+     * presavePrepare() because modules fill `domain` there.
+     */
+    private static function normalizeVat(array $data, $module_id, $post_id)
+    {
+        $stored = $post_id > 0 ? self::getData($post_id, $module_id) : array();
+        $stored = is_array($stored) ? $stored : array();
+
+        foreach ($data as $key => $item)
+        {
+            if (!is_array($item))
+                continue;
+
+            // ContentProduct declares the VAT fields, and the sanitize pass turns
+            // their null into ''. An empty marker is no marker: drop it, so an item
+            // from a module is untouched while the setting is off.
+            foreach (array('price_raw', 'priceOld_raw', 'shipping_cost_raw', 'vat_factor') as $field)
+            {
+                if (array_key_exists($field, $item) && ($item[$field] === '' || $item[$field] === null))
+                    unset($item[$field]);
+            }
+
+            $old = isset($stored[$key]) && is_array($stored[$key]) ? $stored[$key] : null;
+            $data[$key] = VatNormalizer::normalizeItem($item, VatNormalizer::factorForItem($item), $old);
         }
 
         return $data;
@@ -454,15 +545,7 @@ class ContentManager
                     continue;
                 }
 
-                if (!empty($d['price']))
-                {
-                    $data[$key]['price'] = $d['price'] * $rate;
-                    $data[$key]['currencyCode'] = $params['currency'];
-                }
-                if (!empty($d['priceOld']))
-                {
-                    $data[$key]['priceOld'] = $d['priceOld'] * $rate;
-                }
+                $data[$key] = CurrencyHelper::convertItem($d, $params['currency'], $rate);
             }
         }
 
@@ -513,6 +596,20 @@ class ContentManager
 
         foreach ($data as $key => $d)
         {
+            // Shop default shipping, only where the source sent none. View
+            // time on purpose: price history stays item-only and a change
+            // to the shop's ranges applies at once. Skipped when the
+            // displayed price is empty: a price cleared by an admin can
+            // keep a stale price_raw, which shippingFor reads first.
+            if (isset($d['price']) && (float) $d['price'] > 0 && ($shop = VatNormalizer::shopForItem($d)))
+            {
+                if (!empty($shop['shipping_ranges']) && ($default = VatNormalizer::shippingFor($d, $shop['shipping_ranges'])) !== null)
+                {
+                    $d['shipping_cost'] = $default;
+                    $data[$key]['shipping_cost'] = $default;
+                }
+            }
+
             // totals
             if (isset($d['shipping_cost']) && isset($d['price']))
             {
@@ -882,12 +979,67 @@ class ContentManager
         return null;
     }
 
+    /**
+     * Whether keyword re-search is off for this module on the page: the page
+     * has a product passport and the module is a product module, so its
+     * offers change only by an explicit decision. The passport protects the
+     * curated, matched offers; coupon lists (and the other non-product
+     * modules) are not matched against a product and keep their keyword.
+     */
+    public static function isKeywordUpdateSuspended(int $post_id, string $module_id): bool
+    {
+        if (!ProductPassport::has($post_id))
+            return false;
+
+        $manager = ModuleManager::getInstance();
+        if (!$manager->moduleExists($module_id))
+            return false;
+
+        $module = $manager->factory($module_id);
+
+        return $module->isParser() && $module->getParserType() === ParserModule::PARSER_TYPE_PRODUCT;
+    }
+
+    /**
+     * What the Product Manager's "Update listings" control should show: whether
+     * a keyword update would change anything, and whether a product passport
+     * suspends it for some of the keyworded modules (so the UI can say so
+     * instead of implying that every product module is refreshed).
+     *
+     * @param bool[] $suspended_by_module one entry per module that resolves an
+     *     autoupdate keyword: module id => isKeywordUpdateSuspended().
+     * @return array{available: bool, suspended: string, suspended_modules: string[]}
+     *     available: some keyworded module will really refresh.
+     *     suspended: 'passport' when at least one keyworded module is suspended, else ''.
+     *     suspended_modules: the ids of the suspended modules.
+     */
+    public static function keywordRefreshStatus(array $suspended_by_module): array
+    {
+        $suspended_modules = array_map('strval', array_keys(array_filter($suspended_by_module)));
+
+        return array(
+            'available' => in_array(false, $suspended_by_module, true),
+            'suspended' => $suspended_modules ? 'passport' : '',
+            'suspended_modules' => $suspended_modules,
+        );
+    }
+
     public static function updateByKeyword($post_id, $module_id, $is_last_interation = true, $force_feed_import = false)
     {
         if (!$keyword = ContentManager::getAutoupdateKeyword($post_id, $module_id))
         {
             // fix
             \delete_post_meta($post_id, self::META_PREFIX_LAST_BYKEYWORD_UPDATE . $module_id);
+            return 0;
+        }
+
+        // A page with a product passport keeps its curated offers: a keyword
+        // search would replace a product module's list. Mark the update as done
+        // so the cron moves on instead of picking the post again on every run.
+        // Coupon and other non-product modules are not suspended.
+        if (self::isKeywordUpdateSuspended((int) $post_id, (string) $module_id))
+        {
+            ContentManager::touchUpdateTime($post_id, $module_id, false);
             return 0;
         }
 
@@ -1233,6 +1385,11 @@ class ContentManager
             }
         }
 
+        // Used / refurbished offers the owner keeps out of the best price. When
+        // nothing else is left there is no main product: callers (Woo sync,
+        // autoblog, prefill) already handle null.
+        $all_items = array_values(OfferCondition::withoutExcluded($all_items));
+
         if (!$all_items)
         {
             return null;
@@ -1454,44 +1611,23 @@ class ContentManager
 
     /**
      * Find duplicate unique_ids by a specified field, considering module priorities.
+     *
+     * Kept for callers that only need the unique_ids; the offer of the
+     * highest-priority module stays, see OfferDedup. A unique_id shared by two
+     * modules cannot be told apart in this form - use OfferDedup::losers().
      */
     public static function findDuplicatesByField($items, $field)
     {
-        $modules_priority = self::getModulesPriority($items);
-
-        $all_items = TemplateHelper::mergeData($items);
-
-        uasort($modules_priority, function ($a, $b)
-        {
-            return $b - $a;
-        });
-
-        $grouped_items = [];
-        foreach ($all_items as $item)
-        {
-            if (isset($item[$field]))
-            {
-                $grouped_items[$item[$field]][] = $item;
-            }
-        }
+        $losers = OfferDedup::losers(
+            TemplateHelper::mergeData($items),
+            $field,
+            self::getModulesPriority($items)
+        );
 
         $duplicate_unique_ids = [];
-        foreach ($grouped_items as $key => $items)
+        foreach ($losers as $key)
         {
-            if (count($items) > 1)
-            {
-                usort($items, function ($a, $b) use ($modules_priority)
-                {
-                    $priorityA = $modules_priority[$a['module_id']] ?? 0;
-                    $priorityB = $modules_priority[$b['module_id']] ?? 0;
-                    return $priorityB - $priorityA;
-                });
-                // Collect all unique_ids except the first (highest-priority) item
-                foreach (array_slice($items, 1) as $item)
-                {
-                    $duplicate_unique_ids[] = $item['unique_id'];
-                }
-            }
+            $duplicate_unique_ids[] = substr($key, strpos($key, '|') + 1);
         }
 
         return $duplicate_unique_ids;

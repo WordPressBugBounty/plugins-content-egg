@@ -39,29 +39,23 @@ final class OpenApiRestController
 
     public static function handle($request = null)
     {
-        // ?profile=chatgpt trims the spec to fit ChatGPT's 30-operation cap on
-        // Custom GPT Actions; no/other profile serves the full spec.
+        // ?profile=post serves every operation as a POST against the Content Egg
+        // proxy (content-egg/v1/abilities/{name}/run, arguments at the top level of
+        // the JSON body), for HTTP tools that can't send deepObject query params or
+        // whose parameterized GETs an edge/WAF blocks. No/other profile serves the
+        // canonical spec against the core Abilities API (wp-abilities/v1), readonly = GET.
         $profile = ($request && method_exists($request, 'get_param'))
             ? (string) $request->get_param('profile')
             : '';
 
-        $abilities = OpenApiGenerator::applyProfile(OpenApiGenerator::collect(), $profile);
-
-        $is_chatgpt = ($profile === 'chatgpt');
-
-        // ChatGPT can't call the core GET /run endpoint (no deepObject support,
-        // and edge/WAF layers block parameterized GETs), so its profile targets
-        // the Content Egg POST proxy (content-egg/v1/abilities/{name}/run) with
-        // every operation as POST + JSON body. Other clients get the full spec
-        // against the core Abilities API (wp-abilities/v1), readonly = GET.
-        $server_url = $is_chatgpt ? \rest_url('content-egg/v1') : \rest_url('wp-abilities/v1');
+        $post_all = OpenApiGenerator::isPostProfile($profile);
+        $server_url = $post_all ? \rest_url('content-egg/v1') : \rest_url('wp-abilities/v1');
 
         $spec = OpenApiGenerator::buildSpec(
-            $abilities,
+            OpenApiGenerator::collect(),
             $server_url,
             Plugin::version() . '+abilities.' . AbilitiesRegistrar::VERSION,
-            $is_chatgpt,
-            $is_chatgpt
+            $post_all
         );
 
         return \rest_ensure_response($spec);

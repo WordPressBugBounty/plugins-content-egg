@@ -28,9 +28,6 @@ final class UpdateProductAbility extends AbilityBase
 
     public function description(): string
     {
-        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
-        // editing rules must land first; the long field list is deliberately last, so the
-        // clean sentence cut falls just before it rather than mid-list.
         return 'Edits fields of one product attached to a post. Unknown fields are REJECTED '
             . 'with the valid list, so a typo cannot look like success; an empty title is '
             . 'ignored (titles cannot be blanked). Pass the revision from '

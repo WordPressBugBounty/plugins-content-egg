@@ -5,6 +5,11 @@ namespace ContentEgg\application;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\CurrencyHelper;
+use ContentEgg\application\helpers\LogoHelper;
+use ContentEgg\application\components\families\FamilySchema;
+use ContentEgg\application\components\families\FamilyStore;
+use ContentEgg\application\components\families\FamilyWoo;
+use ContentEgg\application\components\families\PriceSummary;
 use ContentEgg\application\components\ExternalFeaturedImage;
 use ContentEgg\application\components\AggregateOffer;
 use ContentEgg\application\components\StructuredData;
@@ -34,8 +39,8 @@ use ContentEgg\application\licensing\LicenseGate;
  */
 class Plugin
 {
-    const version = '11.9.0';
-    const db_version = 96;
+    const version = '12.0.0';
+    const db_version = 99;
     const wp_requires = '6.0';
     const slug = 'content-egg';
     const short_slug = 'cegg';
@@ -95,6 +100,7 @@ class Plugin
             ProductBlock::initAction();
             CouponBlock::initAction();
             MediaBlock::initAction();
+            \ContentEgg\application\deals\Deals::init();
 
             // Group the four core data blocks (products, coupons, images, videos)
             // under their own "Content Egg" inserter category, separate from the
@@ -130,10 +136,20 @@ class Plugin
             ModuleUpdateScheduler::initAction();
             ProductPrefillScheduler::initAction();
             ImageOptimizeScheduler::initAction();
+            VatRecalcScheduler::initAction();
+            LogoHelper::initAction();
+            FamilyStore::initAction();
+            FamilySchema::initAction();
+            PriceSummary::initAction();
+            require_once \ContentEgg\PLUGIN_PATH . 'application/EggBlocks/blocks/variant-switcher/VariantSwitcherRenderer.php';
+            \ContentEgg\application\EggBlocks\blocks\variantswitcher\VariantSwitcherRenderer::initShortcode();
             ProductImportScheduler::initAction();
             AutoImportScheduler::initAction();
             LinkIndexScheduler::initAction();
             WooIntegrator::initAction();
+            // Registered here, not in WooIntegrator: that one bails out while WooCommerce is inactive.
+            \add_action('activated_plugin', array(GeneralConfig::class, 'enableProductPostType'));
+            FamilyWoo::initAction();
             OfferCountService::initAction();
             PostSaveDataNotifier::initAction();
             AmazonWooCheckout::initAction();
@@ -172,6 +188,7 @@ class Plugin
         \wp_register_script('cegg-bootstrap5', \ContentEgg\PLUGIN_RES . '/site/bootstrap/js/bootstrap.min.js');
         \wp_register_script('cegg-chartjs', \ContentEgg\PLUGIN_RES . '/vendor/chartjs/chart.js');
         \wp_register_script('cegg-chartjs-adapter-date-fns', \ContentEgg\PLUGIN_RES . '/vendor/chartjs/chartjs-adapter-date-fns.js', array('cegg-chartjs'));
+        \wp_register_script('cegg-price-history-chart', \ContentEgg\PLUGIN_RES . '/js/cegg-price-history-chart-min.js', array('cegg-chartjs-adapter-date-fns'), Plugin::version(), true);
         \wp_register_script('cegg-products-view', \ContentEgg\PLUGIN_RES . '/js/cegg-products-view-min.js', array(), Plugin::version());
 
         //deprecated

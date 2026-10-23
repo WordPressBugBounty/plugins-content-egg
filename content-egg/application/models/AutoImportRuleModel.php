@@ -53,6 +53,8 @@ class AutoImportRuleModel extends Model
             stop_after_imports                   INT UNSIGNED    DEFAULT NULL,
             stop_if_no_new_results               INT UNSIGNED    DEFAULT NULL,
             max_keyword_no_products              INT UNSIGNED    DEFAULT NULL,
+            min_discount                         TINYINT UNSIGNED DEFAULT NULL,
+            in_stock_only                        TINYINT(1)      NOT NULL DEFAULT 0,
             consecutive_no_products              INT UNSIGNED    NOT NULL DEFAULT 0,
             post_count                           INT UNSIGNED    NOT NULL DEFAULT 0,
             consecutive_errors                   INT UNSIGNED    NOT NULL DEFAULT 0,

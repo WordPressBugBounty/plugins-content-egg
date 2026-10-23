@@ -676,7 +676,7 @@ class LinkHandler
         }
 
         $url_host = TextHelper::urlHost($url);
-        $deeplink_array = str_getcsv($deeplink, ';');
+        $deeplink_array = str_getcsv($deeplink, ';', '"', '\\');
         $default = '';
         foreach ($deeplink_array as $da)
         {

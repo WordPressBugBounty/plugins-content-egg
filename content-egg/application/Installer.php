@@ -15,6 +15,7 @@ use ContentEgg\application\admin\LicConfig;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\OfferCountService;
 use ContentEgg\application\components\ShopMigration;
+use ContentEgg\application\helpers\LogoHelper;
 use ContentEgg\application\models\LinkIndexModel;
 
 /**
@@ -72,7 +73,12 @@ class Installer
         self::requirements();
 
         \add_option(Plugin::slug . '_do_activation_redirect', true);
-        $is_fresh_install = \add_option(Plugin::slug . '_first_activation_date', time());
+        // Fresh = this plugin never ran its upgrade ladder here. The activation
+        // date alone cannot say so: it is missing on installs older than the
+        // option and on sites activated through WP-CLI, and a reactivation of
+        // such a site must not be mistaken for a first install.
+        $is_fresh_install = \get_option(Plugin::slug . '_db_version') === false
+            && \add_option(Plugin::slug . '_first_activation_date', time());
         self::upgradeTables();
 
         MaintenanceScheduler::activate();
@@ -85,7 +91,10 @@ class Installer
         // installs are seeded 'disabled' in upgrade_v94() (opt-in - we never
         // silently start modifying files already on disk).
         if ($is_fresh_install)
+        {
             self::seedImageOptimizationDefault('enabled');
+            self::seedFreshInstallDefaults();
+        }
 
         ImageOptimizeScheduler::maybeAddScheduleEvent();
         if (Plugin::isPaidBuild())
@@ -105,8 +114,10 @@ class Installer
         ProductImportScheduler::clearScheduleEvent();
         AutoImportScheduler::clearScheduleEvent();
         ImageOptimizeScheduler::clearScheduleEvent();
+        VatRecalcScheduler::clear();
         MaintenanceCron::clear();
         self::clearFeedSyncEvents();
+        \wp_clear_scheduled_hook(\ContentEgg\application\deals\DealsCron::HOOK);
     }
 
     /**
@@ -262,6 +273,9 @@ class Installer
         if ($db_version && $db_version < 96)
             self::upgrade_v96();
 
+        if ($db_version && $db_version < 99)
+            self::upgrade_v99();
+
         if (Plugin::isPaidBuild())
             MaintenanceCron::schedule();
 
@@ -322,6 +336,67 @@ class Installer
 
         if ($migrated !== $stored)
             \update_option($name, $migrated);
+    }
+
+    /**
+     * Clearbit no longer serves images, so every logo it was asked for was
+     * cached as a blank marker and keeps being served after the default moves
+     * to the website icon. Drop those markers once so the logos are fetched
+     * again. Only the markers: the same directory can hold logos the user
+     * placed there by hand. Existing installs only: a fresh install has
+     * nothing cached.
+     *
+     * The same step pins the settings whose default differs between a fresh
+     * and an existing install, so an existing site keeps today's behaviour
+     * even if it is later reactivated and misread as fresh.
+     */
+    private static function upgrade_v99()
+    {
+        LogoHelper::purgeBlankLogoMarkers();
+
+        $name = GeneralConfig::getInstance()->option_name();
+        $stored = \get_option($name);
+
+        // Never create the row: a site that never saved settings has none.
+        if (!is_array($stored))
+            return;
+
+        $pinned = self::pinExistingInstallDefaults($stored);
+
+        if ($pinned !== $stored)
+            \update_option($name, $pinned);
+    }
+
+    /**
+     * What an existing install's stored settings row gets when it is upgraded
+     * to db_version 99, as a value in and a value out.
+     *
+     * The new settings are added only where the key is absent (an explicit
+     * value is never touched), with the value that keeps today's behaviour.
+     * A stored Clearbit logo source is moved to the website icon: Clearbit no
+     * longer serves images and the dropdown has no such option any more.
+     * Pure.
+     *
+     * @param array $stored
+     * @return array
+     */
+    public static function pinExistingInstallDefaults(array $stored): array
+    {
+        $pins = array(
+            'woocommerce_sync_scope' => 'selected',
+            'exclude_non_new_offers' => 'disabled',
+        );
+
+        foreach ($pins as $key => $value)
+        {
+            if (!array_key_exists($key, $stored))
+                $stored[$key] = $value;
+        }
+
+        if (isset($stored['logo_source']) && $stored['logo_source'] === 'clearbit')
+            $stored['logo_source'] = 'favicon';
+
+        return $stored;
     }
 
     /**
@@ -441,6 +516,53 @@ class Installer
         // are seeded 'enabled' in activate(). The worker only runs when the
         // key is physically present in the saved options array.
         self::seedImageOptimizationDefault('disabled');
+    }
+
+    /**
+     * Settings whose default differs between a new site and an existing one.
+     *
+     * Applied at activation of a fresh install only. It is deliberately not an
+     * upgrade step: those run on admin_init, so cron and REST would read the
+     * new defaults before the pin was written, and an existing site would have
+     * its behaviour changed rather than preserved. A key that is absent from
+     * the stored row reads as the field's own default, which is today's
+     * behaviour.
+     *
+     * Pure: the stored row in, the row to store out. An explicit value is
+     * never overwritten.
+     *
+     * @param array $stored
+     * @return array
+     */
+    public static function freshInstallDefaults(array $stored): array
+    {
+        $defaults = array(
+            // WooCommerce auto-sync reads every product module, not only the ticked ones.
+            'woocommerce_sync_scope' => 'all',
+            // Price comparison leaves used and refurbished offers out.
+            'exclude_non_new_offers' => 'enabled',
+        );
+
+        foreach ($defaults as $key => $value)
+        {
+            if (!array_key_exists($key, $stored))
+                $stored[$key] = $value;
+        }
+
+        return $stored;
+    }
+
+    private static function seedFreshInstallDefaults()
+    {
+        $option_name = GeneralConfig::getInstance()->option_name();
+        $options = \get_option($option_name);
+
+        if (!is_array($options))
+            $options = array();
+
+        $seeded = self::freshInstallDefaults($options);
+        if ($seeded !== $options)
+            \update_option($option_name, $seeded);
     }
 
     private static function seedImageOptimizationDefault($value)

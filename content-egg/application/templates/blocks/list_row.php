@@ -91,6 +91,11 @@ use ContentEgg\application\helpers\TemplateHelper;
                             <?php TemplateHelper::price($item); ?>
                         </div>
                     </div>
+                    <?php if ($this->isVisible('shipping_cost', false)): ?>
+                        <div class="cegg-shipping-cost pt-2 small text-body-secondary">
+                            <?php TemplateHelper::shippingCost($item); ?>
+                        </div>
+                    <?php endif; ?>
                     <div class="hstack justify-content-md-center gap-2">
 
                         <?php if ($this->isVisible('prime', false)): ?>
@@ -99,9 +104,15 @@ use ContentEgg\application\helpers\TemplateHelper;
                             </div>
                         <?php endif; ?>
 
-                        <?php if ($this->isVisible('stock_status', false)): ?>
+                        <?php $condition_label = TemplateHelper::conditionLabel($item); ?>
+                        <?php if ($this->isVisible('stock_status', false) || $condition_label !== ''): ?>
                             <div class="cegg-stock-status pt-2 small">
-                                <?php TemplateHelper::stockStatus($item); ?>
+                                <?php if ($this->isVisible('stock_status', false)): ?>
+                                    <?php TemplateHelper::stockStatus($item); ?>
+                                <?php endif; ?>
+                                <?php if ($condition_label !== ''): ?>
+                                    <span class="cegg-condition badge badge-secondary text-bg-secondary rounded-0"><?php echo esc_html($condition_label); ?></span>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
 

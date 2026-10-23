@@ -930,6 +930,40 @@ class ModuleManager
         return $feed_modules;
     }
 
+    /**
+     * The single registry of product parsers that can search by a GTIN/EAN/UPC
+     * (their isGtinSearchAllowed() returns true). Deprecated modules are left out.
+     * Feed modules are included; callers that treat them separately filter them.
+     */
+    public function getGtinSearchModuleIds(bool $only_active = true): array
+    {
+        $ids = array();
+        foreach ($this->getAffiliateParsers($only_active, true) as $module)
+        {
+            if ($module->isDeprecated() || !$module->isGtinSearchAllowed())
+            {
+                continue;
+            }
+
+            $ids[] = $module->getId();
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Pure capability check: the module exists and can search by GTIN, deprecated or not
+     * (unlike getGtinSearchModuleIds(), which leaves deprecated modules out).
+     */
+    public function isGtinSearchModule(string $module_id): bool
+    {
+        $modules = $this->getModules(false);
+
+        return isset($modules[$module_id])
+            && $modules[$module_id] instanceof ParserModule
+            && $modules[$module_id]->isGtinSearchAllowed() === true;
+    }
+
     public function getParsersWithRedirects($only_active = true)
     {
         $parsers = array();

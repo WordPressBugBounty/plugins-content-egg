@@ -5,6 +5,7 @@ namespace ContentEgg\application\models;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\components\WooSyncScope;
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\FeaturedImage;
 use ContentEgg\application\helpers\TemplateHelper;
@@ -241,7 +242,7 @@ class AutoblogModel extends Model
         }
 
         // module keywords
-        $keyword_arr = str_getcsv($keyword, ';');
+        $keyword_arr = str_getcsv($keyword, ';', '"', '\\');
         $keyword = '';
         $tmp_module_keywords = array();
 
@@ -365,9 +366,9 @@ class AutoblogModel extends Model
 
         // set main product for woo sync
         $product_sync = GeneralConfig::getInstance()->option('woocommerce_product_sync');
-        $woocommerce_modules = GeneralConfig::getInstance()->option('woocommerce_modules');
+        $sync_modules = array_flip(WooSyncScope::moduleIds());
 
-        if ($autoblog['post_type'] == 'product' && ($product_sync == 'manually' || !array_intersect_key($modules_data, $woocommerce_modules)) && $main_product)
+        if ($autoblog['post_type'] == 'product' && ($product_sync == 'manually' || !array_intersect_key($modules_data, $sync_modules)) && $main_product)
         {
             foreach ($modules_data[$main_product['module_id']] as $i => $product)
             {

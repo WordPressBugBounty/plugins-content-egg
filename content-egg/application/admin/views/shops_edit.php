@@ -146,6 +146,70 @@ $rows[] = $blank;
                 </td>
             </tr>
             <tr>
+                <th scope="row"><label for="cegg-shop-vat-included"><?php \esc_html_e('VAT', 'content-egg'); ?></label></th>
+                <td>
+                    <select name="shop[vat_included]" id="cegg-shop-vat-included">
+                        <option value="" <?php \selected($shop['vat_included'], ''); ?>><?php \esc_html_e('Not set (prices are not converted)', 'content-egg'); ?></option>
+                        <option value="yes" <?php \selected($shop['vat_included'], 'yes'); ?>><?php \esc_html_e('Prices include VAT', 'content-egg'); ?></option>
+                        <option value="no" <?php \selected($shop['vat_included'], 'no'); ?>><?php \esc_html_e('Prices exclude VAT', 'content-egg'); ?></option>
+                    </select>
+                    <label>
+                        <input name="shop[vat_rate]" id="cegg-shop-vat-rate" type="number" step="0.01" min="0" max="99" class="small-text"
+                            value="<?php echo \esc_attr($shop['vat_rate']); ?>" /> %
+                    </label>
+                    <p class="description">
+                        <?php \esc_html_e('Used when Settings → Normalize shop prices is on. Changing these settings recalculates this shop\'s stored prices and price history in the background.', 'content-egg'); ?>
+                    </p>
+                    <?php if ($recalc = \ContentEgg\application\VatRecalcScheduler::status($shop['domain'])): ?>
+                        <p class="description"><strong>
+                            <?php echo \esc_html(sprintf(
+                                /* translators: 1: posts processed, 2: posts total */
+                                \__('Recalculating prices in the background… %1$d of %2$d posts.', 'content-egg'),
+                                $recalc['done'],
+                                $recalc['total']
+                            )); ?>
+                        </strong></p>
+                    <?php endif; ?>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><?php \esc_html_e('Default shipping', 'content-egg'); ?></th>
+                <td>
+                    <?php $ranges = is_array($shop['shipping_ranges']) ? $shop['shipping_ranges'] : array(); ?>
+                    <div class="cegg-ship" id="cegg-shipping-ranges"
+                        data-label-free="<?php echo \esc_attr__('Free shipping', 'content-egg'); ?>"
+                        data-label-cost="<?php /* translators: %s: shipping cost amount */ echo \esc_attr__('Shipping %s', 'content-egg'); ?>">
+                        <div class="cegg-ship__head" aria-hidden="true">
+                            <span><?php \esc_html_e('From price', 'content-egg'); ?></span>
+                            <span><?php \esc_html_e('Shipping cost', 'content-egg'); ?></span>
+                        </div>
+                        <div class="cegg-ship__rows">
+                            <?php foreach ($ranges as $ri => $range): ?>
+                                <div class="cegg-ship__row">
+                                    <input type="text" inputmode="decimal" class="cegg-ship__from" name="shop[shipping_ranges][<?php echo (int) $ri; ?>][from]" value="<?php echo \esc_attr($range['from']); ?>" placeholder="0" aria-label="<?php echo \esc_attr__('From price', 'content-egg'); ?>" />
+                                    <input type="text" inputmode="decimal" class="cegg-ship__cost" name="shop[shipping_ranges][<?php echo (int) $ri; ?>][cost]" value="<?php echo \esc_attr($range['cost']); ?>" placeholder="49.95" aria-label="<?php echo \esc_attr__('Shipping cost', 'content-egg'); ?>" />
+                                    <span class="cegg-ship__result" aria-live="polite"></span>
+                                    <button type="button" class="button-link cegg-ship__remove" aria-label="<?php echo \esc_attr__('Remove range', 'content-egg'); ?>"><span class="dashicons dashicons-no-alt" aria-hidden="true"></span></button>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <p class="cegg-ship__empty"><?php \esc_html_e('No default shipping. Products without a shipping cost from their source show “+ Delivery”.', 'content-egg'); ?></p>
+                        <button type="button" class="button cegg-ship__add" id="cegg-shipping-add"><?php \esc_html_e('Add range', 'content-egg'); ?></button>
+                        <template id="cegg-shipping-row-tpl">
+                            <div class="cegg-ship__row">
+                                <input type="text" inputmode="decimal" class="cegg-ship__from" name="shop[shipping_ranges][__i__][from]" placeholder="0" aria-label="<?php echo \esc_attr__('From price', 'content-egg'); ?>" />
+                                <input type="text" inputmode="decimal" class="cegg-ship__cost" name="shop[shipping_ranges][__i__][cost]" placeholder="49.95" aria-label="<?php echo \esc_attr__('Shipping cost', 'content-egg'); ?>" />
+                                <span class="cegg-ship__result" aria-live="polite"></span>
+                                <button type="button" class="button-link cegg-ship__remove" aria-label="<?php echo \esc_attr__('Remove range', 'content-egg'); ?>"><span class="dashicons dashicons-no-alt" aria-hidden="true"></span></button>
+                            </div>
+                        </template>
+                    </div>
+                    <p class="description">
+                        <?php \esc_html_e('Enter amounts in this shop\'s own prices, e.g. from 0: 49.95 and from 500: 0 for free shipping on orders of 500 or more. Use a dot or comma for decimals, without thousands separators. Applies only when a product has no shipping cost from its source.', 'content-egg'); ?>
+                    </p>
+                </td>
+            </tr>
+            <tr>
                 <th scope="row"><?php \esc_html_e('Shop info', 'content-egg'); ?></th>
                 <td>
                     <?php \wp_editor($shop['info'], 'cegg_shop_info', array(
@@ -413,6 +477,26 @@ $rows[] = $blank;
     .cegg-coupon-state-expired { background: #fbe2e2; }
     .cegg-coupon-state-scheduled { background: #fcf3d7; }
     .cegg-coupon-state-hidden_deal { background: #e5e5e5; }
+    .cegg-ship__head,
+    .cegg-ship__row { display: grid; grid-template-columns: 112px 112px 150px 28px; gap: 8px 12px; align-items: center; justify-content: start; }
+    .cegg-ship__head { margin-bottom: 4px; font-size: 12px; color: #646970; }
+    .cegg-ship__rows { display: grid; gap: 8px; }
+    .cegg-ship__row input { width: 100%; margin: 0; }
+    .cegg-ship__result { color: #646970; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cegg-ship__result.is-free { color: #00a32a; font-weight: 600; }
+    .wp-core-ui .cegg-ship .cegg-ship__remove { display: inline-flex; justify-content: center; align-items: center; width: 28px; height: 28px; color: #646970; border-radius: 3px; text-decoration: none; }
+    .wp-core-ui .cegg-ship .cegg-ship__remove:hover,
+    .wp-core-ui .cegg-ship .cegg-ship__remove:focus { color: #d63638; }
+    .wp-core-ui .cegg-ship .cegg-ship__remove:focus { box-shadow: 0 0 0 2px #2271b1; outline: 2px solid transparent; }
+    .cegg-ship__empty { margin: 0 0 8px; color: #646970; }
+    .cegg-ship.has-rows .cegg-ship__empty,
+    .cegg-ship:not(.has-rows) .cegg-ship__head { display: none; }
+    .wp-core-ui .cegg-ship .cegg-ship__add { margin-top: 10px; }
+    @media (max-width: 600px) {
+        .cegg-ship__head,
+        .cegg-ship__row { grid-template-columns: 1fr 1fr 28px; }
+        .cegg-ship__result { grid-column: 1 / 3; grid-row: 2; }
+    }
 </style>
 
 <script type="text/javascript">
@@ -573,6 +657,65 @@ $rows[] = $blank;
         document.getElementById('cegg-shop-logo-clear').addEventListener('click', function (e) {
             e.preventDefault();
             logoField.value = '';
+        });
+    })();
+
+    (function () {
+        var box = document.getElementById('cegg-shipping-ranges');
+        var tpl = document.getElementById('cegg-shipping-row-tpl');
+        if (!box || !tpl || box.dataset.ceggInit) return;
+        box.dataset.ceggInit = '1';
+
+        var rows = box.querySelector('.cegg-ship__rows');
+        var add = box.querySelector('.cegg-ship__add');
+
+        function amount(v) {
+            v = String(v || '').trim().replace(',', '.');
+            return v !== '' && !isNaN(v) ? parseFloat(v) : null;
+        }
+
+        function describe(row) {
+            var out = row.querySelector('.cegg-ship__result');
+            var cost = amount(row.querySelector('.cegg-ship__cost').value);
+            out.classList.toggle('is-free', cost === 0);
+            if (cost === null || cost < 0) {
+                out.textContent = '';
+            } else if (cost === 0) {
+                out.textContent = box.dataset.labelFree;
+            } else {
+                out.textContent = box.dataset.labelCost.replace('%s', row.querySelector('.cegg-ship__cost').value.trim());
+            }
+        }
+
+        function refresh() {
+            box.classList.toggle('has-rows', rows.children.length > 0);
+        }
+
+        Array.prototype.forEach.call(rows.children, describe);
+        refresh();
+
+        add.addEventListener('click', function (e) {
+            e.preventDefault();
+            var html = tpl.innerHTML.replace(/__i__/g, String(Date.now()));
+            rows.insertAdjacentHTML('beforeend', html);
+            refresh();
+            var last = rows.lastElementChild;
+            var first = last && last.querySelector('input');
+            if (first) first.focus();
+        });
+
+        rows.addEventListener('input', function (e) {
+            var row = e.target.closest('.cegg-ship__row');
+            if (row) describe(row);
+        });
+
+        rows.addEventListener('click', function (e) {
+            var btn = e.target.closest('.cegg-ship__remove');
+            if (!btn) return;
+            e.preventDefault();
+            btn.closest('.cegg-ship__row').remove();
+            refresh();
+            add.focus();
         });
     })();
 </script>

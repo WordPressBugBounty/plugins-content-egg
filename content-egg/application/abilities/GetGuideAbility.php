@@ -32,11 +32,9 @@ final class GetGuideAbility extends AbilityBase
 
     public function description(): string
     {
-        return 'Returns this site\'s Content Egg agent guide: the workflows and the '
-            . 'block-choice rules for building and editing pages. Call this FIRST, before '
-            . 'composing or editing any page, and follow it — it prevents common mistakes '
-            . '(e.g. Markdown tables instead of the comparison block, or bare product '
-            . 'blocks). The guide is plain markdown with this site\'s real URLs filled in.';
+        return 'Call this FIRST, before building or editing any page. '
+            . 'Returns this site\'s agent guide: with no input, the core guide plus the topic index; '
+            . 'with `topic`, one topic (`all` returns everything). Read core first, then the topic for your task.';
     }
 
     public function inputSchema(): array
@@ -44,6 +42,13 @@ final class GetGuideAbility extends AbilityBase
         return array(
             'type' => 'object',
             'default' => array(),
+            'properties' => array(
+                'topic' => array(
+                    'type' => 'string',
+                    'enum' => array_merge(AgentGuideRestController::topicNames(), array(AgentGuideRestController::TOPIC_ALL)),
+                    'description' => 'One guide topic; "all" returns core plus every topic. Omit for the core guide and the topic index.',
+                ),
+            ),
             'additionalProperties' => false,
         );
     }
@@ -65,6 +70,6 @@ final class GetGuideAbility extends AbilityBase
 
     public function execute(array $input): array
     {
-        return array('markdown' => AgentGuideRestController::markdown());
+        return array('markdown' => AgentGuideRestController::markdown(null, (string) ($input['topic'] ?? '')));
     }
 }

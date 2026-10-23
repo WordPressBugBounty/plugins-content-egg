@@ -8,6 +8,7 @@ use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\admin\import\PresetRepository;
 use ContentEgg\application\admin\import\ImportLogger;
 use ContentEgg\application\components\ContentManager;
+use ContentEgg\application\components\Module;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\helpers\ProductHelper;
 use ContentEgg\application\models\ImportQueueModel;
@@ -17,6 +18,9 @@ use ContentEgg\application\helpers\PostHelper;
 use ContentEgg\application\helpers\WooHelper;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\WooIntegrator;
+use ContentEgg\application\deals\DealPostType;
+use ContentEgg\application\deals\DealsSettings;
+use ContentEgg\application\deals\DealCategoryHelper;
 
 use function ContentEgg\prnx;
 
@@ -30,6 +34,12 @@ use function ContentEgg\prnx;
 class ProductImportService
 {
     const PRODUCT_GROUP = 'ProductImport';
+
+    /** Comparison modules that return a single best match per search. */
+    const SINGLE_RESULT_MODULES = array('Amazon', 'AmazonNoApi', 'Bestbuy', 'Bolcom', 'Walmart', 'Webgains');
+
+    /** Comparison modules that can also search by the source product URL. */
+    const URL_COMPARISON_MODULES = array('Viglink');
 
     /** @var ImportQueueModel */
     protected $queue;
@@ -496,6 +506,31 @@ class ProductImportService
             return [];
     }
 
+    /**
+     * Search settings for the price-comparison modules.
+     *
+     * @param string[] $gtin_module_ids     GTIN-capable module ids (ModuleManager::getGtinSearchModuleIds()).
+     * @param string[] $url_comparison_ids  Module ids that can also search by URL.
+     * @param int      $max                 Results per module for modules that return more than one.
+     * @return array module_id => array('results' => int, 'is_ean_search' => bool, 'is_url_search' => bool)
+     */
+    public static function comparisonModuleSettings(array $gtin_module_ids, array $url_comparison_ids, int $max): array
+    {
+        $settings = array();
+        foreach ($gtin_module_ids as $module_id)
+        {
+            // Clones ("Amazon__clone2") follow their parent module's rules.
+            $base_id = Module::getPathId($module_id);
+            $settings[$module_id] = array(
+                'results' => in_array($base_id, self::SINGLE_RESULT_MODULES, true) ? 1 : $max,
+                'is_ean_search' => true,
+                'is_url_search' => in_array($base_id, $url_comparison_ids, true),
+            );
+        }
+
+        return $settings;
+    }
+
     public function findPriceComparisonProducts(array $product, $max = 3, $ean = '')
     {
         if (empty($product['module_id']) || empty($product['unique_id']))
@@ -506,76 +541,13 @@ class ProductImportService
         $current_module_id = $product['module_id'];
         $current_unique_id = $product['unique_id'];
 
-        $modules_settings = [
-            'Amazon' => [
-                'results' => 1,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-            'AmazonNoApi' => [
-                'results' => 1,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-            'Bestbuy' => [
-                'results' => 1,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-            'Bolcom' => [
-                'results' => 1,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-            'CjProducts' => [
-                'results' => $max,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-            'Ebay2' => [
-                'results' => $max,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-            'Kelkoo' => [
-                'results' => $max,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-            'Kieskeurignl' => [
-                'results' => $max,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-            'Viglink' => [
-                'results' => $max,
-                'is_ean_search' => true,
-                'is_url_search' => true,
-            ],
-            'TradedoublerProducts' => [
-                'results' => $max,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-            'TradetrackerProducts' => [
-                'results' => $max,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-            'Walmart' => [
-                'results' => 1,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-            'Webgains' => [
-                'results' => 1,
-                'is_ean_search' => true,
-                'is_url_search' => false,
-            ],
-        ];
-
-        $active_modules = ModuleManager::getInstance()->getAffiliateParsers(true, true);
-        $modules_settings = array_intersect_key($modules_settings, $active_modules);
+        // Feed modules are added below with their own priority.
+        $feed_modules = ModuleManager::getInstance()->getActiveFeedModules();
+        $gtin_module_ids = array_values(array_diff(
+            ModuleManager::getInstance()->getGtinSearchModuleIds(true),
+            array_keys($feed_modules)
+        ));
+        $modules_settings = self::comparisonModuleSettings($gtin_module_ids, self::URL_COMPARISON_MODULES, (int) $max);
 
         foreach ($modules_settings as $module_id => $settings)
         {
@@ -599,7 +571,6 @@ class ProductImportService
         }
 
         // Add active feed modules
-        $feed_modules = ModuleManager::getInstance()->getActiveFeedModules();
         foreach ($feed_modules as $module_id => $feed_module)
         {
             $modules_settings[$module_id] = [
@@ -733,6 +704,15 @@ class ProductImportService
         }
 
         $isWoo = ($preset['post_type'] ?? 'post') === 'product';
+
+        $isDeal = ($preset['post_type'] ?? 'post') === DealPostType::POST_TYPE;
+
+        if ($isDeal && !DealsSettings::enabled())
+        {
+            throw new \RuntimeException(
+                esc_html__('This preset creates deals, but deals are disabled. Enable them under Content Egg → Settings → Deals.', 'content-egg')
+            );
+        }
 
         if ($isWoo && !\ContentEgg\application\helpers\WooHelper::isWooActive())
         {
@@ -970,7 +950,7 @@ class ProductImportService
             'post_content' => $postBody,
             'post_status'  => $preset['post_status'] ?? 'draft',
             'post_author'  => $preset['author_id'],
-            'post_type'    => $isWoo ? 'product' : 'post',
+            'post_type'    => $isWoo ? 'product' : ($isDeal ? DealPostType::POST_TYPE : 'post'),
             'post_name'    => apply_filters(
                 'cegg_import_post_name',
                 TextHelper::sluggable($postTitle),
@@ -1063,6 +1043,13 @@ class ProductImportService
             $taxonomy      = 'product_cat';
             $defaultTermId = (int) $preset['default_woo_cat'];
             $setter        = fn($postId, $termIds) => wp_set_post_terms($postId, $termIds, $taxonomy);
+        }
+        elseif ($isDeal)
+        {
+            $helper        = DealCategoryHelper::class;
+            $taxonomy      = DealPostType::TAX_CATEGORY;
+            $defaultTermId = 0;
+            $setter        = fn($postId, $termIds) => wp_set_post_terms($postId, array_values(array_filter(array_map('absint', (array) $termIds))), $taxonomy);
         }
         else
         {

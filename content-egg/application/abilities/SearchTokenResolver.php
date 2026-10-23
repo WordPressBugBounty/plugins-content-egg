@@ -22,14 +22,13 @@ defined('\ABSPATH') || exit;
 final class SearchTokenResolver
 {
     /**
-     * @param string $search_token token from the search response
-     * @param array  $items        item refs as given by the caller
-     * @param string $module_id    module the add call targets
-     * @return array{items: array, keyword: string} resolved full items in input
-     *         order (overrides re-attached where given) + cached search keyword
-     * @throws AbilityInputException
+     * The cached payload of a search token: {user_id, module_id, keyword, items: unique_id => item}.
+     * The one place that words the "expired or unknown" error, for resolve() and for the
+     * abilities that read a token's results themselves (match-offers).
+     *
+     * @throws AbilityInputException unknown, expired or another user's token
      */
-    public static function resolve(string $search_token, array $items, string $module_id): array
+    public static function payload(string $search_token): array
     {
         $payload = SearchResultCache::get($search_token);
         if ($payload === null)
@@ -39,6 +38,21 @@ final class SearchTokenResolver
                     . 'new search_token from its response.'
             );
         }
+
+        return $payload;
+    }
+
+    /**
+     * @param string $search_token token from the search response
+     * @param array  $items        item refs as given by the caller
+     * @param string $module_id    module the add call targets
+     * @return array{items: array, keyword: string} resolved full items in input
+     *         order (overrides re-attached where given) + cached search keyword
+     * @throws AbilityInputException
+     */
+    public static function resolve(string $search_token, array $items, string $module_id): array
+    {
+        $payload = self::payload($search_token);
 
         if ((string) ($payload['module_id'] ?? '') !== $module_id)
         {

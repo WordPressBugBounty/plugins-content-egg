@@ -48,7 +48,9 @@ final class SearchAllProductsAbility extends AbilityBase
             . 'quotas. NOTE: each module searched consumes that network\'s API quota and counts '
             . 'against the per-user search rate limit. Results are grouped, not merged/ranked, so '
             . 'compare across modules yourself. For a single module use content-egg/search-products.'
-            . ' Each module group with results returns its own search_token for content-egg/add-products-to-post.';
+            . ' Each module group with results returns its own search_token for content-egg/add-products-to-post.'
+            . ' Each group\'s search_mode says whether the module treated the query as a GTIN, URL, native id or keyword.'
+            . ' fields="match" returns identity fields (GTINs, brand, MPN, model, condition, stock, shipping) for comparing offers.';
     }
 
     public function inputSchema(): array
@@ -79,7 +81,7 @@ final class SearchAllProductsAbility extends AbilityBase
                 ),
                 'fields' => array(
                     'type' => 'string',
-                    'enum' => array('lean', 'full'),
+                    'enum' => array('lean', 'full', 'match'),
                     'default' => 'lean',
                 ),
             ),
@@ -103,6 +105,7 @@ final class SearchAllProductsAbility extends AbilityBase
                             'module_id' => array('type' => 'string'),
                             'count' => array('type' => 'integer'),
                             'notice' => array('type' => 'string'),
+                            'search_mode' => AbstractSearchAbility::searchModeSchema(),
                             'results' => array('type' => 'array', 'items' => array('type' => 'object')),
                             'search_token' => array('type' => 'string'),
                             'error' => array('type' => 'string'),
@@ -122,7 +125,7 @@ final class SearchAllProductsAbility extends AbilityBase
     {
         $keyword = trim((string) ($input['keyword'] ?? ''));
         $limit = min(AbstractSearchAbility::MAX_LIMIT, max(1, (int) ($input['limit'] ?? self::DEFAULT_PER_MODULE_LIMIT)));
-        $full = (($input['fields'] ?? 'lean') === 'full');
+        $fields = (string) ($input['fields'] ?? 'lean');
 
         $module_ids = is_array($input['module_ids'] ?? null) ? array_values($input['module_ids']) : array();
         $module_ids = array_values(array_unique(array_filter(array_map(
@@ -191,7 +194,10 @@ final class SearchAllProductsAbility extends AbilityBase
                     'module_id' => $module_id,
                     'count' => count($items),
                     'notice' => $found['notice'],
-                    'results' => $full ? $full_items : LeanProduct::mapList($items),
+                    'search_mode' => $found['search_mode'],
+                    'results' => $fields === 'full'
+                        ? $full_items
+                        : ($fields === 'match' ? LeanProduct::matchList($items, $module_id) : LeanProduct::mapList($items)),
                 );
                 // Each module group carries its own token: one add call per module/search.
                 if ($full_items)

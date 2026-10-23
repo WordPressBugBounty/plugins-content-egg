@@ -60,13 +60,17 @@ class MediaBlock
     {
         register_block_type('content-egg/images', array(
             'editor_script'   => 'content-egg-media-editor',
-            'style'           => array('cegg-bootstrap5', 'cegg-products'),
+            // View + editor handles, not 'style': style handles load on every
+            // front-end page when WP doesn't load block assets on demand.
+            'view_style_handles'   => array('cegg-bootstrap5', 'cegg-products'),
+            'editor_style_handles' => array('cegg-bootstrap5', 'cegg-products'),
             'render_callback' => array(__CLASS__, 'renderImages'),
             'attributes'      => self::getAttributes(),
         ));
         register_block_type('content-egg/videos', array(
             'editor_script'   => 'content-egg-media-editor',
-            'style'           => array('cegg-bootstrap5', 'cegg-products'),
+            'view_style_handles'   => array('cegg-bootstrap5', 'cegg-products'),
+            'editor_style_handles' => array('cegg-bootstrap5', 'cegg-products'),
             'render_callback' => array(__CLASS__, 'renderVideos'),
             'attributes'      => self::getAttributes(),
         ));

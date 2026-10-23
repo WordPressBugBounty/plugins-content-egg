@@ -6,6 +6,7 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ContentManager;
+use ContentEgg\application\components\OfferDedup;
 use ContentEgg\application\components\ModuleTemplateManager;
 use ContentEgg\application\components\Shortcoded;
 use ContentEgg\application\helpers\ArrayHelper;
@@ -86,6 +87,11 @@ class ModuleViewer
             $post_id = $post->ID;
         else
             $post_id = -1;
+
+        // A deal page places its own offer, history and sellers; auto-embedded
+        // module blocks would repeat them under the description.
+        if ($post && $post->post_type === \ContentEgg\application\deals\DealPostType::POST_TYPE)
+            return $content;
 
         $top_modules_priorities = array();
         $bottom_modules_priorities = array();
@@ -335,13 +341,21 @@ class ModuleViewer
         // remove duplicates
         if (!empty($params['remove_duplicates_by']))
         {
-            if ($duplicate_ids = ContentManager::findDuplicatesByField($data, $params['remove_duplicates_by']))
+            // Offers are identified by module AND unique_id: two modules can
+            // hand out the same unique_id, and only one of them is the loser.
+            $losers = OfferDedup::losers(
+                TemplateHelper::mergeData($data),
+                $params['remove_duplicates_by'],
+                ContentManager::getModulesPriority($data)
+            );
+            if ($losers)
             {
+                $losers = array_flip($losers);
                 foreach ($data as $module_id => $module_data)
                 {
                     foreach ($module_data as $unique_id => $d)
                     {
-                        if (in_array($unique_id, $duplicate_ids))
+                        if (isset($losers[$module_id . '|' . $unique_id]))
                             unset($data[$module_id][$unique_id]);
                     }
 

@@ -63,17 +63,24 @@ class UpdateByKeywordCommand extends AbstractCommand
 		$success_count = 0;
 		$error_count = 0;
 		$nodata_count = 0;
+		$skipped_count = 0;
 		$i = 0;
 		foreach ($post_ids as $post_id)
 		{
 			if ($i && $sleep)
 				sleep($sleep);
 
+			// Asked before the call: on a page with a product passport the call only marks
+			// the update as done (so the post is not selected again) and returns 0.
+			$suspended = ContentManager::isKeywordUpdateSuspended((int) $post_id, (string) $module_id);
 			$r = ContentManager::updateByKeyword($post_id, $module_id, true, $force_feed_import);
 
-			if ($r == 1)
+			$outcome = self::outcome($suspended, $r);
+			if ($outcome === 'skipped')
+				$skipped_count++;
+			elseif ($outcome === 'ok')
 				$success_count++;
-			elseif ($r == -1)
+			elseif ($outcome === 'nodata')
 				$nodata_count++;
 			else
 				$error_count++;
@@ -86,8 +93,11 @@ class UpdateByKeywordCommand extends AbstractCommand
 		$progress->finish();
 		$elapsed = $stopwatch->elapsed();
 
+		$summary = self::summary($post_count, $skipped_count);
 		\WP_CLI::line("");
-		\WP_CLI::success($post_count . ' posts updated!');
+		\WP_CLI::success($summary['updated']);
+		if ($summary['skipped'] !== '')
+			\WP_CLI::line($summary['skipped']);
 		\WP_CLI::line(sprintf('Ok: %d', $success_count));
 		\WP_CLI::line(sprintf('No data: %d', $nodata_count));
 		\WP_CLI::line(sprintf('Errors: %d', $error_count));
@@ -95,6 +105,41 @@ class UpdateByKeywordCommand extends AbstractCommand
 		\WP_CLI::line(sprintf('Average time per post: %.4f sec', $elapsed / $post_count));
 		\WP_CLI::line(sprintf('Total time: %.4f sec', $elapsed));
 		\WP_CLI::line("");
+	}
+
+	/**
+	 * How one post counts in the summary: 'skipped' when a product passport keeps the page's
+	 * product offers (the keyword update is suspended there), else 'ok' (1), 'nodata' (-1) or
+	 * 'error' (anything else ContentManager::updateByKeyword() returned).
+	 *
+	 * @param mixed $result ContentManager::updateByKeyword()
+	 */
+	public static function outcome(bool $suspended, $result): string
+	{
+		if ($suspended)
+			return 'skipped';
+		if ($result == 1)
+			return 'ok';
+		if ($result == -1)
+			return 'nodata';
+
+		return 'error';
+	}
+
+	/**
+	 * The summary lines: posts skipped for a product passport are not counted
+	 * as updated, they get their own line ('' when there are none).
+	 *
+	 * @return array {updated: string, skipped: string}
+	 */
+	public static function summary(int $post_count, int $skipped_count): array
+	{
+		$skipped_count = max(0, min($skipped_count, $post_count));
+
+		return array(
+			'updated' => ($post_count - $skipped_count) . ' posts updated!',
+			'skipped' => $skipped_count > 0 ? $skipped_count . ' skipped: product passport' : '',
+		);
 	}
 
 	static public function getPostIdsToUpdate($module_id, $ttl, $limit, $not_older_than)

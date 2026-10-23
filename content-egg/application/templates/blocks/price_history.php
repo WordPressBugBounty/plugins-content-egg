@@ -30,7 +30,7 @@ $this->setItem($lowest_now);
     <div class="cegg-card mt-4">
         <div class="row rounded-3 p-4">
 
-            <div class="col col-md-4">
+            <div class="col-12 col-sm-6 col-md-4">
 
                 <div class="d-flex align-items-center">
                     <span class="text-primary me-2">
@@ -42,7 +42,7 @@ $this->setItem($lowest_now);
                 </div>
 
                 <span class="fs-5 ps-md-4"><?php TemplateHelper::price($highest_over_time); ?></span>
-                <span class="small text-body-secondary ms-1"><?php echo esc_html($highest_over_time['merchant']); ?></span>
+                <span class="small text-body-secondary ms-1 text-nowrap"><?php echo esc_html($highest_over_time['merchant']); ?></span>
 
                 <div class="small ps-md-4 text-body-tertiary">
                     <?php echo esc_html(TemplateHelper::formatDate($highest_over_time['date'])); ?>
@@ -50,7 +50,7 @@ $this->setItem($lowest_now);
 
             </div>
 
-            <div class="col">
+            <div class="col-12 col-sm-6 col-md mt-3 mt-sm-0">
 
                 <div class="d-flex align-items-center">
                     <span class="text-primary me-2">
@@ -62,7 +62,7 @@ $this->setItem($lowest_now);
                 </div>
 
                 <span class="fs-5 ps-md-4"><?php TemplateHelper::price($lowest_over_time); ?></span>
-                <span class="small text-body-secondary ms-1"><?php echo esc_html($lowest_over_time['merchant']); ?></span>
+                <span class="small text-body-secondary ms-1 text-nowrap"><?php echo esc_html($lowest_over_time['merchant']); ?></span>
                 <div class="small ps-md-4 text-body-tertiary">
                     <?php echo esc_html(TemplateHelper::formatDate($lowest_over_time['date'])); ?>
                 </div>

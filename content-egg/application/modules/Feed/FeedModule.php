@@ -13,6 +13,7 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\helpers\ProductHelper;
 use ContentEgg\application\components\ContentProduct;
 use ContentEgg\application\components\LinkHandler;
+use ContentEgg\application\components\OfferCondition;
 
 use function ContentEgg\prn;
 use function ContentEgg\prnx;
@@ -281,7 +282,11 @@ class FeedModule extends AffiliateFeedParserModule
         if (!empty($query_params['price_max']))
             $options['price_max'] = (float) $query_params['price_max'];
 
-        if (TextHelper::isEan($keyword))
+        if (self::isIdKeyword($keyword))
+        {
+            $results = $this->searchByIdKeyword($keyword);
+        }
+        elseif (TextHelper::isEan($keyword))
         {
             $results = $this->product_model->searchByEan($keyword, $limit, $options);
         }
@@ -314,7 +319,14 @@ class FeedModule extends AffiliateFeedParserModule
                 continue;
             }
 
+            $relinked = false;
             $product = $this->product_model->searchById($item['unique_id']);
+
+            if (!$product)
+            {
+                $product = $this->findFeedProductByEan($item);
+                $relinked = (bool) $product;
+            }
 
             if (!$product)
             {
@@ -330,6 +342,11 @@ class FeedModule extends AffiliateFeedParserModule
             }
 
             $r = $this->mapProduct($r);
+
+            // unique_id stays as it is (see findFeedProductByEan()); the deeplink below is
+            // built from orig_url, so it has to follow the new row before that happens.
+            if ($relinked)
+                $items[$key]['orig_url'] = $product['orig_url'];
 
             if (isset($r['availability']))
                 $items[$key]['availability'] = $r['availability'];
@@ -468,6 +485,11 @@ class FeedModule extends AffiliateFeedParserModule
                 $content->isbn = $r['isbn'];
             }
 
+            if (isset($r['condition']))
+            {
+                $content->condition = OfferCondition::normalizeValue($r['condition']);
+            }
+
             if (isset($r['category']))
             {
                 $content->category = $r['category'];
@@ -509,14 +531,7 @@ class FeedModule extends AffiliateFeedParserModule
 
             $content->ean = $product['ean'];
 
-            if ($content->orig_url != $content->url)
-            {
-                $content->domain = TextHelper::getHostName($content->orig_url);
-            }
-            else
-            {
-                $content->domain = $this->config('domain');
-            }
+            $content->domain = $this->getRowDomain($content->orig_url, $content->url);
 
             $content->merchant = \apply_filters('cegg_feed_merchant_name', '', $content->domain);
 
@@ -628,6 +643,28 @@ class FeedModule extends AffiliateFeedParserModule
         }
 
         return parent::viewDataPrepare($data);
+    }
+
+    private function getRowDomain($orig_url, $affiliate_url)
+    {
+        if ($orig_url != $affiliate_url)
+            return TextHelper::getHostName($orig_url);
+
+        return $this->config('domain');
+    }
+
+    /**
+     * A Feed module carries no merchant column, so the shop is the domain the offer was
+     * saved with, worked out from the row the same way prepareResults() does.
+     */
+    protected function isSameShop(array $item, array $row, array $r): bool
+    {
+        $r = $this->mapProduct($r);
+        $affiliate_url = isset($r['affiliate link']) ? $r['affiliate link'] : '';
+
+        $domain = isset($item['domain']) ? (string) $item['domain'] : '';
+
+        return $this->getRowDomain($row['orig_url'], $affiliate_url) === $domain;
     }
 
     public function mapProduct(array $data)

@@ -27,10 +27,10 @@ class FileHelper
 		}
 		ob_start();
 		$df = fopen("php://output", 'w');
-		fputcsv($df, array_keys(reset($array)));
+		fputcsv($df, array_keys(reset($array)), ',', '"', '\\');
 		foreach ($array as $row)
 		{
-			fputcsv($df, $row);
+			fputcsv($df, $row, ',', '"', '\\');
 		}
 		fclose($df);
 

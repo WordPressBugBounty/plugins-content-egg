@@ -27,8 +27,6 @@ final class SearchVideosAbility extends AbstractSearchAbility
 
     public function description(): string
     {
-        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
-        // attach contract must be complete before the cut.
         return 'Searches videos through an active Content Egg video module (YouTube, Pexels '
             . 'Videos). Returns title, watch URL, thumbnail and channel; pass fields="full" for '
             . 'the raw fields. Attach them with content-egg/add-videos-to-post, passing this '

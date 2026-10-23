@@ -289,7 +289,7 @@ class AmazonProduct extends RestClient
 		return $url;
 	}
 
-	public function signedGet($path, array $query = null)
+	public function signedGet($path, ?array $query = null)
 	{
 		$url = $this->_buildUrl($query);
 

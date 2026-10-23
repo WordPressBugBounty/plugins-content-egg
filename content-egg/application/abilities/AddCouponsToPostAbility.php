@@ -27,8 +27,6 @@ final class AddCouponsToPostAbility extends AbilityBase
 
     public function description(): string
     {
-        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
-        // search_token contract must be complete before the cut.
         return 'Attaches coupons to a post under one active COUPON module. '
             . 'Preferred flow: run content-egg/search-coupons, then pass its search_token plus the '
             . 'chosen unique_ids as items — the server attaches its own stored copy, so '

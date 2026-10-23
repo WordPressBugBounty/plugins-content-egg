@@ -43,6 +43,12 @@ class ContentProduct extends Content
 	public $isbn;
 	public $short_description;
 	public $shipping_cost;
+	// Shop's own values before VAT normalization, and the factor applied
+	// (VatNormalizer). Empty on a fresh item from a module.
+	public $price_raw;
+	public $priceOld_raw;
+	public $shipping_cost_raw;
+	public $vat_factor;
 	public $badge;
 	public $badge_color;
 	public $subtitle;
@@ -51,6 +57,8 @@ class ContentProduct extends Content
 	public $features = array();
 	public $images = array();
 	public $stock_status;
+	// new | used | refurbished | unknown (OfferCondition). Set when the item is saved.
+	public $condition;
 	public $img_large;
 	public $group;
 	public $_priceFormatted;

@@ -184,6 +184,24 @@ defined('ABSPATH') || exit; ?>
                 </div>
             </div>
 
+            <!-- Real discounts only -->
+            <div class="col-12 col-md-6">
+                <label for="min_discount" class="form-label">
+                    <?php esc_html_e('Minimum discount (%)', 'content-egg'); ?>
+                </label>
+                <input type="number" min="1" max="99" class="form-control" id="min_discount" name="min_discount" value="<?php echo esc_attr($rule['min_discount']); ?>">
+                <div class="form-text">
+                    <?php esc_html_e('Import only products at least this much below their old price. Products the source reports no saving for are skipped.', 'content-egg'); ?>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <div class="form-check mt-md-4">
+                    <input class="form-check-input" type="checkbox" id="in_stock_only" name="in_stock_only" value="1" <?php checked((int) $rule['in_stock_only'], 1); ?>>
+                    <label class="form-check-label" for="in_stock_only"><?php esc_html_e('In-stock products only', 'content-egg'); ?></label>
+                </div>
+            </div>
+
         </div><!-- /.row -->
 
         <button type="submit" class="btn btn-primary mt-4">

@@ -29,8 +29,6 @@ final class PreviewBlocksAbility extends AbilityBase
 
     public function description(): string
     {
-        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
-        // post_id/products contract must be complete before the cut.
         return 'Validates a block tree, serializes it, and renders it to HTML exactly as the '
             . 'frontend would. Send it as a POST with a JSON body. Pass post_id when the tree '
             . 'references that post\'s products, or "products" to let refs validate for a post that '

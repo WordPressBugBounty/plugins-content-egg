@@ -7,6 +7,9 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ParserModule;
+use ContentEgg\application\components\WooProductFields;
+use ContentEgg\application\components\matching\ProductPassport;
+use ContentEgg\application\helpers\WooHelper;
 use ContentEgg\application\BlockKit\Validator;
 use ContentEgg\application\BlockKit\Serializer;
 
@@ -33,8 +36,6 @@ final class CreatePostAbility extends AbilityBase
 
     public function description(): string
     {
-        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
-        // "products" payload contract must be complete before the cut.
         return 'Creates a post from a block tree in one call: validates the tree, attaches '
             . 'the supplied items and serializes to Gutenberg markup. The "products" payload '
             . 'is module_id => items from the matching search ability with fields="full", and '
@@ -47,6 +48,10 @@ final class CreatePostAbility extends AbilityBase
             . 'subtitle, description, short_description, badge, badge_color [a named color: '
             . 'primary, secondary, success, danger, warning, info, light, dark — not hex], promo) applied on '
             . 'top of the source item; overrides apply to products only. '
+            . 'For post_type "product" (WooCommerce) the optional "woo" object sets the product '
+            . 'type (external or simple), categories (existing ids or names), gtin and '
+            . 'catalog_visibility; you never set the price, Content Egg syncs it from the '
+            . 'attached offers. '
             . 'Publishing requires the publish_posts capability; '
             . 'default status is draft.';
     }
@@ -70,6 +75,14 @@ final class CreatePostAbility extends AbilityBase
                         . 'object of editorial fields (products only).',
                 ),
                 'search_tokens' => self::searchTokensSchema(),
+                'woo' => array(
+                    'type' => 'object',
+                    'description' => 'WooCommerce product fields; only with post_type "product". Checked '
+                        . 'before the product is created and set before the offers are attached. Never '
+                        . 'carries a price: Content Egg syncs it from the attached offers.',
+                    'properties' => UpdateWooProductAbility::fieldProperties(),
+                    'additionalProperties' => false,
+                ),
             ),
             'required' => array('title', 'blocks'),
             'additionalProperties' => false,
@@ -86,6 +99,14 @@ final class CreatePostAbility extends AbilityBase
                 'status' => array('type' => 'string'),
                 'block_count' => array('type' => 'integer'),
                 'attached' => array('type' => 'object', 'description' => 'module_id => added unique_ids.'),
+                'woo' => array(
+                    'type' => 'object',
+                    'description' => 'Present when the woo input was given: the product fields that were written, and the ones skipped with the reason.',
+                    'properties' => array(
+                        'applied' => array('type' => 'array', 'items' => array('type' => 'string')),
+                        'warnings' => array('type' => 'array', 'items' => array('type' => 'string')),
+                    ),
+                ),
             ),
         );
     }
@@ -146,6 +167,11 @@ final class CreatePostAbility extends AbilityBase
             );
         }
 
+        // The woo block is checked here, before anything exists: the post type,
+        // WooCommerce, every field and the category names (against the site's
+        // product categories).
+        $woo = self::prepareWoo($input, $post_type);
+
         // 0. Swap unique_id refs for the server's stored copy of each search
         //    result, BEFORE validating: the validator resolves product_refs
         //    against this payload, so it needs the real items, and everything
@@ -186,6 +212,19 @@ final class CreatePostAbility extends AbilityBase
 
         try
         {
+            // 2b. The product fields go on before the offers are attached, so the
+            //     attach (and any price sync it triggers) sees the final product type.
+            $woo_result = null;
+            if ($woo !== null)
+            {
+                $woo_result = WooProductFields::apply($post_id, $woo['fields'], $woo['category_ids']);
+                $warning = UpdateWooProductAbility::syncGtinWarning($woo_result['applied'], UpdateWooProductAbility::syncGtinEnabled(), ProductPassport::has($post_id));
+                if ($warning !== null)
+                {
+                    $woo_result['warnings'][] = $warning;
+                }
+            }
+
             // 3. Attach each module's items through the ability that matches its
             //    type (products keep Offer/monetization/overrides; coupons, images
             //    and videos go through the generic attach).
@@ -220,7 +259,7 @@ final class CreatePostAbility extends AbilityBase
             throw $e;
         }
 
-        return array(
+        $output = array(
             'post_id' => $post_id,
             'edit_url' => (string) \get_edit_post_link($post_id, 'raw'),
             'status' => $status,
@@ -232,6 +271,44 @@ final class CreatePostAbility extends AbilityBase
             // outputSchema, so the mismatch flags an otherwise successful create.
             'attached' => (object) $attached,
         );
+
+        if ($woo_result !== null)
+        {
+            $output['woo'] = $woo_result;
+        }
+
+        return $output;
+    }
+
+    /**
+     * The `woo` input: null when it was not given, otherwise the checked fields
+     * and the resolved category ids, ready for WooProductFields::apply().
+     * Allowed only for post_type "product" on a site with WooCommerce.
+     *
+     * @return array|null {fields: array, category_ids: int[]}
+     * @throws AbilityInputException
+     */
+    public static function prepareWoo(array $input, string $post_type): ?array
+    {
+        if (!isset($input['woo']))
+        {
+            return null;
+        }
+
+        if (!is_array($input['woo']))
+        {
+            throw new AbilityInputException("'woo' must be an object with at least one of: " . implode(', ', UpdateWooProductAbility::FIELDS) . '.');
+        }
+        if ($post_type !== 'product')
+        {
+            throw new AbilityInputException("'woo' sets WooCommerce product fields, so it is only allowed with post_type \"product\" (this call has post_type \"{$post_type}\").");
+        }
+        if (!WooHelper::isWooActive())
+        {
+            throw new AbilityInputException("WooCommerce is not active on this site, so 'woo' cannot be used.");
+        }
+
+        return UpdateWooProductAbility::prepare($input['woo']);
     }
 
     /**

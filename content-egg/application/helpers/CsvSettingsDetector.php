@@ -257,7 +257,7 @@ class CsvSettingsDetector
 			foreach ($lines as $line)
 			{
 				// str_getcsv is quote-aware
-				$fields = str_getcsv($line, $delimiter, $enc);
+				$fields = str_getcsv($line, $delimiter, $enc, '\\');
 				$c = is_array($fields) ? count($fields) : 1;
 				$counts[] = $c;
 				if ($c >= 2)

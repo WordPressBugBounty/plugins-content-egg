@@ -486,6 +486,29 @@
     white-space: pre;
 }
 
+/* A code block as a link row's value (the ChatGPT project source). */
+.cegg-aa__link .cegg-aa__code-row {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
+/* Sized and styled like .cegg-aa__url, so it lines up with the URL fields in
+   the rows around it. Long URLs wrap on screen; the copy button copies the
+   unwrapped text. */
+.cegg-aa__link .cegg-aa__code {
+    flex: 0 1 440px;
+    min-width: 0;
+    background: #f0f0f1; /* wp-admin's read-only field */
+    padding: 6px 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* Guide text under the link rows. */
+.cegg-aa__links + .cegg-aa__tool-desc {
+    margin: 12px 0 0;
+}
+
 /* copy buttons */
 .cegg-copy {
     display: inline-flex !important;
@@ -683,19 +706,6 @@
 .cegg-aa__tier--pro {
     background: #eae6f7;
     color: #5a3ec8;
-}
-
-.cegg-aa__no-gpt {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .02em;
-    padding: 1px 6px;
-    border-radius: 8px;
-    background: #f0f0f1;
-    color: #6a6f76;
-    border: 1px solid #e2e2e4;
-    white-space: nowrap;
-    cursor: help;
 }
 
 .cegg-aa__ability-lock {

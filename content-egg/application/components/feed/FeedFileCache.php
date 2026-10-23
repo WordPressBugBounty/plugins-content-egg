@@ -123,11 +123,7 @@ class FeedFileCache
             return false;
         }
 
-        $response = \wp_remote_head($feed_url, array(
-            'timeout' => 15,
-            'redirection' => 3,
-            'headers' => $headers,
-        ));
+        $response = FeedHttp::head($feed_url, array('headers' => $headers));
 
         if (\is_wp_error($response) || (int) \wp_remote_retrieve_response_code($response) !== 304)
         {
@@ -237,7 +233,7 @@ class FeedFileCache
         $scheme = strtolower((string) parse_url($feed_url, PHP_URL_SCHEME));
         if ($scheme === 'http' || $scheme === 'https')
         {
-            $response = \wp_remote_head($feed_url, array('timeout' => 15, 'redirection' => 3));
+            $response = FeedHttp::head($feed_url);
             if (!\is_wp_error($response))
             {
                 $meta['etag'] = (string) \wp_remote_retrieve_header($response, 'etag');

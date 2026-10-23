@@ -196,5 +196,6 @@ final class Hints
         'pricing' => array('hint' => 'Pricing tiers/plans table (editorial, not product-bound). Two arrays, both objects: `items` are tiers, `promotions` is a separate list. The keys of each are on the attribute itself in content-egg/list-blocks.', 'rich_text' => array(), 'item_shape' => null),
         'testimonial' => array('hint' => 'Quote/testimonial cards.', 'rich_text' => array(), 'item_shape' => array('quote' => array('type' => 'string'), 'author' => array('type' => 'string'), 'attribution' => array('type' => 'string', 'description' => 'Role/company under the author. Optional.'), 'rating' => array('type' => 'number', 'description' => '0–5 stars. Optional.'))),
         'trust-signals' => array('hint' => 'Trust badges/metrics strip (aggregate rating, counts). Two arrays of objects, `metrics` and `badges`; their keys are on the attribute itself in content-egg/list-blocks. Aggregate rating fields are block-level.', 'rich_text' => array(), 'item_shape' => null),
+        'variant-switcher' => array('hint' => 'Variant switcher for a page in a variant family: links to the sibling pages with their lowest prices. Place it directly above the offer list. No attributes to fill except variant (chips|list).', 'rich_text' => array(), 'item_shape' => null),
     );
 }

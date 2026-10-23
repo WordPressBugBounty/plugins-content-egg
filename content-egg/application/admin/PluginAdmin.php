@@ -82,11 +82,13 @@ class PluginAdmin
             // Submenu order follows registration order, so Shops sits directly after
             // Prefill by being constructed here rather than at the end.
             ShopsController::getInstance();
+            \ContentEgg\application\deals\Deals::adminInit();
             new ProductController;
             new ClicksStatsController;
             new EggMetabox;
             \ContentEgg\application\ProductManagerLoader::init();
             ProductManagerUiNotice::init();
+            WooSyncScopeSwitch::init();
             new ModuleApi;
             new FeaturedImage;
             new ToolsController;

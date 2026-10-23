@@ -29,10 +29,11 @@ final class SearchProductsAbility extends AbstractSearchAbility
     {
         return 'Searches products through one active Content Egg product/affiliate module '
             . '(network API or imported feed). Returns a compact result list by default; pass '
-            . 'fields="full" for all raw fields. NOTE: each call consumes the site\'s '
+            . 'fields="full" for all raw fields; fields="match" returns identity fields (GTINs, brand, MPN, model, condition, stock, shipping) for comparing offers. NOTE: each call consumes the site\'s '
             . 'affiliate API quota and is rate-limited per user — batch your research, '
             . 'do not poll. To attach results to a post, pass the response\'s search_token plus the chosen unique_ids '
             . 'to content-egg/add-products-to-post — no need to echo items back or request fields="full". '
+            . 'The response\'s search_mode says whether the module treated the query as a GTIN, URL, native id or keyword. '
             . 'For images, videos or coupons use content-egg/search-images, search-videos or search-coupons.';
     }
 
@@ -49,5 +50,20 @@ final class SearchProductsAbility extends AbstractSearchAbility
     protected function mapLean(array $items): array
     {
         return LeanProduct::mapList($items);
+    }
+
+    protected function fieldsEnum(): array
+    {
+        return array('lean', 'full', 'match');
+    }
+
+    protected function mapMatch(array $items, string $module_id): array
+    {
+        return LeanProduct::matchList($items, $module_id);
+    }
+
+    protected function echoesSearchMode(): bool
+    {
+        return true;
     }
 }

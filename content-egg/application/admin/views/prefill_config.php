@@ -23,6 +23,7 @@ $max_products_per_module     = (int)  $def('max_products_per_module', 0);
 $max_products_total          = (int)  $def('max_products_total', 0);
 $product_group               = $def('product_group', '');
 $meta_field_name             = $def('meta_field_name', '');
+$meta_field_feed_ids         = (bool) $def('meta_field_feed_ids', false);
 $source_module_title         = $def('source_module_title', '');
 $source_module_gtin          = $def('source_module_gtin', '');
 $shortcode_blocks            = $def('shortcode_blocks', []); // expects [ i => [ 'position' => '', 'code' => '' ] ]
@@ -212,6 +213,11 @@ $ai_warning = AdminHelper::getSysAiWarning();
 
                             <div class="mt-2 ms-4" id="meta_field_input" style="display:none;">
                                 <input type="text" name="meta_field_name" class="form-control" value="<?php echo esc_attr($meta_field_name); ?>" placeholder="e.g. keyword_meta">
+                                <label for="meta_field_feed_ids" class="mt-2">
+                                    <input type="checkbox" id="meta_field_feed_ids" name="meta_field_feed_ids" value="1" <?php checked($meta_field_feed_ids); ?>>
+                                    <?php esc_html_e('Values are feed product IDs', 'content-egg'); ?>
+                                </label>
+                                <div class="small text-muted mt-1"><?php esc_html_e('Exact match by the product ID from the feed. For feed modules only. Separate several IDs with commas.', 'content-egg'); ?></div>
                             </div>
 
                             <div class="mt-2 ms-4" id="gtin_module_select" style="display:none;">

@@ -44,7 +44,7 @@ class AgentAccessController
         $this->hook = (string) \add_submenu_page(
             Plugin::slug,
             __('AI Agents', 'content-egg'),
-            __('AI Agents', 'content-egg') . self::menuBadge(),
+            __('AI Agents', 'content-egg'),
             'manage_options',
             self::slug,
             array($this, 'renderPage')
@@ -101,15 +101,6 @@ class AgentAccessController
         }
 
         $submenu[$parent] = $rebuilt;
-    }
-
-    /** Small inline-styled "New" pill for the menu label (works site-wide). */
-    private static function menuBadge(): string
-    {
-        return ' <span class="cegg-menu-badge" style="display:inline-block;background:#d63638;color:#fff;'
-            . 'font-size:9px;font-weight:600;line-height:1;padding:2px 5px;border-radius:8px;'
-            . 'vertical-align:middle;margin-inline-start:4px;letter-spacing:.02em;">'
-            . esc_html__('New', 'content-egg') . '</span>';
     }
 
     public function enqueueAssets($hook): void

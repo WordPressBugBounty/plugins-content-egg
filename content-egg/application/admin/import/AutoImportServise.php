@@ -159,12 +159,20 @@ final class AutoImportServise
             return 0;
         }
 
+        $minDiscount = !empty($rule['min_discount']) ? (int) $rule['min_discount'] : null;
+        $inStockOnly = !empty($rule['in_stock_only']);
+
         $queue   = ImportQueueModel::model();
-        $queued  = $dupPost = $dupJob = 0;
+        $queued  = $dupPost = $dupJob = $filtered = 0;
         foreach ($products as $p)
         {
             if (empty($p['unique_id']))
             {
+                continue;
+            }
+            if (!AutoImportProductFilter::passes($p, $minDiscount, $inStockOnly))
+            {
+                $filtered++;
                 continue;
             }
             if (PostHelper::getPostIdByUniqueId($p['unique_id']))
@@ -187,6 +195,10 @@ final class AutoImportServise
         if ($dupJob)
         {
             $this->addLog(sprintf(__('Skipped queued items: %d', 'content-egg'), $dupJob));
+        }
+        if ($filtered)
+        {
+            $this->addLog(sprintf(__('Skipped by discount or stock rule: %d', 'content-egg'), $filtered));
         }
         if ($queued)
         {

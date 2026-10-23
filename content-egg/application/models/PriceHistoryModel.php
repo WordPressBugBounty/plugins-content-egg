@@ -6,6 +6,7 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ContentProduct;
+use ContentEgg\application\components\OfferCondition;
 use ContentEgg\application\helpers\TextHelper;
 
 /**
@@ -31,6 +32,7 @@ class PriceHistoryModel extends Model
                     module_id varchar(255) NOT NULL,
                     create_date datetime NOT NULL,
                     price float(12,2) NOT NULL,
+                    price_raw float(12,2) DEFAULT NULL,
                     price_old float(12,2) DEFAULT NULL,
                     price_old_date datetime DEFAULT NULL,
                     post_id bigint(20) unsigned DEFAULT NULL,
@@ -184,7 +186,7 @@ class PriceHistoryModel extends Model
 		return $this->getDb()->get_row($sql, \ARRAY_A);
 	}
 
-	public function saveData(array $data, $module_id, $post_id = null)
+	public function saveData(array $data, $module_id, $post_id = null, array $basis_only = array())
 	{
 		if (!$post_id)
 		{
@@ -203,6 +205,21 @@ class PriceHistoryModel extends Model
 				continue;
 			}
 
+			// A used / refurbished offer the owner keeps out of the best price
+			// would drag the history (and the alerts built on it) below what a
+			// new buyer can get.
+			if (OfferCondition::excludedFromBestPrice($d))
+			{
+				continue;
+			}
+
+			// VAT basis changed, price did not: no point. ContentManager::saveData()
+			// has already restated the item's history in the new basis.
+			if (in_array($key, $basis_only, true))
+			{
+				continue;
+			}
+
 			$latest_price = $this->getLastPriceValue($d['unique_id'], $module_id);
 
 			// price changed?
@@ -217,6 +234,12 @@ class PriceHistoryModel extends Model
 				'price'     => $d['price'],
 				'post_id'   => $post_id,
 			);
+			// Only when present: the column arrives with the schema upgrade
+			// (admin_init), and a cron save can run before it.
+			if (isset($d['price_raw']) && $d['price_raw'] !== '')
+			{
+				$save['price_raw'] = $d['price_raw'];
+			}
 			$this->save($save);
 			$saved++;
 		}
@@ -225,6 +248,30 @@ class PriceHistoryModel extends Model
 		{
 			$this->cleanOld((int) GeneralConfig::getInstance()->option('price_history_days'), false);
 		}
+	}
+
+	/**
+	 * Every point of one item onto factor x the shop's own price. Idempotent:
+	 * it always starts from price_raw (NULL on rows written before the
+	 * feature, when the stored price was the shop's own price), and price_old
+	 * is scaled only on a row whose price actually moves.
+	 * price_old must stay the first assignment: MySQL and MariaDB evaluate
+	 * single-table SET clauses left to right with updated values, and it
+	 * needs the price and price_raw as they were before this update. It is
+	 * scaled by the new/old price ratio; the factor is sent with 10 decimals,
+	 * not the 6 of a plain %f, so prices agree with the PHP-side
+	 * round(raw x factor, 2) up to the largest values.
+	 */
+	public function convertForItem($unique_id, $module_id, $factor)
+	{
+		$t = $this->tableName();
+		$sql = "UPDATE {$t} SET
+			price_old = IF(price > 0 AND price_old IS NOT NULL AND ABS(ROUND(COALESCE(price_raw, price) * %.10F, 2) - price) >= 0.005, ROUND(price_old * COALESCE(price_raw, price) * %.10F / price, 2), price_old),
+			price_raw = COALESCE(price_raw, price),
+			price = ROUND(COALESCE(price_raw, price) * %.10F, 2)
+			WHERE unique_id = %s AND module_id = %s";
+		$f = (float) $factor;
+		$this->getDb()->query($this->getDb()->prepare($sql, $f, $f, $f, $unique_id, $module_id));
 	}
 
 	public function getPriceMovers(array $params = array(), $double_limit = false)

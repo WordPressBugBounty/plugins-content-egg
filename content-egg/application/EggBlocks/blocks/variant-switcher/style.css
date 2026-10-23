@@ -1,0 +1,197 @@
+/*
+ * Variant switcher block.
+ * Chips per dimension (Amazon / Geizhals style) and a list of sibling pages
+ * (idealo style). Colors come from the eggb-base tokens; fonts are the
+ * theme's own, so nothing here sets font-family.
+ */
+
+.eggb-variant-switcher {
+  display: block;
+  max-width: 100%;
+  /* Part of the product form: room above (price, update date) and below (the
+     Buy button). */
+  margin: 1rem 0 1.25rem;
+  /* Two quiet greys derived from the text colour, so the chips sit well on
+     any theme background. */
+  --eggb-vs-line: color-mix(in srgb, var(--eggb-text, currentColor) 22%, transparent);
+  --eggb-vs-line-strong: color-mix(in srgb, var(--eggb-text, currentColor) 55%, transparent);
+}
+
+.eggb-variant-switcher a,
+.eggb-variant-switcher a:hover,
+.eggb-variant-switcher a:visited,
+.eggb-variant-switcher a:focus {
+  text-decoration: none;
+  color: inherit;
+}
+
+.eggb-variant-switcher .eggb-vs-price {
+  color: var(--eggb-text-muted);
+  font-size: var(--eggb-text-xs);
+  font-weight: 400;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+/* Chips */
+
+.eggb-vs-dimension + .eggb-vs-dimension {
+  margin-top: 1rem;
+}
+
+.eggb-vs-label {
+  margin-bottom: 0.5rem;
+  color: var(--eggb-text-muted);
+  font-size: var(--eggb-text-sm);
+  line-height: 1.4;
+}
+
+.eggb-vs-label b {
+  color: var(--eggb-text);
+  font-weight: 600;
+}
+
+.eggb-vs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.eggb-vs-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.0625rem;
+  box-sizing: border-box;
+  min-width: 4.5rem;
+  min-height: 2.75rem;
+  padding: 0.3125rem 0.875rem;
+  border: 1px solid var(--eggb-vs-line);
+  border-radius: var(--eggb-radius-chip, var(--eggb-radius));
+  background: var(--eggb-surface, transparent);
+  color: var(--eggb-text);
+  font-size: var(--eggb-text-sm);
+  line-height: 1.25;
+  text-align: center;
+  transition: border-color 0.12s ease;
+}
+
+.eggb-vs-chip .eggb-vs-value {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+a.eggb-vs-chip:hover {
+  border-color: var(--eggb-vs-line-strong);
+}
+
+a.eggb-vs-chip:focus-visible {
+  outline: 2px solid var(--eggb-accent);
+  outline-offset: 2px;
+}
+
+/* The selected variant: the one strong element, a 2px ring in the text colour
+   (drawn inside, so the chip keeps its size). The text colour suits every
+   theme; a brand accent next to the theme's own Buy button would clash. */
+.eggb-vs-chip.is-current {
+  border-color: var(--eggb-text, currentColor);
+  box-shadow: inset 0 0 0 1px var(--eggb-text, currentColor);
+}
+
+.eggb-vs-chip.is-current .eggb-vs-value {
+  font-weight: 600;
+}
+
+/* A combination without a page: still readable, clearly not a choice. */
+.eggb-vs-chip.is-disabled {
+  border-color: color-mix(in srgb, var(--eggb-text, currentColor) 12%, transparent);
+  background: transparent;
+  color: var(--eggb-text-muted);
+  cursor: not-allowed;
+}
+
+.eggb-vs-chip.is-disabled .eggb-vs-value {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--eggb-text-muted, currentColor) 70%, transparent);
+  font-weight: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eggb-vs-chip {
+    transition: none;
+  }
+}
+
+/* List */
+
+.eggb-vs-rows {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--eggb-vs-line);
+  border-radius: var(--eggb-radius);
+  background: var(--eggb-surface);
+}
+
+.eggb-vs-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.125rem 0.75rem;
+  min-height: 2.75rem;
+  box-sizing: border-box;
+  padding: 0.5rem 0.875rem;
+  color: var(--eggb-text);
+  font-size: var(--eggb-text-sm);
+  line-height: 1.35;
+}
+
+.eggb-vs-row + .eggb-vs-row {
+  border-top: 1px solid var(--eggb-vs-line);
+}
+
+a.eggb-vs-row:hover {
+  background: color-mix(in srgb, var(--eggb-text, currentColor) 4%, transparent);
+}
+
+a.eggb-vs-row:focus-visible {
+  outline: 2px solid var(--eggb-accent);
+  outline-offset: -2px;
+}
+
+/* The current page: a bar in the text colour, as the chips' ring. */
+.eggb-vs-row.is-current {
+  background: color-mix(in srgb, var(--eggb-text, currentColor) 5%, transparent);
+  box-shadow: inset 3px 0 0 var(--eggb-text, currentColor);
+  font-weight: 600;
+}
+
+.eggb-vs-row-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.5rem;
+}
+
+.eggb-vs-row .eggb-vs-price {
+  color: var(--eggb-text);
+  font-size: var(--eggb-text-sm);
+}
+
+.eggb-vs-row .eggb-vs-price--out,
+.eggb-vs-row .eggb-vs-shops {
+  color: var(--eggb-text-muted);
+  font-size: var(--eggb-text-xs);
+  font-weight: 400;
+}
+
+/* Editor notice */
+
+.eggb-variant-switcher-notice {
+  padding: 0.5rem 0.75rem;
+  border: var(--eggb-border-w) dashed var(--eggb-border);
+  color: var(--eggb-text-muted);
+  font-size: var(--eggb-text-xs);
+}

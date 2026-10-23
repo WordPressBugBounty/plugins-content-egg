@@ -40,6 +40,7 @@ class EggBlocksLoader
         'pricing',
         'testimonial',
         'trust-signals',
+        'variant-switcher',
     ];
 
     public static function initAction(): void
@@ -49,9 +50,8 @@ class EggBlocksLoader
         EggbBlockGuard::initAction();
 
         // Must be added BEFORE register_block_type() so each eggb/* block
-        // gets the active theme CSS attached at registration time. This is
-        // the only style-loading path that reaches the iframed editor canvas
-        // in WP 6.3+ without depending on legacy non-iframe behavior.
+        // gets the active theme CSS attached at registration time, as
+        // view + editor style handles (see attachThemeStyles()).
         add_filter('register_block_type_args', [self::class, 'attachThemeStyles'], 10, 2);
 
         // Also before register_block_type(): WordPress takes each block
@@ -67,6 +67,7 @@ class EggBlocksLoader
         PriceFormatBridge::register();
         add_filter('block_categories_all', [self::class, 'registerBlockCategory']);
         add_filter('render_block', [self::class, 'maybeBlockOutput'], 999, 2);
+        add_action('wp_enqueue_scripts', [self::class, 'preloadContentStyles'], 9);
     }
 
     public static function maybeBlockOutput($block_content, $block)
@@ -123,20 +124,107 @@ class EggBlocksLoader
             'eggb-theme-' . $theme . '-dark',
         ];
 
-        // Append to style_handles (the modern WP 6.1+ property used for loading).
-        // Assigning to the legacy 'style' key would trigger WP_Block_Type::__set()
-        // and OVERWRITE the file-based handle WP already resolved from block.json.
-        if (!isset($args['style_handles']) || !is_array($args['style_handles'])) {
-            $args['style_handles'] = [];
-        }
-
+        // Work on the resolved *_handles arrays. Assigning to the legacy 'style'
+        // key would trigger WP_Block_Type::__set() and OVERWRITE the file-based
+        // handle WP already resolved from block.json.
+        $styles = isset($args['style_handles']) && is_array($args['style_handles']) ? $args['style_handles'] : [];
         foreach ($handles as $handle) {
-            if (!in_array($handle, $args['style_handles'], true)) {
-                $args['style_handles'][] = $handle;
+            if (!in_array($handle, $styles, true)) {
+                $styles[] = $handle;
             }
         }
 
+        return self::scopeStyles($args, $styles);
+    }
+
+    /**
+     * Move block CSS from style_handles to view_style_handles + editor_style_handles.
+     *
+     * style_handles are enqueued on EVERY front-end page unless WordPress loads
+     * block assets on demand, which is off on classic themes before WP 6.9 or
+     * when a theme/plugin opts out (e.g. Rehub). view_style_handles are only
+     * enqueued when the block actually renders; editor_style_handles are
+     * enqueued into the iframed editor canvas by _wp_get_iframed_editor_assets().
+     *
+     * @param array    $args    Block type args.
+     * @param string[] $handles Style handles the block needs on front end and in the editor.
+     * @return array
+     */
+    public static function scopeStyles(array $args, array $handles): array
+    {
+        foreach (['view_style_handles', 'editor_style_handles'] as $key) {
+            $current = isset($args[$key]) && is_array($args[$key]) ? $args[$key] : [];
+            $args[$key] = array_values(array_unique(array_merge($current, $handles)));
+        }
+        $args['style_handles'] = [];
+
         return $args;
+    }
+
+    /**
+     * Enqueue the CSS of eggb/* and content-egg/* blocks (and CE product
+     * shortcodes) found in the current singular post's content, so it prints
+     * in <head>. Without this, on sites that don't hoist on-demand block
+     * styles, it would print in the footer after the block and shift the
+     * layout. Anything outside post_content (widgets, templates, reusable
+     * blocks, auto-embedded modules) still loads its CSS on render.
+     */
+    public static function preloadContentStyles(): void
+    {
+        if (!is_singular()) {
+            return;
+        }
+
+        $post = get_queried_object();
+        if (!$post instanceof \WP_Post) {
+            return;
+        }
+
+        $content = (string) $post->post_content;
+
+        // [content-egg] / [content-egg-block] render through TemplateManager,
+        // which enqueues these same handles at render time.
+        if (preg_match('/\[content-egg(?:-block)?[\s\]]/', $content)) {
+            wp_enqueue_style('cegg-bootstrap5');
+            wp_enqueue_style('cegg-products');
+        }
+
+        if (strpos($content, '<!-- wp:eggb/') === false && strpos($content, '<!-- wp:content-egg/') === false) {
+            return;
+        }
+
+        $registry = \WP_Block_Type_Registry::get_instance();
+        foreach (self::collectBlockNames(parse_blocks($content)) as $name) {
+            $type = $registry->get_registered($name);
+            if (!$type) {
+                continue;
+            }
+            foreach ($type->view_style_handles as $handle) {
+                wp_enqueue_style($handle);
+            }
+        }
+    }
+
+    /**
+     * @param array $blocks Parsed blocks.
+     * @return string[] Unique eggb/* and content-egg/* block names, nested blocks included.
+     */
+    private static function collectBlockNames(array $blocks): array
+    {
+        $names = [];
+        foreach ($blocks as $block) {
+            $name = isset($block['blockName']) ? (string) $block['blockName'] : '';
+            if (strpos($name, 'eggb/') === 0 || strpos($name, 'content-egg/') === 0) {
+                $names[$name] = true;
+            }
+            if (!empty($block['innerBlocks']) && is_array($block['innerBlocks'])) {
+                foreach (self::collectBlockNames($block['innerBlocks']) as $inner) {
+                    $names[$inner] = true;
+                }
+            }
+        }
+
+        return array_keys($names);
     }
 
     /**

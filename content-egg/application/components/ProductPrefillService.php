@@ -7,6 +7,8 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ai\NullPrompt;
 use ContentEgg\application\components\ai\PrefillPrompt;
+use ContentEgg\application\components\matching\ProductPassport;
+use ContentEgg\application\helpers\Gtin;
 use ContentEgg\application\helpers\ProductHelper;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\models\PrefillQueueModel;
@@ -141,6 +143,20 @@ class ProductPrefillService
             );
         }
 
+        // A page with a product passport is curated by an AI agent: offers reach
+        // it only by an explicit add, and Prefill would attach unmatched results.
+        if (ProductPassport::has($post_id))
+        {
+            $this->queue->markAsDone(
+                $post_id,
+                $this->logger->format([
+                    'note' => __('Post skipped: it has a product passport, so its offers are curated by an AI agent.', 'content-egg'),
+                ]),
+                microtime(true) - $this->start_time,
+            );
+            return;
+        }
+
         // 3. Validate modules
         $available_modules = ModuleManager::getInstance()->getAffiliateParsersList(true, true, true);
         $available_module_ids = array_keys($available_modules);
@@ -234,6 +250,20 @@ class ProductPrefillService
         {
             if (!$keyword)
             {
+                continue;
+            }
+
+            // An unknown module id is left to parserFactory() below, as before.
+            // The skip is a default, not a rule: a site that has a module which
+            // does handle a GTIN keyword can switch it off per module and keyword.
+            if (
+                Gtin::isValid($keyword)
+                && ModuleManager::getInstance()->moduleExists($module_id)
+                && !ModuleManager::getInstance()->isGtinSearchModule($module_id)
+                && \apply_filters('cegg_prefill_skip_non_gtin_module', true, $module_id, $keyword)
+            )
+            {
+                $this->logger->notice(sprintf(__('Module "%s" skipped: it cannot search by GTIN.', 'content-egg'), $module_id));
                 continue;
             }
 

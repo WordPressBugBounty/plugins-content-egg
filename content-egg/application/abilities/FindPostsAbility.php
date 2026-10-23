@@ -40,8 +40,6 @@ final class FindPostsAbility extends AbilityBase
 
     public function description(): string
     {
-        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
-        // filter list and return shape must be complete before the cut.
         return 'Finds existing posts to edit with the other abilities. Read-only. '
             . 'Filter by search (keyword over title AND body, substring, relevance-ordered), '
             . 'id, status (draft/pending/publish/future/'

@@ -1,0 +1,42 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "eggb/variant-switcher",
+    "version": "1.0.0",
+    "title": "Variant Switcher",
+    "category": "cegg-blocks",
+    "icon": "image-flip-horizontal",
+    "description": "Links to the sibling pages of a variant family (memory, color, size...) with their lowest prices.",
+    "textdomain": "content-egg",
+    "editorScript": "file:./index.js",
+    "render": "file:./render.php",
+    "style": ["eggb-base", "file:./style-min.css"],
+    "attributes": {
+        "variant": {
+            "type": "string",
+            "default": "chips",
+            "enum": ["chips", "list"]
+        },
+        "color_scheme": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "light", "dark"]
+        },
+        "style": {
+            "type": "object",
+            "default": {
+                "spacing": {
+                    "margin": { "bottom": "1.5rem" }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false,
+        "anchor": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": ["bottom"]
+        }
+    }
+}

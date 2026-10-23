@@ -15,6 +15,19 @@ defined('\ABSPATH') || exit;
 class WooHelper
 {
 
+	/**
+	 * The first WooCommerce version that has the GTIN / UPC / EAN / ISBN product
+	 * field (`_global_unique_id`, WC_Product::set_global_unique_id()).
+	 */
+	const GLOBAL_UNIQUE_ID_MIN_VERSION = '9.2';
+
+	/**
+	 * Set by tests to pretend to run on another WooCommerce version. null = use WC_VERSION.
+	 *
+	 * @var string|null
+	 */
+	public static ?string $wc_version_override = null;
+
 	public static function isWooActive()
 	{
 		if (class_exists('\WooCommerce'))
@@ -23,6 +36,28 @@ class WooHelper
 			return true;
 		else
 			return false;
+	}
+
+	/**
+	 * The running WooCommerce version, or '' when WooCommerce is not loaded.
+	 */
+	public static function wcVersion(): string
+	{
+		if (self::$wc_version_override !== null)
+		{
+			return self::$wc_version_override;
+		}
+
+		return defined('WC_VERSION') ? (string) WC_VERSION : '';
+	}
+
+	/**
+	 * Whether this WooCommerce has the native GTIN field. False when the
+	 * version is unknown, so nothing is written on a site that cannot hold it.
+	 */
+	public static function supportsGlobalUniqueId(): bool
+	{
+		return version_compare(self::wcVersion(), self::GLOBAL_UNIQUE_ID_MIN_VERSION, '>=');
 	}
 
 	public static function getWooCategoryList()

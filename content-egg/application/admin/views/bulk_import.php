@@ -62,6 +62,13 @@ defined('\ABSPATH') || exit;
                 </select>
             </div>
 
+            <!-- Deal Category note ----------->
+            <div id="group_deal_cat" class="col-12 col-md-6" style="display: none;">
+                <div class="form-text">
+                    <?php esc_html_e('Deals are filed under Deal Categories. Use Dynamic categories to create them from the product\'s category, or set them after import.', 'content-egg'); ?>
+                </div>
+            </div>
+
             <!-- Module ---------------------------------------------------->
             <div class="col-12 col-md-6">
                 <label for="import_module" class="form-label">
@@ -151,6 +158,7 @@ defined('\ABSPATH') || exit;
             const presetSelect = document.getElementById('import_preset');
             const postCatGroup = document.getElementById('group_post_cat');
             const wooCatGroup = document.getElementById('group_woo_cat');
+            const dealCatGroup = document.getElementById('group_deal_cat');
             const moduleSelect = document.getElementById('import_module');
             const keywordsLabel = document.getElementById('keywords_label');
             const keywordsField = document.getElementById('import_keywords');
@@ -167,6 +175,8 @@ defined('\ABSPATH') || exit;
                 const type = presetSelect.options[presetSelect.selectedIndex].dataset.type;
                 postCatGroup.style.display = (type === 'post') ? '' : 'none';
                 wooCatGroup.style.display = (type === 'product') ? '' : 'none';
+                // Deals take no post category (their terms live in deal_category).
+                dealCatGroup.style.display = (type === '<?php echo esc_js(\ContentEgg\application\deals\DealPostType::POST_TYPE); ?>') ? '' : 'none';
             }
 
             function updateKeywordsLabel() {

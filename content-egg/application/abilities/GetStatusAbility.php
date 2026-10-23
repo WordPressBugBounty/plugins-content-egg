@@ -6,6 +6,7 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\Plugin;
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\components\WooPreflight;
 use ContentEgg\application\licensing\LicenseGate;
 
 /**
@@ -33,6 +34,8 @@ final class GetStatusAbility extends AbilityBase
             . 'WordPress version, agent abilities layer version, number of active modules, '
             . 'whether the WordPress MCP Adapter is installed, and a license summary '
             . '(administrators only; never contains license keys). '
+            . 'On a WooCommerce site it also reports the product sync setup (woocommerce), '
+            . 'which is null when WooCommerce is not active. '
             . 'Call this first to learn what this site supports.';
 
         if (!Plugin::isPaidBuild())
@@ -67,10 +70,57 @@ final class GetStatusAbility extends AbilityBase
                     . 'When false, do not use the MCP URL — use the REST routes.',
             ),
             'guide_url' => array('type' => 'string'),
+            'guide_version' => array(
+                'type' => 'string',
+                'description' => 'Changes whenever the agent guide changes; a guide topic loaded earlier is current while this is unchanged.',
+            ),
+            'guide_topics' => array(
+                'type' => 'array',
+                'items' => array('type' => 'string'),
+                'description' => 'Topics of the agent guide, for content-egg/get-guide {topic}.',
+            ),
             'openapi_url' => array('type' => 'string'),
             'license' => array(
                 'type' => array('object', 'null'),
                 'description' => 'License summary. Null on free builds or when the user lacks manage_options.',
+            ),
+            'woocommerce' => array(
+                'type' => array('object', 'null'),
+                'description' => 'WooCommerce sync setup, read it before editing a product. Null when WooCommerce is not active. '
+                    . 'auto_sync.off_reason says why prices are not synced by themselves: manual_only (criteria is "manually") '
+                    . 'or no_modules (no module is in scope); null when the automatic sync is on.',
+                'properties' => array(
+                    'version' => array('type' => 'string', 'description' => 'WooCommerce version.'),
+                    'products_enabled' => array(
+                        'type' => 'boolean',
+                        'description' => 'False when "product" is not ticked in the post_types setting: create-post and the product abilities reject WooCommerce products until it is. Check it before searching.',
+                    ),
+                    'gtin_field' => array(
+                        'type' => 'boolean',
+                        'description' => 'True when this WooCommerce has the native GTIN field (9.2 or later).',
+                    ),
+                    'auto_sync' => array(
+                        'type' => 'object',
+                        'properties' => array(
+                            'criteria' => array('type' => 'string', 'enum' => WooPreflight::CRITERIA),
+                            'scope' => array('type' => 'string', 'enum' => WooPreflight::SCOPES),
+                            'module_ids' => array('type' => 'array', 'items' => array('type' => 'string')),
+                            'off_reason' => array('type' => array('string', 'null'), 'description' => 'manual_only | no_modules | null.'),
+                        ),
+                    ),
+                    'exclude_non_new' => array(
+                        'type' => 'boolean',
+                        'description' => 'Used and refurbished offers are kept out of the best price and the WooCommerce price.',
+                    ),
+                    'sync_gtin' => array(
+                        'type' => 'boolean',
+                        'description' => 'The sync writes the offer GTIN into the product (not on pages with a passport).',
+                    ),
+                    'out_of_stock' => array(
+                        'type' => 'string',
+                        'description' => 'What happens to an out-of-stock product: "" (nothing), hide_price, hide_product or move_to_trash.',
+                    ),
+                ),
             ),
         );
 
@@ -117,8 +167,11 @@ final class GetStatusAbility extends AbilityBase
             // route is never mounted and agents trusting the flag got a 404.
             'mcp_adapter_present' => McpBridge::isServing(),
             'guide_url' => \rest_url('content-egg/v1/agent-guide'),
+            'guide_version' => AgentGuideRestController::guideVersion(),
+            'guide_topics' => AgentGuideRestController::topicNames(),
             'openapi_url' => \rest_url('content-egg/v1/openapi'),
             'license' => null,
+            'woocommerce' => WooPreflight::current(),
         );
 
         if ($build !== 'free' && \current_user_can('manage_options'))

@@ -104,7 +104,7 @@ class PresetForm
         );
 
         $clean = [
-            'post_type'          => in_array($data['post_type'], ['post', 'product'], true)
+            'post_type'          => in_array($data['post_type'], ['post', 'product', \ContentEgg\application\deals\DealPostType::POST_TYPE], true)
                 ? $data['post_type']
                 : 'post',
             'product_type'       => in_array($data['product_type'], ['external', 'simple'], true)

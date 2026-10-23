@@ -168,6 +168,11 @@ class BlockRenderRestController
 
         $results = array();
 
+        // Scripts a rendered template asks for (e.g. the price history chart)
+        // are enqueued during this REST request and would never reach the page,
+        // so they are returned with the HTML for the async loader to add.
+        $queued_before = \wp_scripts()->queue;
+
         foreach ($blocks as $item)
         {
             // Expected shape per item:
@@ -227,6 +232,50 @@ class BlockRenderRestController
         return rest_ensure_response(array(
             'success' => true,
             'data'    => $results,
+            'scripts' => self::scriptsQueuedSince($queued_before),
         ));
+    }
+
+    /**
+     * Scripts enqueued since $queued_before, with their dependencies, in load
+     * order: list of {handle, src}. Handles without a src (aliases such as
+     * "jquery") are expanded through all_deps() and themselves skipped. Inline
+     * data attached to a handle is not carried; the async loader only adds
+     * <script src> tags.
+     */
+    protected static function scriptsQueuedSince(array $queued_before)
+    {
+        $wp_scripts = \wp_scripts();
+        $new = array_values(array_diff($wp_scripts->queue, $queued_before));
+        if (!$new)
+            return array();
+
+        $resolver = clone $wp_scripts;
+        $resolver->to_do = array();
+        $resolver->done = array();
+        $resolver->all_deps($new);
+
+        $scripts = array();
+        foreach ($resolver->to_do as $handle)
+        {
+            $obj = isset($wp_scripts->registered[$handle]) ? $wp_scripts->registered[$handle] : null;
+            if (!$obj || empty($obj->src))
+                continue;
+
+            $src = $obj->src;
+            if (!preg_match('|^(https?:)?//|', $src) && !($wp_scripts->content_url && strpos($src, $wp_scripts->content_url) === 0))
+                $src = $wp_scripts->base_url . $src;
+
+            $ver = $obj->ver === null ? '' : ($obj->ver ? $obj->ver : $wp_scripts->default_version);
+            if ($ver !== '')
+                $src = \add_query_arg('ver', $ver, $src);
+
+            $scripts[] = array(
+                'handle' => (string) $handle,
+                'src'    => \esc_url_raw(\apply_filters('script_loader_src', $src, $handle)),
+            );
+        }
+
+        return $scripts;
     }
 }

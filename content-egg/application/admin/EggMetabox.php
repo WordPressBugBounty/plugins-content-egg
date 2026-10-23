@@ -10,6 +10,7 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\ProductDataService;
 use ContentEgg\application\components\ContentProduct;
+use ContentEgg\application\components\matching\OfferDecisions;
 use ContentEgg\application\components\ContentCoupon;
 use ContentEgg\application\components\ExtraData;
 use ContentEgg\application\components\LManager;
@@ -103,6 +104,8 @@ class EggMetabox
             if ($keywordsExist && $dataExist)
                 break;
         }
+
+        UnseenRejectionNotice::render((int) $post->ID);
 
         echo '<div ng-app="contentEgg" class="egg-container" id="content-egg" ng-cloak>';
         echo '<div ng-controller="ContentEggController" class="container-fluid" style="padding: 0px;">';
@@ -386,22 +389,35 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!is_array($content))
             return;
 
-        $i = 0;
-        foreach ($content as $module_id => $data)
+        // The editor is a person: keeping an offer the agent rejected is their
+        // decision and clears the rejection. The form posts every module's
+        // whole list, so a rejection recorded after the form was loaded was
+        // never shown here: it is kept and its offer dropped (pages with a
+        // product passport).
+        $form_loaded_at = isset($_POST['cegg_form_loaded_at']) ? \absint(\wp_unslash($_POST['cegg_form_loaded_at'])) : 0;
+        $dropped_before = OfferDecisions::unseenDroppedCount();
+        OfferDecisions::runManual(function () use ($content, $post_id)
         {
-            $module_id = sanitize_text_field($module_id);
-            $i++;
-            if (!ModuleManager::getInstance()->moduleExists($module_id) || !ModuleManager::getInstance()->isModuleActive($module_id))
-                continue;
+            $i = 0;
+            foreach ($content as $module_id => $data)
+            {
+                $module_id = sanitize_text_field($module_id);
+                $i++;
+                if (!ModuleManager::getInstance()->moduleExists($module_id) || !ModuleManager::getInstance()->isModuleActive($module_id))
+                    continue;
 
-            $data = json_decode($data, true);
-            $data = $this->dataPrepare($data);
-            if ($i == count($content))
-                $last_iteration = true;
-            else
-                $last_iteration = false;
-            ContentManager::saveData($data, $module_id, $post_id, $last_iteration);
-        }
+                $data = json_decode($data, true);
+                $data = $this->dataPrepare($data);
+                if ($i == count($content))
+                    $last_iteration = true;
+                else
+                    $last_iteration = false;
+                ContentManager::saveData($data, $module_id, $post_id, $last_iteration);
+            }
+        }, $form_loaded_at);
+
+        // The rule stands, but the person is told on the next load of this edit screen.
+        UnseenRejectionNotice::remember((int) $post_id, OfferDecisions::unseenDroppedCount() - $dropped_before);
     }
 
     private function dataPrepare($data): array

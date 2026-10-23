@@ -9,6 +9,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ModuleTemplateManager;
 use ContentEgg\application\components\ParserModule;
 use ContentEgg\application\components\ProductSearchService;
+use ContentEgg\application\helpers\TextHelper;
 
 /**
  * ModulesRestController class file
@@ -215,8 +216,9 @@ class ModulesRestController extends \WP_REST_Controller
     }
 
     /**
-     * Legacy per-module search-input placeholder (content_egg_keyword_input_placeholder).
-     * Returns the filtered string only when a filter actually changed the default,
+     * Per-module search-input placeholder: the module's own hint
+     * (getSearchPlaceholder()) and/or the legacy content_egg_keyword_input_placeholder
+     * filter. Returns a string only when it differs from the generic default,
      * else '' so the client keeps its own capability-derived placeholder.
      */
     private static function keywordPlaceholderOverride($module)
@@ -225,7 +227,9 @@ class ModulesRestController extends \WP_REST_Controller
             ? \__('Keyword or Product URL', 'content-egg')
             : \__('Keyword to search', 'content-egg');
 
-        $placeholder = \apply_filters('content_egg_keyword_input_placeholder', $default, $module->getId());
+        $own = (string) $module->getSearchPlaceholder();
+
+        $placeholder = \apply_filters('content_egg_keyword_input_placeholder', $own !== '' ? $own : $default, $module->getId());
 
         return ($placeholder !== $default) ? (string) $placeholder : '';
     }
@@ -300,7 +304,7 @@ class ModulesRestController extends \WP_REST_Controller
             return \rest_ensure_response(array(
                 'results' => array(),
                 'error' => '',
-                'notice' => $e->getMessage(),
+                'notice' => TextHelper::plainErrorMessage($e->getMessage()),
                 'feed_importing' => true,
             ));
         }
@@ -313,7 +317,7 @@ class ModulesRestController extends \WP_REST_Controller
             // Parser/API failures use the admin-ajax envelope: HTTP 200 + error field.
             return \rest_ensure_response(array(
                 'results' => array(),
-                'error' => $e->getMessage(),
+                'error' => TextHelper::plainErrorMessage($e->getMessage()),
                 'notice' => '',
             ));
         }

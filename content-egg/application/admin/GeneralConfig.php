@@ -12,11 +12,14 @@ use ContentEgg\application\models\PriceAlertModel;
 use ContentEgg\application\components\ImageOptimizeService;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\TemplateManager;
+use ContentEgg\application\components\WooSyncScope;
+use ContentEgg\application\helpers\WooHelper;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\LocalRedirector;
 use ContentEgg\application\components\ShopStore;
 use ContentEgg\application\components\ShopMigration;
+use ContentEgg\application\deals\DealPostType;
 
 /**
  * GeneralConfig class file
@@ -40,6 +43,26 @@ class GeneralConfig extends Config
         return 'contentegg_options';
     }
 
+    /**
+     * While deals are on, the Deal post type is always a Content Egg post type.
+     * Product search, the Product Manager and the REST product routes all gate
+     * on this option; asking users to also tick "Deals" there would be one more
+     * way for a deal page to have no products.
+     */
+    public function option($opt_name, $default = null)
+    {
+        $value = parent::option($opt_name, $default);
+
+        if ($opt_name === 'post_types' && parent::option('deals_enabled'))
+        {
+            $value = (array) $value;
+            if (!in_array(DealPostType::POST_TYPE, $value, true))
+                $value[] = DealPostType::POST_TYPE;
+        }
+
+        return $value;
+    }
+
     public function add_admin_menu()
     {
         \add_submenu_page(Plugin::slug, __('Settings', 'content-egg') . ' &lsaquo; Content Egg', __('Settings', 'content-egg'), 'manage_options', $this->page_slug, array($this, 'settings_page'));
@@ -54,6 +77,8 @@ class GeneralConfig extends Config
             'Offers:' => __('Offers:', 'content-egg-tpl'),
             'in stock' => __('in stock', 'content-egg-tpl'),
             'out of stock' => __('out of stock', 'content-egg-tpl'),
+            'Refurbished' => __('Refurbished', 'content-egg-tpl'),
+            'Used' => __('Used', 'content-egg-tpl'),
             'Show Code' => __('Show Code', 'content-egg-tpl'),
             'See details' => __('See details', 'content-egg-tpl'),
             'Get deal' => __('Get deal', 'content-egg-tpl'),
@@ -177,12 +202,116 @@ class GeneralConfig extends Config
             $this->getPriceAlertOptions(),
             $this->getFrontendSearchOptions(),
             $this->getShopsOptions(),
+            $this->getDealsOptions(),
             $this->getDeprecatedOptions(),
         );
 
         $options = \apply_filters('cegg_general_config', $options);
 
         return $options;
+    }
+
+    /**
+     * Deals is always a Content Egg post type while deals are on (see option()),
+     * so its box is shown ticked and locked rather than as a choice that does
+     * nothing.
+     */
+    public function render_post_types($args)
+    {
+        if (parent::option('deals_enabled'))
+            $args['locked_options'] = array(DealPostType::POST_TYPE => __('always on while Deals are enabled', 'content-egg'));
+
+        $this->render_checkbox_list($args);
+    }
+
+    /**
+     * The scope dropdown, plus a way out for the state that used to be a silent
+     * support issue: scope "selected" with nothing selected syncs nothing.
+     * Read the options here, not in options(): the Config constructor builds
+     * the field list before the stored values are loaded.
+     */
+    public function render_woo_sync_scope($args)
+    {
+        $this->render_dropdown($args);
+
+        // "Manually Only" hides the scope and both module lists; otherwise only the
+        // list the chosen scope reads is shown. Hidden checkboxes are still
+        // submitted, so a hidden list keeps its ticks for a switch back.
+        echo '<script>jQuery(function($){'
+            . 'var $criteria=$("#label-woocommerce_product_sync"),$scope=$(' . \wp_json_encode('#' . $args['label_for']) . ');'
+            . 'function toggle(){var auto=$criteria.val()!=="manually",all=$scope.val()===' . \wp_json_encode(WooSyncScope::SCOPE_ALL) . ';'
+            . '$("tr.cegg-woo-scope").toggle(auto);'
+            . '$("tr.cegg-woo-scope-selected,.cegg-woo-scope-off").toggle(auto&&!all);'
+            . '$("tr.cegg-woo-scope-all").toggle(auto&&all);}'
+            . '$criteria.add($scope).on("change",toggle);toggle();'
+            . '});</script>';
+
+        if ($args['value'] === WooSyncScope::SCOPE_ALL)
+            return;
+
+        if (WooSyncScope::normalizeList($this->option('woocommerce_modules')))
+            return;
+
+        // Nothing to switch on for a site without WooCommerce, or one that syncs by hand.
+        if (!WooHelper::isWooActive() || $this->option('woocommerce_product_sync') === 'manually')
+            return;
+
+        $url = \wp_nonce_url(\add_query_arg(WooSyncScopeSwitch::ACTION, WooSyncScope::SCOPE_ALL), WooSyncScopeSwitch::ACTION);
+
+        echo '<div class="notice notice-warning inline cegg-woo-scope-off"><p>';
+        echo esc_html__('Automatic synchronization is off: no module is selected.', 'content-egg');
+        echo ' ' . esc_html__('Switching to all modules starts updating WooCommerce prices from your offers.', 'content-egg');
+        echo '</p><p><a href="' . esc_url($url) . '" class="button button-primary">'
+            . esc_html__('Switch to all modules', 'content-egg') . '</a></p>';
+        echo '</div>';
+    }
+
+    /**
+     * The form lists only the post types registered right now, so saving while
+     * WooCommerce is inactive used to drop "product" — and the box stayed unticked
+     * after WooCommerce came on. A post type that isn't registered at save time
+     * keeps the state it had (the default, if the settings were never saved).
+     */
+    public function keepUnlistedPostTypes($value)
+    {
+        $value = is_array($value) ? $value : array();
+
+        foreach ((array) $this->get_current('post_types') as $type)
+        {
+            if (is_string($type) && $type !== '' && !\post_type_exists($type))
+            {
+                $value[$type] = $type;
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * Sites that saved their settings before WooCommerce was installed have
+     * "product" missing from the stored list. Turn it on when WooCommerce is
+     * activated; never-saved settings already default to it.
+     */
+    public static function enableProductPostType($plugin)
+    {
+        if ($plugin !== 'woocommerce/woocommerce.php')
+        {
+            return;
+        }
+
+        $options = \get_option('contentegg_options', array());
+        if (!is_array($options) || !isset($options['post_types']) || !is_array($options['post_types']))
+        {
+            return;
+        }
+
+        if (in_array('product', $options['post_types'], true))
+        {
+            return;
+        }
+
+        $options['post_types']['product'] = 'product';
+        \update_option('contentegg_options', $options);
     }
 
     public function getPostTypeList()
@@ -282,8 +411,14 @@ class GeneralConfig extends Config
                 'title' => 'Post Types',
                 'description' => __('Select the post types that you want to integrate with the Content Egg plugin.', 'content-egg'),
                 'checkbox_options' => $post_types,
-                'callback' => array($this, 'render_checkbox_list'),
+                'callback' => array($this, 'render_post_types'),
                 'default' => array('post', 'page', 'product'),
+                'validator' => array(
+                    array(
+                        'call' => array($this, 'keepUnlistedPostTypes'),
+                        'type' => 'filter',
+                    ),
+                ),
                 'section' => __('General settings', 'content-egg'),
             ),
             // Two settings, not one, mirroring Cashback Tracker's own pair
@@ -328,6 +463,33 @@ class GeneralConfig extends Config
                     '' => __('Do nothing', 'content-egg'),
                     'hide_price' => __('Hide price', 'content-egg'),
                     'hide_product' => __('Hide product', 'content-egg'),
+                ),
+                'default' => '',
+                'section' => __('General settings', 'content-egg'),
+            ),
+            // A dropdown, not a checkbox (see cashback_tracking above): a
+            // missing key must read as 'disabled', so existing sites keep
+            // treating every offer alike until the owner changes it.
+            'exclude_non_new_offers' => array(
+                'title' => __('Used and Refurbished Offers', 'content-egg'),
+                'description' => __('Choose whether used and refurbished offers can set the best price. The condition comes from the module or feed, or from a clear word in the product title; offers of unknown condition always count as new.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'disabled' => __('Treat like new offers', 'content-egg'),
+                    'enabled' => __('Exclude from the best price, WooCommerce price, price history and alerts', 'content-egg'),
+                ),
+                'default' => 'disabled',
+                'section' => __('General settings', 'content-egg'),
+            ),
+
+            'vat_normalize' => array(
+                'title' => __('Normalize Shop Prices', 'content-egg'),
+                'description' => __('Bring every shop\'s prices onto one VAT basis before they are saved. Set each shop\'s VAT basis and rate under Content Egg → Shops. Stored prices and price history are recalculated in the background.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    '' => __('Off', 'content-egg'),
+                    'excl' => __('Excluding VAT', 'content-egg'),
+                    'incl' => __('Including VAT', 'content-egg'),
                 ),
                 'default' => '',
                 'section' => __('General settings', 'content-egg'),
@@ -405,18 +567,18 @@ class GeneralConfig extends Config
             'logo_source' => [
                 'title'       => esc_html__('Logo Source', 'content-egg'),
                 'description' => sprintf(
-                    __('Choose the service for retrieving logos. Some providers may require attribution—please consult their documentation. %s', 'content-egg'),
+                    __('Choose the service for retrieving logos. When the service has no logo for a shop, or its key is missing, the shop\'s website icon is used. Some providers may require attribution—please consult their documentation. %s', 'content-egg'),
                     '<a href="' . esc_url($clear_cache_url) . '" title="' . esc_attr__('Clear all cached logos', 'content-egg') . '">'
                         . esc_html__('Click here to purge cached logos', 'content-egg')
                         . '</a>'
                 ),
                 'callback'         => [$this, 'render_dropdown'],
                 'dropdown_options' => [
-                    'clearbit'   => esc_html__('Clearbit', 'content-egg'),
+                    'favicon'    => esc_html__('Website icon (no key needed)', 'content-egg'),
                     'brandfetch' => esc_html__('Brandfetch', 'content-egg'),
                     'logodev'    => esc_html__('Logo.dev', 'content-egg'),
                 ],
-                'default'          => 'clearbit',
+                'default'          => 'favicon',
                 'section'          => esc_html__('General settings', 'content-egg'),
             ],
             'brandfetch_client_id' => array(
@@ -432,7 +594,7 @@ class GeneralConfig extends Config
             'logodev_key' => array(
                 'title'       => __('Logo.dev Token', 'content-egg'),
                 'description' => sprintf(
-                    __('Enter your API Token from <a href="%s" target="_blank" rel="noopener noreferrer">Logo.de Developer Portal</a>.', 'content-egg'),
+                    __('Enter your API Token from <a href="%s" target="_blank" rel="noopener noreferrer">Logo.dev Developer Portal</a>.', 'content-egg'),
                     'https://www.logo.dev/dashboard'
                 ),
                 'callback'    => array($this, 'render_input'),
@@ -904,14 +1066,7 @@ class GeneralConfig extends Config
     private function getWooCommerceOptions()
     {
         return array(
-            'woocommerce_modules' => array(
-                'title' => __('Automatic Synchronization Modules', 'content-egg'),
-                'description' => __('Select the modules to be automatically synchronized with WooCommerce.', 'content-egg'),
-                'checkbox_options' => self::getAffiliteModulesList(),
-                'callback' => array($this, 'render_checkbox_list'),
-                'default' => array(),
-                'section' => __('WooCommerce', 'content-egg'),
-            ),
+            // First, because "Manually Only" turns off everything the scope rows below configure.
             'woocommerce_product_sync' => array(
                 'title' => __('Automatic Synchronization Criteria', 'content-egg'),
                 'description' => __('Choose the method for selecting products to automatically synchronize with WooCommerce.', 'content-egg'),
@@ -924,6 +1079,37 @@ class GeneralConfig extends Config
                 ),
                 'default' => 'min_price',
                 'section' => __('WooCommerce', 'content-egg'),
+            ),
+            // Only the rows that apply are shown; render_woo_sync_scope() switches them.
+            'woocommerce_sync_scope' => array(
+                'title' => __('Automatic Synchronization Scope', 'content-egg'),
+                'description' => __('Choose which modules are automatically synchronized with WooCommerce.', 'content-egg'),
+                'callback' => array($this, 'render_woo_sync_scope'),
+                'dropdown_options' => array(
+                    'selected' => __('Only selected modules', 'content-egg'),
+                    'all' => __('All product modules', 'content-egg'),
+                ),
+                'default' => 'selected',
+                'section' => __('WooCommerce', 'content-egg'),
+                'row_class' => 'cegg-woo-scope',
+            ),
+            'woocommerce_modules' => array(
+                'title' => __('Automatic Synchronization Modules', 'content-egg'),
+                'description' => __('Select the modules to be automatically synchronized with WooCommerce.', 'content-egg'),
+                'checkbox_options' => self::getAffiliteModulesList(),
+                'callback' => array($this, 'render_checkbox_list'),
+                'default' => array(),
+                'section' => __('WooCommerce', 'content-egg'),
+                'row_class' => 'cegg-woo-scope-selected',
+            ),
+            'woocommerce_modules_exclude' => array(
+                'title' => __('Excluded from Automatic Synchronization', 'content-egg'),
+                'description' => __('Modules that are never synchronized automatically.', 'content-egg'),
+                'checkbox_options' => WooSyncScope::productModules(),
+                'callback' => array($this, 'render_checkbox_list'),
+                'default' => array(),
+                'section' => __('WooCommerce', 'content-egg'),
+                'row_class' => 'cegg-woo-scope-all',
             ),
             'woocommerce_attributes_sync' => array(
                 'title' => __('Import Product Attributes', 'content-egg'),
@@ -961,6 +1147,29 @@ class GeneralConfig extends Config
                     'all' => __('All Modules', 'content-egg'),
                 ),
                 'default' => 'amazon',
+                'section' => __('WooCommerce', 'content-egg'),
+            ),
+            'woocommerce_variant_switcher' => array(
+                'title' => __('Variant Switcher', 'content-egg'),
+                'description' => __('Shown on products that belong to a variant family, between the price and the Buy button.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'chips' => __('Chips', 'content-egg'),
+                    'list' => __('List', 'content-egg'),
+                    '' => __('Disabled', 'content-egg'),
+                ),
+                'default' => 'chips',
+                'section' => __('WooCommerce', 'content-egg'),
+            ),
+            'woocommerce_family_archive' => array(
+                'title' => __('Variant Families in Shop', 'content-egg'),
+                'description' => __('Show every variant in the shop and category pages, or only one product per variant family. Search results always show every variant.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'all' => __('Show every variant', 'content-egg'),
+                    'one' => __('One product per family', 'content-egg'),
+                ),
+                'default' => 'all',
                 'section' => __('WooCommerce', 'content-egg'),
             ),
             'woocommerce_echo_price_per_unit' => array(
@@ -1429,6 +1638,167 @@ class GeneralConfig extends Config
                 'section' => $section,
             ),
         );
+    }
+
+    private function getDealsOptions()
+    {
+        $section = __('Deals', 'content-egg');
+        $toggle = array(
+            'enabled' => __('Enabled', 'content-egg'),
+            'disabled' => __('Disabled', 'content-egg'),
+        );
+
+        // Default-on settings are dropdowns, not checkboxes: Config::get_current()
+        // reads an unsaved checkbox as false on any install that already has
+        // saved options, so a default-on checkbox would ship switched off.
+        return array(
+            'deals_enabled' => array(
+                'title' => __('Enable deals', 'content-egg'),
+                'description' => __('Adds a Deal post type with ready-made deal pages, a deals archive and deal voting.', 'content-egg'),
+                'callback' => array($this, 'render_checkbox'),
+                'default' => false,
+                'section' => $section,
+            ),
+            'deals_slug' => array(
+                'title' => __('Deal URL slug', 'content-egg'),
+                'description' => __('The URL base of a single deal, e.g. /deal/my-deal/.', 'content-egg'),
+                'callback' => array($this, 'render_input'),
+                'default' => 'deal',
+                'validator' => array(
+                    'trim',
+                    'sanitize_title',
+                    array(
+                        'call' => array($this, 'dealSlugsDiffer'),
+                        'message' => __('The deal slug and the archive slug must differ.', 'content-egg'),
+                    ),
+                ),
+                'section' => $section,
+            ),
+            'deals_archive_slug' => array(
+                'title' => __('Deals archive slug', 'content-egg'),
+                'description' => __('The URL of the deals listing, e.g. /deals/.', 'content-egg'),
+                'callback' => array($this, 'render_input'),
+                'default' => 'deals',
+                'validator' => array(
+                    'trim',
+                    'sanitize_title',
+                    array(
+                        'call' => array($this, 'dealSlugsDiffer'),
+                        'arg' => 'deals_archive_slug',
+                        'message' => __('The deal slug and the archive slug must differ.', 'content-egg'),
+                    ),
+                ),
+                'section' => $section,
+            ),
+            'deals_price_threshold' => array(
+                'title' => __('Expire when the price rises by (%)', 'content-egg'),
+                'description' => __('A deal expires when its price rises more than this above the price it was published at.', 'content-egg'),
+                'callback' => array($this, 'render_input'),
+                'default' => 5,
+                'validator' => array(
+                    'trim',
+                    'absint',
+                    array(
+                        'call' => array('\ContentEgg\application\helpers\FormValidator', 'less_than_equal_to'),
+                        'arg' => 100,
+                        'message' => sprintf(__('The field "%s" can\'t be more than %d.', 'content-egg'), __('Expire when the price rises by (%)', 'content-egg'), 100),
+                    ),
+                ),
+                'section' => $section,
+            ),
+            'deals_auto_reactivate' => array(
+                'title' => __('Reactivate automatically', 'content-egg'),
+                'description' => __('Bring a deal back when the product is back in stock or its price falls back. Deals that ended or that you expired by hand never come back on their own.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => $toggle,
+                'default' => 'enabled',
+                'section' => $section,
+            ),
+            'deals_hide_expired' => array(
+                'title' => __('Hide expired deals from listings', 'content-egg'),
+                'description' => __('Expired deals keep their page either way.', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => $toggle,
+                'default' => 'enabled',
+                'section' => $section,
+            ),
+            'deals_noindex_expired' => array(
+                'title' => __('Noindex expired deals', 'content-egg'),
+                'description' => __('Ask search engines not to index a deal page once the deal has expired.', 'content-egg'),
+                'callback' => array($this, 'render_checkbox'),
+                'default' => false,
+                'section' => $section,
+            ),
+            'deals_btn_text' => array(
+                'title' => __('Deal button text', 'content-egg'),
+                'description' => sprintf(
+                    __('Text for the buy button on a deal page. Leave empty to use the default: %1$s. Supports tokens: %2$s', 'content-egg'),
+                    '<code>Get deal at %MERCHANT%</code>',
+                    '<code>%MERCHANT%</code>, <code>%DOMAIN%</code>, <code>%PRICE%</code>, <code>%STOCK_STATUS%</code>'
+                ),
+                'callback' => array($this, 'render_input'),
+                'default' => '',
+                'validator' => array('strip_tags'),
+                'section' => $section,
+            ),
+            'deals_voting' => array(
+                'title' => __('Deal voting', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => $toggle,
+                'default' => 'enabled',
+                'section' => $section,
+            ),
+            'deals_voting_logged_in' => array(
+                'title' => __('Only logged-in users can vote', 'content-egg'),
+                'callback' => array($this, 'render_checkbox'),
+                'default' => false,
+                'section' => $section,
+            ),
+            'deals_hot_score' => array(
+                'title' => __('Hot deal score', 'content-egg'),
+                'description' => __('Deals whose vote score reaches this number get a "Hot" badge. 0 turns the badge off.', 'content-egg'),
+                'callback' => array($this, 'render_input'),
+                'default' => 50,
+                'validator' => array('trim', 'absint'),
+                'section' => $section,
+            ),
+            'deals_per_page' => array(
+                'title' => __('Deals per archive page', 'content-egg'),
+                'callback' => array($this, 'render_input'),
+                'default' => 24,
+                'validator' => array('trim', 'absint'),
+                'section' => $section,
+            ),
+        );
+    }
+
+    /**
+     * The single-deal and archive slugs share one rewrite space: equal slugs
+     * would send every deal URL to the archive. Runs on both fields, compared
+     * as they resolve (an empty slug falls back to its default). deals_slug is
+     * validated first, so the archive check sees the single slug that will
+     * actually be saved - a rejected archive keeps its current value.
+     */
+    public function dealSlugsDiffer($value, $field = 'deals_slug')
+    {
+        $other = $field === 'deals_slug' ? 'deals_archive_slug' : 'deals_slug';
+        try
+        {
+            $other_value = $this->get_submitted_value($other);
+        }
+        catch (\Exception $e)
+        {
+            $other_value = $this->option($other);
+        }
+
+        $resolve = function ($slug, $name)
+        {
+            $slug = \sanitize_title(trim((string) $slug));
+
+            return $slug !== '' ? $slug : ($name === 'deals_slug' ? 'deal' : 'deals');
+        };
+
+        return $resolve($value, $field) !== $resolve($other_value, $other);
     }
 
     public function couponsLimitFilter($value)

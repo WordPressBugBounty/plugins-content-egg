@@ -347,6 +347,7 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
             'direct link' => false,
             'additional image link' => false,
             'brand' => false,
+            'condition' => false,
             'category' => false,
             'short description' => false,
             'subtitle' => false,

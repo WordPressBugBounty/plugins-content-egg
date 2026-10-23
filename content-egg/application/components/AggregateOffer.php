@@ -30,6 +30,26 @@ class AggregateOffer
         \add_action('woocommerce_structured_data_product', array(__CLASS__, 'addStructuredDataProduct'), 10, 2);
     }
 
+    /**
+     * Offers that may be advertised in the schema: not out of stock, not a used
+     * or refurbished offer the owner keeps out of the best price, and with a
+     * positive price. Stock status is stored as a string ("-1"), so it is
+     * compared as a number; an offer that does not report stock is kept.
+     */
+    public static function eligibleOffers(array $data)
+    {
+        return array_values(array_filter($data, static function ($d)
+        {
+            if (isset($d['stock_status']) && (int) $d['stock_status'] === ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+                return false;
+
+            if (is_array($d) && OfferCondition::excludedFromBestPrice($d))
+                return false;
+
+            return isset($d['price']) && is_numeric($d['price']) && (float) $d['price'] > 0;
+        }));
+    }
+
     public static function addStructuredDataProduct($markup, $product)
     {
         if (!is_array($markup) || !is_object($product) || !method_exists($product, 'get_id'))
@@ -50,11 +70,7 @@ class AggregateOffer
             return $markup;
         }
 
-        // Keep only in-stock offers (strict).
-        $data = array_values(array_filter($data, static function ($d)
-        {
-            return isset($d['stock_status']) && $d['stock_status'] !== ContentProduct::STOCK_STATUS_OUT_OF_STOCK;
-        }));
+        $data = self::eligibleOffers($data);
 
         $offer_count = count($data);
         if ($offer_count <= 1)

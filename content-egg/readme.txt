@@ -2,9 +2,9 @@
 Contributors: keywordrush
 Tags: affiliate marketing, price comparison, csv import, affiliate links, gutenberg blocks
 Requires at least: 6.9
-Tested up to: 7.1
+Tested up to: 7.1.3
 Requires PHP: 8.0
-Stable tag: 11.9.0
+Stable tag: 12.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -103,6 +103,16 @@ No more copy-pasting product details. Turn imported data into posts or WooCommer
 * **Price Drop Alerts**: Email alerts for price drops.
 * **EAN Search**: Merge products into a single comparison list using EANs.
 
+= Deals Websites =
+
+Run a deals site on your own WordPress install: every deal is a post with its own page, and Content Egg keeps its price current.
+
+* **Deal pages** with price, old price, discount, store, coupon code, a countdown and "checked 2 hours ago".
+* **Automatic expiry:** a deal expires when the product goes out of stock or its price rises, and comes back when it recovers.
+* **Community voting** with a "Hot" badge, sorting by newest, biggest discount, popular or ending soon.
+* **Store and category pages** with breadcrumbs, plus a Deals block for your homepage.
+* **Import deals** from a list of product links, or automatically with a minimum-discount rule.
+
 = AI Content Generation for Product Reviews =
 
 Write from the product data you imported — title, specs, offers, attributes — instead of from a blank prompt. One click per section:
@@ -145,7 +155,7 @@ Create clean, product-focused landing pages on your site before sending visitors
 
 Every feature is in the free version — feed imports, price comparison and price history, AI content generation, Egg Blocks, Bridge Pages, clicks statistics, WooCommerce sync and autoblogging. PRO widens the reach rather than unlocking the basics:
 
-* **29 more network modules** — Amazon, eBay, AliExpress, Walmart, AWIN, CJ, Rakuten and more
+* **32 more network modules** — Amazon, eBay, AliExpress, Walmart, AWIN, CJ, Rakuten and more
 * **50 feed modules** instead of 3
 * **Write access for AI agents** — your assistant builds and edits pages instead of only researching them
 * **Fully automatic AI prefill** — monetize existing posts unattended, start to finish
@@ -154,7 +164,7 @@ Every feature is in the free version — feed imports, price comparison and pric
 Includes `CSV-XML Feed`, `CJ Links`, `Coupon`, `GdeSlon`, `Google Images`, `Offer`, `Pexels`, `Pexels Videos`, `Pixabay`, `Related Keywords`, `RSS Fetcher`, `Skimlinks Coupons`, `Sovrn`, `Unsplash`, `YouTube`.
 
 **PRO adds:**
-Includes `Aliexpress`, `AllKeyShop`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`, `Billigerde`, `Bol.com`, `CJ Products`, `CityAds.com`, `Coupang`, `Clickbank`, `Daisycon`, `eBay`, `Envato`, `Flipkart`, `Geizhalsde`, `Impact Radius`, `Kelkoogroup`, `Kieskeurig.nl`, `Linkwise`, `Lomadee.com`, `Paytm.com`, `Pepperjam`, `Rakuten (LinkShare)`, `Shopee`, `Walmart`, `Webgains`.
+Includes `Aliexpress`, `AllKeyShop`, `Amazon`, `Amazon NoAPI`, `Avantlink`, `AWIN`, `BestBuy`, `Billigerde`, `Bol.com`, `CJ Products`, `CityAds.com`, `Clickbank`, `Clickwise`, `Coupang`, `eBay`, `Envato`, `Flipkart`, `Geizhalsde`, `Impact Radius`, `Kelkoogroup`, `Kieskeurig.nl`, `Linkwise`, `Lomadee.com`, `Magalu`, `Paytm.com`, `Rakuten (LinkShare)`, `Shopee`, `Tradedoubler`, `TradeTracker`, `Trovaprezzi`, `Walmart`, `Webgains`.
 
 ➡️ Visit us at [www.keywordrush.com/contentegg](https://www.keywordrush.com/contentegg "Content Egg PRO")
 
@@ -187,11 +197,11 @@ Installation Instructions
 
 Every feature: feed and product import, price comparison and price history, AI content generation, all 25+ Egg Blocks, Bridge Pages, WooCommerce sync, autoblogging, clicks statistics, and AI Agents.
 
-PRO adds 29 more affiliate network modules (Amazon, eBay, AliExpress, Walmart and others), 50 feed modules instead of 3, write access for AI agents, and fully automatic AI prefill.
+PRO adds 32 more affiliate network modules (Amazon, eBay, AliExpress, Walmart and others), 50 feed modules instead of 3, write access for AI agents, and fully automatic AI prefill.
 
 = Can I use ChatGPT or Claude to run the plugin? =
 
-Yes. Turn on AI Agents, create a WordPress application password, and connect your assistant — the screen gives you the guide text, an OpenAPI profile for ChatGPT Custom GPT actions, and an MCP endpoint for Claude Desktop, Cursor and similar tools. Claude Code, scripts and any HTTP client need no set-up beyond the guide link and your credentials.
+Yes. Turn on AI Agents, create a WordPress application password, and connect your assistant — the screen gives you the guide link, the text to paste into a ChatGPT project, and an MCP endpoint for Claude Desktop, Codex, Cursor and similar tools. ChatGPT Work, Claude, Claude Code, scripts and any HTTP client need no set-up beyond the guide link and your credentials.
 
 Your assistant calls your own site over the WordPress REST API, so no third-party service sits in between, and every Content Egg action is logged on the AI Agents screen. Requires WordPress 6.9 or newer.
 
@@ -251,6 +261,49 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 
 == Changelog ==
 
+= 12.0.0 =
+
+* Deals are off by default: nothing changes on your site until you turn them on in Settings → Deals.
+* New: Deals. Turn on Settings → Deals to get a Deal post type with ready-made deal pages (price, old price, discount, store, "checked N hours ago", lowest-price-in-30-days badge, countdown, voting), a /deals/ archive with sorting and store/category filters, and a Deals block. Deals expire on their own when the product goes out of stock, its price rises, or its end date passes, and come back when the product does.
+* New: Deals → Add deals creates deals from a list of product links.
+* New: A coupon code per deal, with a one-click Copy button on the deal page, a "Coupon" label on cards, a "With coupon" filter and a coupon-only option in the Deals block.
+* New: Store and category pages for deals — breadcrumbs with BreadcrumbList markup, a store header with logo, deal count and store link, category links, and a link to the store's Cashback Tracker page when Cashback Tracker is installed.
+* New: "Hot" badge for deals whose vote score reaches Settings → Deals → Hot deal score (default 50), with cegg_deal_hot_score and cegg_deal_is_hot filters.
+* New: Deal button text setting, "Get deal at {store}" by default.
+* New: Auto-import rules can require a minimum discount and in-stock products.
+* New: "Used and Refurbished Offers" setting (General settings). When enabled, used and refurbished offers no longer set the best price, the WooCommerce price, price history or price alerts, and they get a "Used" or "Refurbished" label. An offer with "Renewed", "Refurbished" or a similar word in its title counts as refurbished even when the shop lists it as new. Enabled by default on new installations; existing sites keep their current behavior until you turn it on.
+* New: WooCommerce "Automatic Synchronization Scope". Sync product prices from all modules and exclude the ones you don't want, or keep syncing only the selected modules. New installations sync from all modules; existing sites keep their current setting. A notice now tells you when automatic sync is off because no module is selected.
+* New: Comparable prices with and without VAT. Set each shop's VAT basis and rate in Shops, then choose Excluding or Including VAT in Settings → Normalize Shop Prices. Prices are converted before they are saved, so price history, charts and price alerts stay consistent. Existing data is recalculated in the background.
+* New: Default shipping cost per shop by price range, used when a product has no shipping cost from its source.
+* New: Optional shipping line (visible=shipping_cost) in the Price comparison widget, Price comparison card and Sorted offers list with product images templates.
+* New: Feed modules — "condition" column in the feed mapping.
+* New: Feed modules — search by the feed's own product ID with "id:12345" to add an exact offer. Works in the editor search, Prefill and auto-update keywords; separate several IDs with commas (id:123,id:456).
+* New: Prefill — "Values are feed product IDs" option for the Custom Field source. Plain feed product IDs saved in a custom field are matched exactly, one per field value or comma-separated.
+* New: AI agents see which modules can search by EAN, URL or product ID and get the product identifiers needed to compare offers. The agent guide is now split into topics, including a new price comparison topic.
+* New: ChatGPT connects through ChatGPT Work and a ChatGPT project, with scheduled tasks that run in the cloud. The AI Agents screen shows the new steps; Custom GPTs, which OpenAI is retiring, are no longer needed.
+* Improved: Merchant logos work again without an API key. The default logo source is now the shop's website icon, since Clearbit no longer provides logos.
+* Improved: Every shop now gets its logo from the Logo Source setting, so all logos look the same; your own logos still take priority. When Brandfetch or Logo.dev has no logo for a shop, or no key is set, the shop's website icon is used instead.
+* Improved: Changing Logo Source now replaces the logos Content Egg downloaded before; logos you placed in the ce-logos folder yourself are kept. A logo that could not be downloaded is tried again after 7 days.
+* Improved: Prefill no longer sends an EAN to modules that can't search by EAN.
+* Improved: Content Egg now bundles Action Scheduler, so background tasks run reliably even when no other plugin provides it.
+* Improved: Block styles now load only on pages that use the blocks.
+* Improved: Price comparison and price history templates fit mobile screens.
+* Improved: Price history chart dates no longer overlap.
+* Improved: Sorted and filtered deal archive pages are no longer indexed by search engines.
+* Fixed: Feed modules — an offer stayed out of stock for good once the merchant re-listed the product under a new ID. The update now falls back to the EAN within the same shop and reconnects the offer on a single unambiguous match, refreshing price, stock, image and links while keeping the saved product data and price history.
+* Fixed: Sovrn — offers from many shops had no logo. They now get the logo Sovrn provides, and Target, The Home Depot, Lowe's, Ace Hardware, Wayfair, REI and other shops are matched to their website.
+* Fixed: Large product feeds served through a redirect could exhaust PHP memory before the import started.
+* Fixed: Products stayed unticked under Post Types when WooCommerce was installed after Content Egg's settings had been saved. Activating WooCommerce now turns them on, and saving the settings while WooCommerce is inactive no longer unticks them.
+* Fixed: Sorting by highest price, and the "Maximum Price" WooCommerce sync, put out-of-stock offers first.
+* Fixed: WooCommerce product schema (AggregateOffer) included out-of-stock offers.
+* Fixed: WooCommerce attributes were re-synced for every offer marked for attribute sync instead of only the first.
+* Fixed: The currency option did not convert shipping costs.
+* Fixed: Price statistics showed the wrong product name for the lowest price.
+* Fixed: Price history chart not showing in blocks rendered via AJAX (async or lazy load).
+* Fixed: Clearing a product price in the editor was undone on save.
+* Fixed: PHP 8.4 deprecation notices.
+* Fixed: Codex could not use the MCP endpoint on sites with WooCommerce, and asked to approve every call.
+
 = 11.9.0 =
 
 * New: Shop badge — a badge text and color on each shop's Content Egg > Shops page, shown automatically on every offer from that domain unless the offer already has its own badge.
@@ -270,7 +323,6 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 * New: Egg Blocks — a Plain variant for nine blocks, including Product Card, Verdict, Pros & Cons and Callout. No panel, no tinted background, no bordered tags: the blocks line up on a shared label column so a review reads as one article instead of a stack of widgets.
 * New: Import presets — Category Mapping. Send a merchant's feed category to one of your own categories, so products arrive filed correctly instead of needing cleanup. A rule can name the full path or a single level, and * matches a whole branch.
 * New: Editorial Product — an alt text field for the product image.
-* Improved: All feed modules — an offer stayed out of stock for good once a merchant re-listed the product under a new ID. The lookup now falls back to the EAN within the same merchant and reconnects the offer on a single unambiguous match, refreshing price, stock, image and links while keeping the saved product data and price history.
 * Fixed: Editorial Product was missing from the block catalog the agent API publishes, so an AI agent could not create or validate one.
 * Fixed: AWIN — the maximum price was ignored when searching a feed.
 

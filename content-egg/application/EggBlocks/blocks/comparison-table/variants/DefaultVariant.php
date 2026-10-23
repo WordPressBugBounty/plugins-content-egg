@@ -2,6 +2,7 @@
 
 namespace ContentEgg\application\EggBlocks\blocks\comparisontable\variants;
 
+use ContentEgg\application\components\OfferCondition;
 use ContentEgg\application\EggBlocks\blocks\comparisontable\ComparisonTableRenderer;
 use ContentEgg\application\EggBlocks\shared\EggbIcons;
 use ContentEgg\application\helpers\TemplateHelper;
@@ -357,6 +358,12 @@ class DefaultVariant
 
         foreach ($items as $item)
         {
+            // A used / refurbished offer kept out of the best price is not "the lowest".
+            if (self::isExcludedOffer($item))
+            {
+                continue;
+            }
+
             $price = self::extractPriceValue($item);
             if ($price === null)
             {
@@ -370,6 +377,13 @@ class DefaultVariant
         }
 
         return $lowest;
+    }
+
+    private static function isExcludedOffer(array $item): bool
+    {
+        $product = $item['product_item'] ?? null;
+
+        return is_array($product) && OfferCondition::excludedFromBestPrice($product);
     }
 
     private static function extractPriceValue(array $item): ?float

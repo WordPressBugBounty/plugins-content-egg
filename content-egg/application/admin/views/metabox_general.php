@@ -5,6 +5,8 @@ use ContentEgg\application\helpers\AdminHelper;
 defined('\ABSPATH') || exit; ?>
 <?php
 \wp_nonce_field('contentegg_metabox', 'contentegg_nonce');
+// When this form was loaded: saving it keeps an offer rejection recorded later (EggMetabox::saveMeta()).
+echo '<input type="hidden" name="cegg_form_loaded_at" value="' . (int) time() . '">';
 $tpl_manager = ContentEgg\application\components\BlockTemplateManager::getInstance();
 $templates = $tpl_manager->getTemplatesList(true);
 if (!$global_keyword = \get_post_meta($post->ID, '_cegg_global_autoupdate_keyword', true))

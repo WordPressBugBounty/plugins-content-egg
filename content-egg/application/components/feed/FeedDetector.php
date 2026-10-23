@@ -335,7 +335,7 @@ class FeedDetector
         $priority = array(
             'id', 'title', 'price', 'sale price', 'affiliate link', 'image link',
             'description', 'currency', 'availability', 'is in stock', 'gtin',
-            'brand', 'category', 'direct link', 'shipping cost',
+            'brand', 'condition', 'category', 'direct link', 'shipping cost',
             'additional image link', 'short description', 'subtitle', 'isbn',
         );
 
@@ -1543,6 +1543,7 @@ class FeedDetector
             'isinstock' => array('isinstock', 'instock'),
             'gtin' => array('ggtin', 'gtin', 'eancode', 'ean', 'barcode', 'upc'),
             'brand' => array('gbrand', 'brandname', 'manufacturer', 'brand', 'vendor'),
+            'condition' => array('gcondition', 'itemcondition', 'productcondition', 'condition'),
             'category' => array('merchantcategory', 'gproducttype', 'categorypath', 'producttype', 'categoryname', 'category', 'googleproductcategory'),
             // 'link' last (lowest priority): in a Google Merchant Center feed
             // 'affiliate link' is claimed first (from aw_deep_link etc.), so the

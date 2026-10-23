@@ -8,6 +8,8 @@ use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ai\AiProcessor;
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\FeaturedImage;
+use ContentEgg\application\components\matching\OfferDecisions;
+use ContentEgg\application\components\matching\ProductPassport;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ParserModule;
 use ContentEgg\application\components\ProductDataService;
@@ -15,6 +17,7 @@ use ContentEgg\application\components\UpdateSettingsService;
 use ContentEgg\application\helpers\AdminHelper;
 use ContentEgg\application\helpers\ClickStatsHelper;
 use ContentEgg\application\helpers\TemplateHelper;
+use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\models\LinkClicksDailyModel;
 
 /**
@@ -406,6 +409,12 @@ class PostProductsRestController extends \WP_REST_Controller
             true
         );
 
+        // Verified marker (product passport pages only). It needs the attached
+        // items as stored, keyed like a decision, to tell an offer that is still
+        // what was accepted from one edited since.
+        $has_passport = ProductPassport::has($post_id);
+        $stored = array();
+
         // Managed families (product + coupon): one store spans both, and the
         // client filters each family's roster by module type.
         foreach ($this->managed_module_ids() as $module_id)
@@ -414,6 +423,15 @@ class PostProductsRestController extends \WP_REST_Controller
 
             if (!is_array($data) || !$data)
                 continue;
+
+            if ($has_passport)
+            {
+                foreach ($data as $stored_item)
+                {
+                    if (is_array($stored_item) && isset($stored_item['unique_id']) && is_scalar($stored_item['unique_id']))
+                        $stored[OfferDecisions::key($module_id, (string) $stored_item['unique_id'])] = $stored_item;
+                }
+            }
 
             $items = array_values($data);
 
@@ -458,10 +476,21 @@ class PostProductsRestController extends \WP_REST_Controller
             $revisions[$module_id] = ProductDataService::revision($post_id, $module_id);
         }
 
+        // `match`: null without a passport, else the accepted offers, keyed
+        // "<module_id>:<unique_id>", that are still what was accepted (unchanged
+        // title and GTINs). Kept apart from the item arrays so a module save
+        // never drops it.
+        $match = OfferDecisions::matchPayload(
+            $has_passport,
+            $has_passport ? OfferDecisions::all($post_id) : array(),
+            $stored
+        );
+
         return array(
             'by_module' => (object) $by_module,
             'revisions' => (object) $revisions,
             'groups' => $groups,
+            'match' => $match === null ? null : (object) $match,
         );
     }
 
@@ -537,7 +566,13 @@ class PostProductsRestController extends \WP_REST_Controller
 
         $keyword = \sanitize_text_field((string) $request['keyword']);
 
-        $result = ProductDataService::addItems($post_id, $module_id, $items, $keyword);
+        // The Product Manager is a person: adding an offer the agent rejected is
+        // an explicit decision and clears the rejection, whenever it was recorded
+        // (no form load time, unlike the classic metabox save).
+        $result = OfferDecisions::runManual(function () use ($post_id, $module_id, $items, $keyword)
+        {
+            return ProductDataService::addItems($post_id, $module_id, $items, $keyword);
+        });
 
         return \rest_ensure_response(array(
             'items' => array_values($result['data']),
@@ -785,22 +820,32 @@ class PostProductsRestController extends \WP_REST_Controller
      * module-specific keyword, else the post's global autoupdate keyword). If no
      * module resolves a keyword there's nothing to update, so the UI disables the
      * action. Mirrors ContentManager::updateAllByKeyword()'s module iteration.
+     *
+     * A product passport suspends the keyword update of the product modules
+     * (ContentManager::updateByKeyword() returns early for them). Those modules
+     * do not count towards `available`, and every one that has a keyword is
+     * named in `suspended_modules`, so the UI can tell "nothing will refresh"
+     * (available:false) from "only the coupon lists will" (available:true).
      */
     public function keyword_status($request)
     {
         $post_id = (int) $request['post_id'];
 
-        $available = false;
+        $has_passport = ProductPassport::has($post_id);
+        $suspended_by_module = array();
         foreach (array_keys(ModuleManager::getInstance()->getAffiliteModulesList(true)) as $module_id)
         {
-            if (ContentManager::getAutoupdateKeyword($post_id, $module_id))
-            {
-                $available = true;
+            if (!ContentManager::getAutoupdateKeyword($post_id, $module_id))
+                continue;
+
+            $suspended_by_module[$module_id] = ContentManager::isKeywordUpdateSuspended($post_id, $module_id);
+
+            // Nothing is suspended without a passport: one keyword settles it.
+            if (!$has_passport)
                 break;
-            }
         }
 
-        return \rest_ensure_response(array('available' => $available));
+        return \rest_ensure_response(ContentManager::keywordRefreshStatus($suspended_by_module));
     }
 
     public function get_update_settings($request)
@@ -929,7 +974,7 @@ class PostProductsRestController extends \WP_REST_Controller
             return \rest_ensure_response(array(
                 'items' => array(),
                 'previous' => array(),
-                'error' => \wp_strip_all_tags($e->getMessage()),
+                'error' => TextHelper::plainErrorMessage($e->getMessage()),
             ));
         }
 
@@ -1004,7 +1049,7 @@ class PostProductsRestController extends \WP_REST_Controller
         {
             return \rest_ensure_response(array(
                 'previous' => array(),
-                'error' => \wp_strip_all_tags($e->getMessage()),
+                'error' => TextHelper::plainErrorMessage($e->getMessage()),
             ));
         }
 

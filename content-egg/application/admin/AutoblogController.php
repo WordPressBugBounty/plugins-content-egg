@@ -303,7 +303,7 @@ class AutoblogController
         $i = 0;
         $keywords = array();
         $category_keywords = array();
-        while (($data = fgetcsv($handle, 1000, $separator)) !== false)
+        while (($data = fgetcsv($handle, 1000, $separator, '"', '\\')) !== false)
         {
             $num = count($data);
 

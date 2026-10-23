@@ -6,6 +6,8 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ContentProduct;
+use ContentEgg\application\deals\DealPostType;
+use ContentEgg\application\deals\DealService;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\helpers\TextHelper;
 
@@ -52,6 +54,14 @@ class StructuredData
 
     public static function getStructuredData($post_id)
     {
+        // A deal is one pinned offer, not the cheapest of whatever the post holds.
+        if (\get_post_type($post_id) === DealPostType::POST_TYPE)
+        {
+            $markup = DealService::schema((int) $post_id);
+
+            return $markup ? \apply_filters('cegg_structured_data_single', $markup, $post_id, array()) : null;
+        }
+
         if (!$items = ContentManager::getViewProductData($post_id))
             return;
 
@@ -62,6 +72,9 @@ class StructuredData
             if (empty($d['price']))
                 unset($items[$i]);
         }
+        // Used / refurbished offers the owner keeps out of the best price are not
+        // advertised either: they would set the low price (and the Offer's price).
+        $items = OfferCondition::withoutExcluded($items);
         if (!$items = array_values($items))
             return;
 
@@ -78,13 +91,13 @@ class StructuredData
             'url' => $permalink,
         );
 
-        if ($item['img'])
+        if (!empty($item['img']))
             $markup['image'] = $item['img'];
 
-        if ($item['ean'])
+        if (!empty($item['ean']))
             $markup['gtin14'] = TextHelper::fixEan($item['ean'], 14);
 
-        if ($item['manufacturer'])
+        if (!empty($item['manufacturer']))
         {
             $markup['brand'] = array(
                 '@type' => 'Brand',

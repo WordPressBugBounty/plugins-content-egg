@@ -85,6 +85,10 @@ final class AbilitiesRegistrar
             PreviewBlocksAbility::class => 'free',
             GetPostBlocksAbility::class => 'free',
             FindPostsAbility::class => 'free',
+            GetPassportAbility::class => 'free',
+            MatchOffersAbility::class => 'free',
+            AuditOffersAbility::class => 'free',
+            GetFamilyAbility::class => 'free',
             AddProductsToPostAbility::class => 'pro',
             AddCouponsToPostAbility::class => 'pro',
             AddImagesToPostAbility::class => 'pro',
@@ -103,6 +107,10 @@ final class AbilitiesRegistrar
             CreatePostAbility::class => 'pro',
             SetFeaturedImageAbility::class => 'pro',
             SetPostStatusAbility::class => 'pro',
+            UpdateWooProductAbility::class => 'pro',
+            SetPassportAbility::class => 'pro',
+            SetOfferDecisionsAbility::class => 'pro',
+            SetFamilyAbility::class => 'pro',
         );
     }
 

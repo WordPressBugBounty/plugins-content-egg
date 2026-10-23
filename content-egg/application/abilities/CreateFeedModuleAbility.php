@@ -32,8 +32,6 @@ final class CreateFeedModuleAbility extends AbilityBase
 
     public function description(): string
     {
-        // Front-loaded: the ChatGPT profile trims this to 300 chars, so the
-        // "you only need feed_url" contract must be complete before the cut.
         return 'Creates a new product feed module from a feed URL and schedules the first '
             . 'import. You normally only need feed_url: the format (CSV/XML/JSON), compression, '
             . 'encoding, CSV delimiter, currency, merchant domain, display name and XML product '

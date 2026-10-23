@@ -123,6 +123,56 @@ class ShopStore
     }
 
     /**
+     * Default-shipping rows, ascending by threshold. A row needs a numeric
+     * cost; an empty threshold means 0. A repeated threshold keeps the last
+     * row, which is what an operator editing the list top to bottom expects.
+     * Pure.
+     */
+    public static function sanitizeShippingRanges($rows)
+    {
+        if (!is_array($rows))
+            return array();
+
+        $by_from = array();
+        foreach ($rows as $row)
+        {
+            if (!is_array($row))
+                continue;
+
+            $cost = self::parseAmount(isset($row['cost']) ? $row['cost'] : '');
+            if ($cost === null || $cost < 0)
+                continue;
+
+            $from_raw = isset($row['from']) ? trim((string) $row['from']) : '';
+            $from = $from_raw === '' ? 0.0 : self::parseAmount($from_raw);
+            if ($from === null || $from < 0)
+                continue;
+
+            $by_from[(string) $from] = array('from' => $from, 'cost' => $cost);
+        }
+
+        ksort($by_from, SORT_NUMERIC);
+
+        return array_values($by_from);
+    }
+
+    /** '49,95' / '49.95' / 49.95 -> 49.95; anything non-numeric -> null. Pure. */
+    private static function parseAmount($v)
+    {
+        $v = str_replace(',', '.', trim((string) $v));
+
+        return ($v !== '' && is_numeric($v)) ? (float) $v : null;
+    }
+
+    /** 0-99 inclusive, else the 21% default. Pure. */
+    private static function sanitizeVatRate($v)
+    {
+        $rate = self::parseAmount($v === null ? '' : $v);
+
+        return ($rate === null || $rate < 0 || $rate > 99) ? 21.0 : $rate;
+    }
+
+    /**
      * A shop row, or array() when its domain cannot be normalized.
      *
      * Returning the empty array rather than a row with an empty domain matters:
@@ -159,6 +209,11 @@ class ShopStore
             // color list) as the per-item badge field editors already use.
             'badge_text'   => ProductDataService::sanitizeField('badge', isset($s['badge_text']) ? $s['badge_text'] : ''),
             'badge_color'  => ProductDataService::sanitizeField('badge_color', isset($s['badge_color']) ? $s['badge_color'] : ''),
+            // VAT basis of this shop's own prices, used by VatNormalizer to
+            // bring every stored price onto the site's basis before saving.
+            'vat_included'    => isset($s['vat_included']) && in_array($s['vat_included'], array('yes', 'no'), true) ? $s['vat_included'] : '',
+            'vat_rate'        => self::sanitizeVatRate(isset($s['vat_rate']) ? $s['vat_rate'] : null),
+            'shipping_ranges' => self::sanitizeShippingRanges(isset($s['shipping_ranges']) ? $s['shipping_ranges'] : array()),
         );
     }
 

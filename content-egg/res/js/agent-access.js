@@ -55,7 +55,7 @@
         });
     }
 
-    /* ---- "Copy guide text": fetch the guide endpoint, copy its markdown ---- */
+    /* ---- "Copy guide text": fetch the whole guide (topic=all), copy its markdown ---- */
     function initGuideText() {
         // Bound by class, not id: the guide row is repeated per assistant panel.
         [].slice.call(document.querySelectorAll('.cegg-aa__guide-text')).forEach(bindGuideText);
@@ -68,6 +68,8 @@
             if (!url) {
                 return;
             }
+            // Pasted text cannot load topics later, so copy every topic.
+            url = fullGuideUrl(url);
             btn.disabled = true;
             fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
                 .then(function (r) { return r.json(); })
@@ -84,6 +86,17 @@
                 })
                 .then(function () { btn.disabled = false; });
         });
+    }
+
+    // Add topic=all to the guide URL; works for pretty and ?rest_route= permalinks.
+    function fullGuideUrl(url) {
+        try {
+            var u = new URL(url, window.location.href);
+            u.searchParams.set('topic', 'all');
+            return u.toString();
+        } catch (err) {
+            return url + (url.indexOf('?') === -1 ? '?' : '&') + 'topic=all';
+        }
     }
 
     /* ---- Basic-auth token helper: base64(user:pass), entirely in-browser ---- */

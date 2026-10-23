@@ -10,8 +10,10 @@ use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\helpers\CurrencyHelper;
 use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\components\WooSyncScope;
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\components\ContentProduct;
+use ContentEgg\application\components\matching\ProductPassport;
 use ContentEgg\application\Translator;
 
 /**
@@ -25,6 +27,13 @@ class WooIntegrator
 {
 
     const META_WOO_SYNC_MODULE_UNIQUE_ID = '_cegg_woo_sync_muid';
+
+    /**
+     * Set while every offer of the product is one the owner keeps out of the
+     * price (used / refurbished): the product is unavailable though the synced
+     * offer itself may still be in stock. Cleared when an offer is synced.
+     */
+    const META_NO_NEW_OFFER = '_cegg_woo_no_new_offer';
 
     private static $attributes_list;
 
@@ -102,7 +111,7 @@ class WooIntegrator
                 if (!$is_attr_sync && !empty($item['woo_attr']) && filter_var($item['woo_attr'], FILTER_VALIDATE_BOOLEAN))
                 {
                     self::wooCreateAttr($item, $module_id, $post_id);
-                    $is_attr_sync == true;
+                    $is_attr_sync = true;
                 }
 
                 if ($is_product_sync && $is_attr_sync)
@@ -117,11 +126,11 @@ class WooIntegrator
          * Automatic sync
          */
         $woocommerce_product_sync = GeneralConfig::getInstance()->option('woocommerce_product_sync');
-        $woocommerce_modules = GeneralConfig::getInstance()->option('woocommerce_modules');
-        if (!$woocommerce_modules || $woocommerce_product_sync == 'manually')
+        $scope_ids = WooSyncScope::moduleIds();
+        if (!$scope_ids || $woocommerce_product_sync == 'manually')
             return;
 
-        $modules_data = array_intersect_key($modules_data, $woocommerce_modules);
+        $modules_data = array_intersect_key($modules_data, array_flip($scope_ids));
         if ($item = ContentManager::getMainProduct($modules_data, $woocommerce_product_sync))
         {
             self::wooSync($item, $item['module_id'], $post_id);
@@ -130,6 +139,98 @@ class WooIntegrator
             if (!$product->get_attributes() && GeneralConfig::getInstance()->option('woocommerce_attributes_sync'))
                 self::wooCreateAttr($item, $item['module_id'], $post_id);
         }
+        elseif ($modules_data)
+        {
+            // Offers exist but none may set the price (every one is used or
+            // refurbished and the owner keeps those out): the product is
+            // unavailable, and the last price is left as it is.
+            self::applyOutOfStockState($product, $post_id);
+        }
+    }
+
+    /**
+     * What wooSync() does for an out-of-stock item, without an item to sync:
+     * a simple product goes out of stock and the "Out of Stock Products"
+     * WooCommerce setting is applied (hidden from the catalog or trashed).
+     * The price is never touched.
+     */
+    public static function applyOutOfStockState(\WC_Product $product, int $post_id): void
+    {
+        // External products cannot be stock managed.
+        if ($product->get_type() == 'simple')
+            $product->set_stock_status('outofstock');
+
+        // The synced offer may still be in stock, so "hide price" cannot tell
+        // from it alone; this flag says no offer may set the price.
+        \update_post_meta($post_id, self::META_NO_NEW_OFFER, 1);
+
+        $outofstock_woo = GeneralConfig::getInstance()->option('outofstock_woo');
+        if ($outofstock_woo == 'hide_product')
+            $product->set_catalog_visibility('hidden');
+
+        $product->save();
+
+        if ($outofstock_woo == 'move_to_trash')
+            \wp_trash_post($post_id);
+    }
+
+    /**
+     * The rate from the offer's currency to the store currency: 1.0 when the
+     * offer names none or the same one, 0.0 when no rate is known.
+     */
+    public static function priceRate(string $from, string $woo_currency): float
+    {
+        $from = strtoupper(trim($from));
+        if ($from === '' || $from === strtoupper(trim($woo_currency)))
+            return 1.0;
+
+        return CurrencyHelper::comparisonRate($from, $woo_currency);
+    }
+
+    /**
+     * Writes the item's price (and old price) converted with $rate and
+     * rounded to the store's price decimals. With no rate ($rate <= 0) nothing
+     * is touched and false is returned.
+     */
+    public static function syncPrice(\WC_Product $product, array $item, float $rate, int $decimals): bool
+    {
+        if ($rate <= 0)
+            return false;
+
+        $price = round((float) $item['price'] * $rate, $decimals);
+        $price_old = !empty($item['priceOld']) ? round((float) $item['priceOld'] * $rate, $decimals) : 0;
+
+        $product->set_price($price);
+        if ($price_old)
+        {
+            if (\apply_filters('cegg_dont_sync_sale_price', false))
+            {
+                $product->set_regular_price($price);
+            }
+            else
+            {
+                if (!\apply_filters('cegg_dont_touch_retail_price', false))
+                    $product->set_regular_price($price_old);
+
+                if (!\apply_filters('cegg_dont_touch_sale_price', false))
+                    $product->set_sale_price($price);
+            }
+        }
+        else
+        {
+            if ($product->get_regular_price() && \apply_filters('cegg_dont_touch_retail_price', false))
+            {
+                $product->set_sale_price($price);
+            }
+            else
+            {
+                $product->set_regular_price($price);
+                if (!\apply_filters('cegg_dont_touch_sale_price', false))
+                    $product->set_sale_price(null);
+            }
+        }
+
+        return true;
     }
 
     public static function wooSync(array $item, $module_id, $post_id)
@@ -142,44 +243,10 @@ class WooIntegrator
         // set price
         if (!empty($item['price']))
         {
-            $currency_rate = 1;
-            $woo_currency = \get_woocommerce_currency();
-            if ($item['currencyCode'] && $item['currencyCode'] != $woo_currency)
-            {
-                $currency_rate = CurrencyHelper::getCurrencyRate($item['currencyCode'], $woo_currency);
-                if (!$currency_rate)
-                    $currency_rate = 1;
-            }
-
-            $product->set_price($item['price'] * $currency_rate);
-            if ($item['priceOld'])
-            {
-                if (\apply_filters('cegg_dont_sync_sale_price', false))
-                {
-                    $product->set_regular_price($item['price'] * $currency_rate);
-                }
-                else
-                {
-                    if (!\apply_filters('cegg_dont_touch_retail_price', false))
-                        $product->set_regular_price($item['priceOld'] * $currency_rate);
-
-                    if (!\apply_filters('cegg_dont_touch_sale_price', false))
-                        $product->set_sale_price($item['price'] * $currency_rate);
-                }
-            }
-            else
-            {
-                if ($product->get_regular_price() && \apply_filters('cegg_dont_touch_retail_price', false))
-                {
-                    $product->set_sale_price($item['price'] * $currency_rate);
-                }
-                else
-                {
-                    $product->set_regular_price($item['price'] * $currency_rate);
-                    if (!\apply_filters('cegg_dont_touch_sale_price', false))
-                        $product->set_sale_price(null);
-                }
-            }
+            $rate = self::priceRate((string) ($item['currencyCode'] ?? ''), \get_woocommerce_currency());
+            // No rate known for the offer's currency: the last price stays,
+            // rather than a foreign amount written as the store currency.
+            self::syncPrice($product, $item, $rate, (int) \wc_get_price_decimals());
         }
         else
         {
@@ -270,39 +337,13 @@ class WooIntegrator
 
         // update meta
         self::setMetaSyncUniqueId($post_id, $module_id, $item['unique_id']);
+        \delete_post_meta($post_id, self::META_NO_NEW_OFFER);
 
         $product = \apply_filters('cegg_before_woo_product_save', $product, $item, $module_id, $post_id);
 
         $res = $product->save();
 
-        // Sync native WooCommerce GTIN/EAN -> _global_unique_id
-        if (GeneralConfig::getInstance()->option('sync_gtin') === 'enabled')
-        {
-            $gtin_raw = '';
-
-            if (! empty($item['gtin']))
-            {
-                $gtin_raw = (string) $item['gtin'];
-            }
-            elseif (! empty($item['ean']))
-            {
-                $gtin_raw = (string) $item['ean'];
-            }
-
-            $gtin_sanitized  = sanitize_text_field($gtin_raw);
-            $gtin_normalized = apply_filters('cegg_wc_normalize_gtin', $gtin_sanitized);
-
-            $meta_key = '_global_unique_id';
-
-            if ($gtin_normalized !== '')
-            {
-                \update_post_meta($post_id, $meta_key, $gtin_normalized);
-            }
-            else
-            {
-                \delete_post_meta($post_id, $meta_key);
-            }
-        }
+        self::syncGtin($post_id, $item);
 
         if (GeneralConfig::getInstance()->option('sync_ean') === 'enabled' && self::isEanForWoocommerceActive())
         {
@@ -328,6 +369,48 @@ class WooIntegrator
         }
 
         return $res;
+    }
+
+    /**
+     * Sync native WooCommerce GTIN/EAN -> _global_unique_id.
+     *
+     * A page with a passport is left alone: the passport pins its GTIN (it is
+     * written by set-passport, through WooCommerce's uniqueness check), so a
+     * sync that finds no code in the offer must not delete it and one that
+     * finds a different code must not replace it.
+     */
+    public static function syncGtin(int $post_id, array $item): void
+    {
+        if (GeneralConfig::getInstance()->option('sync_gtin') !== 'enabled')
+            return;
+
+        if (ProductPassport::has($post_id))
+            return;
+
+        $gtin_raw = '';
+
+        if (! empty($item['gtin']))
+        {
+            $gtin_raw = (string) $item['gtin'];
+        }
+        elseif (! empty($item['ean']))
+        {
+            $gtin_raw = (string) $item['ean'];
+        }
+
+        $gtin_sanitized  = sanitize_text_field($gtin_raw);
+        $gtin_normalized = apply_filters('cegg_wc_normalize_gtin', $gtin_sanitized);
+
+        $meta_key = '_global_unique_id';
+
+        if ($gtin_normalized !== '')
+        {
+            \update_post_meta($post_id, $meta_key, $gtin_normalized);
+        }
+        else
+        {
+            \delete_post_meta($post_id, $meta_key);
+        }
     }
 
     public static function wooCreateAttr(array $item, $module_id, $post_id)
@@ -733,14 +816,27 @@ class WooIntegrator
 
         if (\is_product() && $post->ID)
         {
-            if (!$item = self::getSyncItem($post->ID))
-                return $price;
+            $no_new_offer = (bool) \get_post_meta($post->ID, self::META_NO_NEW_OFFER, true);
 
-            if (isset($item['stock_status']) && $item['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+            $item_out_of_stock = false;
+            if (!$no_new_offer && ($item = self::getSyncItem($post->ID)))
+                $item_out_of_stock = isset($item['stock_status']) && $item['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK;
+
+            $outofstock_woo = (string) GeneralConfig::getInstance()->option('outofstock_woo');
+            if (self::shouldHidePrice($item_out_of_stock, $no_new_offer, $outofstock_woo))
                 return '';
         }
 
         return $price;
+    }
+
+    /**
+     * The "hide price" setting hides the price of a product that is out of
+     * stock: its synced offer is, or no offer is left that may set the price.
+     */
+    public static function shouldHidePrice(bool $synced_item_out_of_stock, bool $no_new_offer_flag, string $outofstock_woo): bool
+    {
+        return $outofstock_woo === 'hide_price' && ($synced_item_out_of_stock || $no_new_offer_flag);
     }
 
     public static function addShortcodeSingle()

@@ -82,7 +82,13 @@ else
                     <div class="cegg-desc-small small lh-sm pt-3"><?php TemplateHelper::description($item); ?></div>
                 <?php endif; ?>
 
-                <div class="d-grid gap-2 mt-3" style="max-width: 450px;">
+                <?php
+                // A shipping line belongs to the button above it: group the two
+                // tightly and leave more room between groups.
+                $this->setItem(reset($items), key($items));
+                $show_shipping = $this->isVisible('shipping_cost', false);
+                ?>
+                <div class="d-grid <?php echo $show_shipping ? 'gap-3' : 'gap-2'; ?> mt-3" style="max-width: 450px;">
                     <?php foreach ($items as $i => $btn_item): ?>
                         <?php
                         if (empty($btn_text) && !TemplateHelper::isLinkedToBridge($btn_item))
@@ -96,8 +102,15 @@ else
                         }
                         ?>
                         <?php $this->setItem($btn_item, $i); ?>
+                        <?php if ($show_shipping): ?>
+                            <div class="d-grid gap-1">
+                        <?php endif; ?>
                         <?php if ($this->isVisible('button')): ?>
                             <?php TemplateHelper::button($btn_item, $params); ?>
+                        <?php endif; ?>
+                        <?php if ($show_shipping): ?>
+                                <div class="small text-body-secondary lh-sm text-center cegg-shipping-cost"><?php TemplateHelper::shippingCost($btn_item); ?></div>
+                            </div>
                         <?php endif; ?>
                     <?php endforeach; ?>
                 </div>

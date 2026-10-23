@@ -153,7 +153,10 @@ class ProductBlock
     {
         register_block_type('content-egg/products', array(
             'editor_script'   => 'content-egg-products-editor',
-            'style'           => array('cegg-bootstrap5', 'cegg-products'),
+            // View + editor handles, not 'style': style handles load on every
+            // front-end page when WP doesn't load block assets on demand.
+            'view_style_handles'   => array('cegg-bootstrap5', 'cegg-products'),
+            'editor_style_handles' => array('cegg-bootstrap5', 'cegg-products'),
             'render_callback' => array(__CLASS__, 'renderShortcode'),
             'attributes'      => self::getAttributes(),
         ));

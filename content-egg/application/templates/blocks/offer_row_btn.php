@@ -101,9 +101,15 @@ use ContentEgg\application\helpers\TemplateHelper;
                         </div>
                     <?php endif; ?>
 
-                    <?php if ($this->isVisible('stock_status', true)): ?>
+                    <?php $condition_label = TemplateHelper::conditionLabel($item); ?>
+                    <?php if ($this->isVisible('stock_status', true) || $condition_label !== ''): ?>
                         <div class="cegg-stock-status pt-2 small">
-                            <?php TemplateHelper::stockStatus($item); ?>
+                            <?php if ($this->isVisible('stock_status', true)): ?>
+                                <?php TemplateHelper::stockStatus($item); ?>
+                            <?php endif; ?>
+                            <?php if ($condition_label !== ''): ?>
+                                <span class="cegg-condition badge badge-secondary text-bg-secondary rounded-0"><?php echo esc_html($condition_label); ?></span>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
 

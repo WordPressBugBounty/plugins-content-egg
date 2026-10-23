@@ -9,6 +9,8 @@ use ContentEgg\application\components\ShopCoupon;
 use ContentEgg\application\components\ShopScan;
 use ContentEgg\application\components\ShopStore;
 use ContentEgg\application\components\ShopProductRef;
+use ContentEgg\application\components\VatNormalizer;
+use ContentEgg\application\VatRecalcScheduler;
 
 /**
  * ShopsController class file
@@ -221,7 +223,32 @@ class ShopsController
             return;
         }
 
+        $before = ShopStore::get($previous !== '' ? $previous : $prepared['domain']);
+        $target = VatNormalizer::siteTarget();
+
         $saved = ShopStore::save($prepared, $previous);
+
+        // Stored prices follow the shop's VAT settings: recalculate in the
+        // background when the conversion factor they imply changed, or on a
+        // rename of a shop with a VAT basis. Items keep their own domain on a
+        // rename, so that walk only reaches items whose domain matches the new
+        // key. Items still on the old domain match no shop any more and fall
+        // back to the shop's own prices on their next save.
+        // Comparing factors rather than raw settings keeps a new shop with an
+        // unknown basis, a rate change with no basis, or a factor-neutral
+        // change (e.g. unknown to "excl. VAT" under the "excl" target) from
+        // walking every post for nothing. With the site setting off nothing is
+        // normalized, and turning it off already scheduled every shop
+        // (VatRecalcScheduler::onSettingsChange).
+        $after = $saved !== '' ? ShopStore::get($saved) : null;
+        $renamed = $previous !== '' && ShopStore::normalizeDomain($previous) !== $saved;
+        $factor_changed = $after && $target !== ''
+            && abs(VatNormalizer::factorFor($target, $before) - VatNormalizer::factorFor($target, $after)) > 0.000001;
+
+        if ($after && $target !== '' && ($factor_changed || ($renamed && !empty($after['vat_included']))))
+        {
+            VatRecalcScheduler::schedule($saved);
+        }
 
         // Survives the redirect that turns the POST into a GET, so a
         // reload does not resubmit the form.
@@ -270,6 +297,11 @@ class ShopsController
             \delete_transient(self::WARNINGS_TRANSIENT . \get_current_user_id());
         else
             $warnings = array();
+
+        // The view shows the walk's progress: restart one whose chain died, or
+        // the line would read "Recalculating..." for good.
+        if (!empty($shop['domain']))
+            VatRecalcScheduler::ensureRunning($shop['domain']);
 
         \wp_enqueue_media();
 
@@ -414,6 +446,15 @@ class ShopsController
             'coupons' => $coupons,
             'badge_text' => isset($submitted['badge_text']) ? \sanitize_text_field($submitted['badge_text']) : '',
             'badge_color' => isset($submitted['badge_color']) ? \sanitize_text_field($submitted['badge_color']) : '',
+            // Always supplied, even empty: save() merges the submission over the
+            // stored record, so an omitted key would keep the old value and a
+            // cleared basis or an emptied range list could never be saved.
+            'vat_included' => isset($submitted['vat_included']) ? \sanitize_text_field($submitted['vat_included']) : '',
+            'vat_rate' => isset($submitted['vat_rate']) ? \sanitize_text_field($submitted['vat_rate']) : '',
+            'shipping_ranges' => isset($submitted['shipping_ranges']) && is_array($submitted['shipping_ranges']) ? array_map(function ($row)
+            {
+                return is_array($row) ? array_map('sanitize_text_field', $row) : array();
+            }, $submitted['shipping_ranges']) : array(),
         ));
     }
 
@@ -431,6 +472,9 @@ class ShopsController
         $shop['coupons_html'] = isset($submitted['coupons_html']) ? \wp_kses_post($submitted['coupons_html']) : '';
         $shop['badge_text'] = isset($submitted['badge_text']) ? \sanitize_text_field($submitted['badge_text']) : '';
         $shop['badge_color'] = isset($submitted['badge_color']) ? \sanitize_text_field($submitted['badge_color']) : '';
+        $shop['vat_included'] = isset($submitted['vat_included']) && in_array($submitted['vat_included'], array('yes', 'no'), true) ? $submitted['vat_included'] : '';
+        $shop['vat_rate'] = isset($submitted['vat_rate']) ? \sanitize_text_field($submitted['vat_rate']) : '';
+        $shop['shipping_ranges'] = ShopStore::sanitizeShippingRanges(isset($submitted['shipping_ranges']) && is_array($submitted['shipping_ranges']) ? $submitted['shipping_ranges'] : array());
 
         $shop['coupons'] = array();
         if (!empty($submitted['coupons']) && is_array($submitted['coupons']))

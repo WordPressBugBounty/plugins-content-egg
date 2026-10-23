@@ -6,6 +6,7 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TemplateHelper;
 use ContentEgg\application\components\feed\FeedFileCache;
+use ContentEgg\application\components\feed\FeedHttp;
 use ContentEgg\application\components\feed\FeedImportPendingException;
 use ContentEgg\application\components\feed\FeedImportState;
 use ContentEgg\application\components\feed\FeedImportStatus;
@@ -41,6 +42,16 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
     /** Bump whenever any feed product table schema (base or per-network override) changes. */
     const SCHEMA_VERSION = '3';
+
+    /**
+     * How many EAN matches to inspect when re-linking an offer whose feed id is gone.
+     * The feed's ean index is not shop-scoped, so a widely carried product returns
+     * roughly one row per shop and the shop filter runs afterwards, in PHP.
+     */
+    const EAN_RELINK_CANDIDATES = 50;
+
+    /** Search keyword prefix for an exact feed product ID lookup ("id:12345"). */
+    const ID_KEYWORD_PREFIX = 'id:';
 
     protected $rmdir;
     protected $product_model;
@@ -135,6 +146,30 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         }
 
         return !\apply_filters('cegg_feed_product_filter', true, $product, $this->getId());
+    }
+
+    /**
+     * "id:<feed product ID>" keyword: exact match on the feed's own product ID,
+     * which is also the saved item's unique_id. Binds products by a known ID
+     * (e.g. a Prefill meta field holding "id:12345") with no EAN, URL or title
+     * matching involved.
+     */
+    public static function isIdKeyword($keyword): bool
+    {
+        return is_string($keyword) && stripos(ltrim($keyword), self::ID_KEYWORD_PREFIX) === 0;
+    }
+
+    protected function searchByIdKeyword(string $keyword): array
+    {
+        $id = trim(substr(ltrim($keyword), strlen(self::ID_KEYWORD_PREFIX)));
+        if ($id === '')
+        {
+            return array();
+        }
+
+        $product = $this->product_model->searchById($id);
+
+        return $product ? array($product) : array();
     }
 
     /**
@@ -765,7 +800,7 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
             return;
         }
 
-        $response = \wp_remote_head($feed_url, array('timeout' => 15, 'redirection' => 3));
+        $response = FeedHttp::head($feed_url);
         if (\is_wp_error($response))
         {
             return;
@@ -2844,5 +2879,95 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         $this->deleteFile($gz_path); // remove the .gz source
 
         return $out_path;
+    }
+
+    /**
+     * Fallback lookup for an offer whose stored feed id is no longer in the feed.
+     *
+     * Merchants re-list products under a new feed id, which otherwise leaves the mapped
+     * offer out of stock for good. The EAN is the only stable identifier the saved offer
+     * already carries, so match on that - scoped to the same shop by isSameShop(), and
+     * only when it resolves to exactly one candidate. Anything fuzzier risks re-pointing
+     * the offer at a different product or a different shop.
+     *
+     * Callers must leave the offer's unique_id as it is: it keys the saved data array
+     * (ContentManager::setIds) and the price history rows, so rewriting it would orphan
+     * both and drop the offer's price chart. Only the links have to follow the new row.
+     *
+     * @return array|null Feed product row, or null when nothing can be matched safely.
+     */
+    protected function findFeedProductByEan(array $item)
+    {
+        if (empty($item['ean']))
+        {
+            return null;
+        }
+
+        $ean = TextHelper::fixEan($item['ean']);
+        if (!TextHelper::isEan($ean))
+        {
+            return null;
+        }
+
+        if (!$candidates = $this->product_model->searchByEan($ean, self::EAN_RELINK_CANDIDATES))
+        {
+            return null;
+        }
+
+        $matched = array();
+        foreach ($candidates as $candidate)
+        {
+            if (!$r = unserialize($candidate['product']))
+            {
+                continue;
+            }
+            if (!$this->isSameShop($item, $candidate, $r))
+            {
+                continue;
+            }
+
+            $matched[] = $candidate;
+        }
+
+        if (count($matched) !== 1)
+        {
+            return null;
+        }
+
+        return $matched[0];
+    }
+
+    /**
+     * Whether a feed row belongs to the same shop as a saved offer.
+     *
+     * Refuses by default, which keeps the EAN re-link off for a module until it says
+     * how its rows identify a shop.
+     *
+     * @param array $item Saved offer.
+     * @param array $row  Feed product table row.
+     * @param array $r    The row's unserialized feed data.
+     */
+    protected function isSameShop(array $item, array $row, array $r): bool
+    {
+        return false;
+    }
+
+    /**
+     * Saved offers are passed through wp_strip_all_tags() on save while feed rows are not,
+     * so put both merchant names on a common footing before comparing them.
+     */
+    protected static function normalizeMerchantName($merchant)
+    {
+        return mb_strtolower(trim(\wp_strip_all_tags((string) $merchant)));
+    }
+
+    protected static function isSameMerchant(array $item, $feed_merchant): bool
+    {
+        if (empty($item['merchant']) || empty($feed_merchant))
+        {
+            return false;
+        }
+
+        return self::normalizeMerchantName($item['merchant']) === self::normalizeMerchantName($feed_merchant);
     }
 }

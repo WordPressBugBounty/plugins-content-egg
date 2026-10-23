@@ -73,7 +73,11 @@ class BulkImportTab extends AbstractTab
 
         /* ---------- 2.  Prepare data for the view ------------------------- */
         $preset_options     = PresetRepository::getList();
-        $default_preset_id  = (int) PresetRepository::getDefaultId();
+        // Deals → Add deals links here with its own preset preselected.
+        $requested_preset   = absint($_GET['preset'] ?? 0); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $default_preset_id  = ($requested_preset && get_post_type($requested_preset) === PresetPostType::POST_TYPE)
+            ? $requested_preset
+            : (int) PresetRepository::getDefaultId();
         $post_cat_options   = WooHelper::getPostCategoryList();
         $woo_cat_options    = WooHelper::getWooCategoryList();
         $module_meta        = ModuleManager::getInstance()->getAffiliateParsersMeta(true, true, true);

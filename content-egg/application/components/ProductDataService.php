@@ -253,6 +253,10 @@ class ProductDataService
             {
                 $row['priceOld'] = (float) $row['priceOld'];
             }
+
+            // A typed price is in the displayed (normalized) basis; keep the
+            // shop value in step so save-time normalization keeps what was typed.
+            $row = VatNormalizer::absorbManualEdit($row);
         }
         unset($row);
 

@@ -3,7 +3,9 @@ defined('\ABSPATH') || exit;
 
 use ContentEgg\application\helpers\TemplateHelper;
 
-if (!TemplateHelper::isPriceAlertAllowed($item['unique_id'], $item['module_id']))
+// Nothing for an offer that has no history to alert on, or that the owner keeps
+// out of the best price (used / refurbished): its alert would never fire.
+if (!TemplateHelper::isPriceAlertOffered($item))
     return;
 
 $desired_price = '';

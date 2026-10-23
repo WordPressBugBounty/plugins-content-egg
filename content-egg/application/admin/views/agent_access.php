@@ -119,16 +119,25 @@ $guide_copy_row = ob_get_clean();
         <?php
         /* ---------- One tab per assistant ----------
         Organised by assistant, not by artifact: a Claude user should not have to
-        work out that the ChatGPT profile isn't theirs. The agent guide row is
+        work out that the ChatGPT project source isn't theirs. The agent guide row is
         repeated in every panel on purpose — it is the one artifact every assistant
         needs, and a single shared row outside the tabs would break the
         self-contained "do these steps" reading of each panel. */
 
-        // ChatGPT caps Custom GPT Actions at 30 operations and can't call the core
-        // GET endpoint, so the chatgpt profile is a trimmed, all-POST spec against
-        // the proxy. The Full profile is every operation, for other HTTP clients.
-        $openapi_chatgpt_url = add_query_arg('profile', 'chatgpt', $openapi_url);
         $site_host = (string) wp_parse_url(home_url(), PHP_URL_HOST);
+        $user_login = wp_get_current_user()->user_login;
+
+        // ChatGPT Work reads credentials from a text source in the project:
+        // the file reaches every Work chat in the project and the tasks scheduled
+        // from it, so the password never goes into a chat. The password stays a
+        // placeholder; the page never handles a real one.
+        $chatgpt_source = implode("\n", array(
+            sprintf('Content Egg site: %s', home_url('/')),
+            sprintf('Agent guide: %s', $guide_url),
+            sprintf('WordPress username: %s', $user_login),
+            'Application password: your-application-password',
+            'Read the agent guide before working on the site.',
+        ));
         ?>
         <div class="cegg-aa__how">
             <div class="cegg-aa__tabs" role="tablist" aria-label="<?php esc_attr_e('Choose your assistant', 'content-egg'); ?>">
@@ -141,7 +150,7 @@ $guide_copy_row = ob_get_clean();
             <div class="cegg-aa__panel" id="cegg-aa-panel-chatgpt" role="tabpanel" aria-labelledby="cegg-aa-tab-chatgpt">
                 <div class="cegg-aa__panel-head">
                     <div class="cegg-aa__tool-desc">
-                        <?php esc_html_e('Create a Custom GPT, paste the guide text into its Instructions, then import this action and set Authentication to Basic.', 'content-egg'); ?>
+                        <?php esc_html_e('Create a ChatGPT project, paste the text below into its Sources (Add sources → Paste text), then start a Work chat in the project.', 'content-egg'); ?>
                     </div>
                     <a class="cegg-aa__tool-link" href="<?php echo esc_url($docs_url . '/connect-chatgpt'); ?>" target="_blank" rel="noopener">
                         <?php esc_html_e('Step by step', 'content-egg'); ?><span class="dashicons dashicons-external"></span>
@@ -150,53 +159,37 @@ $guide_copy_row = ob_get_clean();
                 <ul class="cegg-aa__links">
                     <li class="cegg-aa__link">
                         <div class="cegg-aa__link-info">
-                            <span class="cegg-aa__link-name"><?php esc_html_e('Agent guide', 'content-egg'); ?></span>
-                            <?php // Custom GPT Instructions boxes never fetch a URL, so ChatGPT users want the text. ?>
-                            <span class="cegg-aa__link-for"><?php esc_html_e('Copy the text, paste it into your GPT’s Instructions', 'content-egg'); ?></span>
+                            <span class="cegg-aa__link-name"><?php esc_html_e('Project source', 'content-egg'); ?></span>
+                            <span class="cegg-aa__link-for"><?php esc_html_e('Fill in your application password before pasting', 'content-egg'); ?></span>
                         </div>
-                        <?php echo $guide_copy_row; ?>
+                        <div class="cegg-aa__code-row">
+                            <pre class="cegg-aa__code"><?php echo esc_html($chatgpt_source); ?></pre>
+                            <button type="button" class="button cegg-copy cegg-copy--icon" data-copy="<?php echo esc_attr($chatgpt_source); ?>" title="<?php esc_attr_e('Copy', 'content-egg'); ?>" aria-label="<?php esc_attr_e('Copy ChatGPT project source', 'content-egg'); ?>">
+                                <?php echo $copy_icon; ?>
+                            </button>
+                        </div>
                     </li>
 
                     <li class="cegg-aa__link">
                         <div class="cegg-aa__link-info">
-                            <span class="cegg-aa__link-name"><?php esc_html_e('OpenAPI — ChatGPT profile', 'content-egg'); ?></span>
-                            <span class="cegg-aa__link-for"><?php esc_html_e('Trimmed to fit ChatGPT’s action limit', 'content-egg'); ?></span>
+                            <span class="cegg-aa__link-name"><?php esc_html_e('Agent guide', 'content-egg'); ?></span>
+                            <span class="cegg-aa__link-for"><?php esc_html_e('Or paste it into a single chat with your login', 'content-egg'); ?></span>
                         </div>
-                        <div class="cegg-aa__link-copy">
-                            <input type="text" class="cegg-aa__url" readonly value="<?php echo esc_url($openapi_chatgpt_url); ?>" onfocus="this.select()">
-                            <button type="button" class="button cegg-copy cegg-copy--icon" data-copy="<?php echo esc_attr($openapi_chatgpt_url); ?>" title="<?php esc_attr_e('Copy link', 'content-egg'); ?>" aria-label="<?php esc_attr_e('Copy ChatGPT OpenAPI URL', 'content-egg'); ?>">
-                                <?php echo $copy_icon; ?>
-                            </button>
-                        </div>
+                        <?php echo $guide_copy_row; ?>
                     </li>
                 </ul>
+                <p class="cegg-aa__tool-desc">
+                    <?php esc_html_e('To run a job on a schedule, ask for it in a project chat.', 'content-egg'); ?>
+                </p>
 
-                <?php /* Basic-auth token helper — encodes entirely in the browser (see agent-access.js); nothing is sent to the server. */ ?>
                 <details class="cegg-aa__token">
                     <summary class="cegg-aa__token-summary">
-                        <?php esc_html_e('Make a Basic auth token', 'content-egg'); ?>
+                        <?php esc_html_e('Using the ChatGPT desktop app', 'content-egg'); ?>
                     </summary>
                     <div class="cegg-aa__token-body">
-                        <p class="cegg-aa__token-note">
-                            <span class="dashicons dashicons-lock"></span>
-                            <?php esc_html_e('Paste this under Authentication → API Key → Auth Type: Basic. The token is equivalent to your password: treat it the same and don’t share it.', 'content-egg'); ?>
+                        <p class="cegg-aa__tool-desc">
+                            <?php esc_html_e('Choose Work and set the permission menu under the message box to Full access.', 'content-egg'); ?>
                         </p>
-                        <div class="cegg-aa__token-fields">
-                            <label class="cegg-aa__token-field">
-                                <span><?php esc_html_e('WordPress username', 'content-egg'); ?></span>
-                                <input type="text" id="cegg-aa-user" value="<?php echo esc_attr(wp_get_current_user()->user_login); ?>" autocomplete="off" autocapitalize="off" spellcheck="false">
-                            </label>
-                            <label class="cegg-aa__token-field">
-                                <span><?php esc_html_e('Application password', 'content-egg'); ?></span>
-                                <input type="text" id="cegg-aa-pass" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" autocomplete="off" autocapitalize="off" spellcheck="false">
-                            </label>
-                        </div>
-                        <div class="cegg-aa__link-copy">
-                            <input type="text" id="cegg-aa-token" class="cegg-aa__url" readonly placeholder="<?php esc_attr_e('Your Basic auth token appears here', 'content-egg'); ?>" onfocus="this.select()">
-                            <button type="button" class="button cegg-copy cegg-copy--icon" id="cegg-aa-token-copy" data-copy="" title="<?php esc_attr_e('Copy', 'content-egg'); ?>" aria-label="<?php esc_attr_e('Copy Basic auth token', 'content-egg'); ?>">
-                                <?php echo $copy_icon; ?>
-                            </button>
-                        </div>
                     </div>
                 </details>
             </div>
@@ -267,7 +260,7 @@ $guide_copy_row = ob_get_clean();
             <div class="cegg-aa__panel" id="cegg-aa-panel-other" role="tabpanel" aria-labelledby="cegg-aa-tab-other" hidden>
                 <div class="cegg-aa__panel-head">
                     <div class="cegg-aa__tool-desc">
-                        <?php esc_html_e('Claude Code, Cursor and your own scripts need no setup — give them the guide link plus your username and application password. Anything that imports an API spec can use the full profile.', 'content-egg'); ?>
+                        <?php esc_html_e('Claude Code, Codex, Antigravity (Gemini), Cursor and your own scripts need no setup — give them the guide link plus your username and application password. Anything that imports an API spec can use the full profile.', 'content-egg'); ?>
                     </div>
                     <a class="cegg-aa__tool-link" href="<?php echo esc_url($docs_url . '/connect-other'); ?>" target="_blank" rel="noopener">
                         <?php esc_html_e('Step by step', 'content-egg'); ?><span class="dashicons dashicons-external"></span>
@@ -298,7 +291,7 @@ $guide_copy_row = ob_get_clean();
                     <li class="cegg-aa__link">
                         <div class="cegg-aa__link-info">
                             <span class="cegg-aa__link-name"><?php esc_html_e('MCP endpoint', 'content-egg'); ?></span>
-                            <span class="cegg-aa__link-for"><?php esc_html_e('Optional — for Cursor and other MCP apps', 'content-egg'); ?></span>
+                            <span class="cegg-aa__link-for"><?php esc_html_e('Optional — for Codex, Cursor and other MCP apps', 'content-egg'); ?></span>
                         </div>
                         <?php if ($mcp_active): ?>
                             <div class="cegg-aa__link-copy">
@@ -324,6 +317,71 @@ $guide_copy_row = ob_get_clean();
                         <?php endif; ?>
                     </li>
                 </ul>
+
+                <?php /* Codex MCP config — the Authorization header comes from an environment variable, so the password stays out of config.toml. */ ?>
+                <?php if ($mcp_active):
+                    $codex_config = implode("\n", array(
+                        '[mcp_servers.content_egg]',
+                        sprintf('url = "%s"', $mcp_endpoint),
+                        'env_http_headers = { Authorization = "CE_WP_AUTH" }',
+                    ));
+                    ?>
+                    <details class="cegg-aa__token">
+                        <summary class="cegg-aa__token-summary">
+                            <?php esc_html_e('Codex over MCP', 'content-egg'); ?>
+                        </summary>
+                        <div class="cegg-aa__token-body">
+                            <p class="cegg-aa__token-note">
+                                <span class="dashicons dashicons-info-outline"></span>
+                                <?php // One span, or the flex row would break the sentence apart at each code tag. ?>
+                                <span>
+                                    <?php
+                                    printf(
+                                        /* translators: %s: environment variable name */
+                                        wp_kses(__('Add this to <code>~/.codex/config.toml</code>, and set the environment variable <code>%s</code> to <code>Basic</code> followed by a space and the token made below.', 'content-egg'), array('code' => array())),
+                                        'CE_WP_AUTH'
+                                    );
+                                    ?>
+                                </span>
+                            </p>
+                            <div class="cegg-aa__code-row">
+                                <pre class="cegg-aa__code"><?php echo esc_html($codex_config); ?></pre>
+                                <button type="button" class="button cegg-copy cegg-copy--icon" data-copy="<?php echo esc_attr($codex_config); ?>" title="<?php esc_attr_e('Copy', 'content-egg'); ?>" aria-label="<?php esc_attr_e('Copy Codex config', 'content-egg'); ?>">
+                                    <?php echo $copy_icon; ?>
+                                </button>
+                            </div>
+                        </div>
+                    </details>
+                <?php endif; ?>
+
+                <?php /* Basic-auth token helper — encodes entirely in the browser (see agent-access.js); nothing is sent to the server. */ ?>
+                <details class="cegg-aa__token">
+                    <summary class="cegg-aa__token-summary">
+                        <?php esc_html_e('Make a Basic auth token', 'content-egg'); ?>
+                    </summary>
+                    <div class="cegg-aa__token-body">
+                        <p class="cegg-aa__token-note">
+                            <span class="dashicons dashicons-lock"></span>
+                            <?php esc_html_e('For tools that take an Authorization header instead of a username and password: send “Basic” followed by a space and this token. The token is equivalent to your password: treat it the same and don’t share it.', 'content-egg'); ?>
+                        </p>
+                        <div class="cegg-aa__token-fields">
+                            <label class="cegg-aa__token-field">
+                                <span><?php esc_html_e('WordPress username', 'content-egg'); ?></span>
+                                <input type="text" id="cegg-aa-user" value="<?php echo esc_attr($user_login); ?>" autocomplete="off" autocapitalize="off" spellcheck="false">
+                            </label>
+                            <label class="cegg-aa__token-field">
+                                <span><?php esc_html_e('Application password', 'content-egg'); ?></span>
+                                <input type="text" id="cegg-aa-pass" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" autocomplete="off" autocapitalize="off" spellcheck="false">
+                            </label>
+                        </div>
+                        <div class="cegg-aa__link-copy">
+                            <input type="text" id="cegg-aa-token" class="cegg-aa__url" readonly placeholder="<?php esc_attr_e('Your Basic auth token appears here', 'content-egg'); ?>" onfocus="this.select()">
+                            <button type="button" class="button cegg-copy cegg-copy--icon" id="cegg-aa-token-copy" data-copy="" title="<?php esc_attr_e('Copy', 'content-egg'); ?>" aria-label="<?php esc_attr_e('Copy Basic auth token', 'content-egg'); ?>">
+                                <?php echo $copy_icon; ?>
+                            </button>
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
     </div>
@@ -370,9 +428,6 @@ $guide_copy_row = ob_get_clean();
                                             <?php else: ?>
                                                 <span class="cegg-aa__tier cegg-aa__tier--free"><?php esc_html_e('Free', 'content-egg'); ?></span>
                                             <?php endif; ?>
-                                        <?php endif; ?>
-                                        <?php if (!empty($a['chatgpt_excluded'])): ?>
-                                            <span class="cegg-aa__no-gpt" title="<?php esc_attr_e('Not in the ChatGPT Actions profile (ChatGPT caps imports at 30 operations). Still available via Claude, MCP and REST.', 'content-egg'); ?>"><?php esc_html_e('Not in ChatGPT', 'content-egg'); ?></span>
                                         <?php endif; ?>
                                         <?php if (!$a['available']): ?>
                                             <span class="dashicons dashicons-lock cegg-aa__ability-lock" title="<?php esc_attr_e('Requires Pro', 'content-egg'); ?>"></span>

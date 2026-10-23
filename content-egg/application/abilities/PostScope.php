@@ -5,6 +5,7 @@ namespace ContentEgg\application\abilities;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\admin\GeneralConfig;
+use ContentEgg\application\components\ContentManager;
 
 /**
  * PostScope class file
@@ -62,6 +63,43 @@ final class PostScope
         }
 
         return \current_user_can('edit_post', $post_id);
+    }
+
+    /**
+     * Module ids that hold data on a post: the suffix of each _cegg_data_<module_id>
+     * meta key, in meta order.
+     *
+     * @return string[]
+     */
+    public static function attachedModuleIds(int $post_id): array
+    {
+        return self::moduleIdsFromMetaKeys(array_keys((array) \get_post_meta($post_id)));
+    }
+
+    /**
+     * The module ids in a list of post meta keys. Pure.
+     *
+     * @param array $meta_keys
+     * @return string[]
+     */
+    public static function moduleIdsFromMetaKeys(array $meta_keys): array
+    {
+        $prefix = ContentManager::META_PREFIX_DATA;
+        $module_ids = array();
+        foreach ($meta_keys as $meta_key)
+        {
+            if (!is_string($meta_key) || strpos($meta_key, $prefix) !== 0)
+            {
+                continue;
+            }
+            $module_id = (string) substr($meta_key, strlen($prefix));
+            if ($module_id !== '')
+            {
+                $module_ids[] = $module_id;
+            }
+        }
+
+        return $module_ids;
     }
 
     /**

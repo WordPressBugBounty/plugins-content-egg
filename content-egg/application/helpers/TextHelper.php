@@ -692,6 +692,12 @@ class TextHelper
      */
     public static function isEan($barcode)
     {
+        // fixEan() zero-pads empty input into the checksum-valid all-zero code
+        if (!preg_match('/[1-9]/', (string) $barcode))
+        {
+            return false;
+        }
+
         $barcode = self::fixEan($barcode);
 
         if (!preg_match("/^[0-9]{13}$/", $barcode))
@@ -736,7 +742,7 @@ class TextHelper
 
     public static function fixEan($barcode, $n = 13)
     {
-        if (strlen($barcode == $n))
+        if (strlen($barcode) == $n)
         {
             return $barcode;
         }
@@ -1533,5 +1539,17 @@ class TextHelper
 
         $text = preg_replace("/[\n\r\t ]+/", '', $text);
         return mb_strlen($text, 'UTF-8');
+    }
+
+    /**
+     * Module exception messages are HTML-escaped (esc_html) for the legacy
+     * metabox. REST consumers render text, so return a plain-text message:
+     * entities decoded, tags (e.g. a doc link) stripped.
+     */
+    public static function plainErrorMessage($message)
+    {
+        $message = html_entity_decode((string) $message, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return trim(\wp_strip_all_tags($message));
     }
 }

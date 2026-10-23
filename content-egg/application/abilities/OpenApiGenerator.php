@@ -21,75 +21,16 @@ final class OpenApiGenerator
 {
     const SPEC_VERSION = '3.1.0';
 
-    /** ChatGPT Custom GPT Actions refuse an imported schema above this many operations. */
-    const CHATGPT_MAX_OPERATIONS = 30;
-
     /**
-     * Abilities dropped from the 'chatgpt' profile. ChatGPT Custom GPT Actions
-     * cap an imported OpenAPI at 30 operations; the full ability set is larger, so
-     * this trims a few admin / rarely-needed-from-a-chat-GPT operations to fit.
-     * They stay fully available over MCP, plain REST, and the agent guide.
+     * Client profiles that get the all-POST document against the Content Egg
+     * proxy instead of the canonical one. 'chatgpt' is the old Custom GPT link,
+     * kept as an alias so it still returns a usable document.
      */
-    const CHATGPT_EXCLUDE = array(
-        'content-egg/get-feed-status',
-        'content-egg/search-all-products',
-        'content-egg/refresh-post-products',
-        'content-egg/deactivate-module',
-        // ChatGPT gets the guide via its Instructions (paste, or a "read this URL"
-        // line its browser fetches), so it doesn't need get-guide as an operation —
-        // dropping it keeps the profile under ChatGPT's 30-operation cap. get-guide
-        // stays in the full spec for MCP/Claude/curl, where it's a first-class tool.
-        'content-egg/get-guide',
-    );
+    const POST_PROFILES = array('post', 'chatgpt');
 
-    /**
-     * Abilities that keep ChatGPT's per-call confirmation (x-openai-isConsequential
-     * = true): genuinely destructive (data loss) or public-facing. Everything else
-     * gets a one-time "Always allow". Deliberately narrower than the `destructive`
-     * annotation so reversible edits (insert-blocks, set-featured-image) don't
-     * prompt on every call.
-     */
-    const CHATGPT_CONFIRM = array(
-        'content-egg/remove-products',
-        'content-egg/deactivate-module',
-        'content-egg/set-post-status',
-    );
-
-    /**
-     * Which abilities the ChatGPT profile actually drops for a build exposing
-     * $ability_count of them — empty when the set already fits.
-     *
-     * The exclusion list exists to satisfy ChatGPT's limit, not because those
-     * abilities are unwanted, so a build under the cap (free registers 17) keeps
-     * everything. Single source of truth: applyProfile() trims by this, and the
-     * Agent Access screen badges by it, so the spec and the UI can never disagree.
-     */
-    public static function chatGptExcludes(int $ability_count): array
+    public static function isPostProfile(string $profile): bool
     {
-        return $ability_count > self::CHATGPT_MAX_OPERATIONS ? self::CHATGPT_EXCLUDE : array();
-    }
-
-    /**
-     * Keep only the abilities allowed under a client profile. Unknown/empty
-     * profile returns the list unchanged (full spec). Pure.
-     */
-    public static function applyProfile(array $abilities, string $profile): array
-    {
-        if ($profile !== 'chatgpt')
-        {
-            return $abilities;
-        }
-
-        $exclude = array_flip(self::chatGptExcludes(count($abilities)));
-        if (!$exclude)
-        {
-            return $abilities;
-        }
-
-        return array_values(array_filter($abilities, static function ($a) use ($exclude)
-        {
-            return !isset($exclude[(string) ($a['name'] ?? '')]);
-        }));
+        return in_array($profile, self::POST_PROFILES, true);
     }
 
     /**
@@ -131,50 +72,30 @@ final class OpenApiGenerator
      * Pure: descriptors -> OpenAPI 3.1 document (array; serialize with
      * wp_json_encode at the transport layer).
      */
-    public static function buildSpec(array $abilities, string $server_url, string $version, bool $compact = false, bool $post_all = false): array
+    public static function buildSpec(array $abilities, string $server_url, string $version, bool $post_all = false): array
     {
         $paths = array();
 
         foreach ($abilities as $a)
         {
             $description = (string) $a['description'];
-            $warning = !empty($a['destructive'])
-                ? ' WARNING: destructive operation — confirm with the user before calling.'
-                : '';
-
-            // ChatGPT Custom GPT Actions cap each operation description at 300 chars.
-            // The full text is served to MCP/REST/Claude; the compact (chatgpt) spec
-            // trims it — the rich workflow context lives in the agent guide the user
-            // pastes into the GPT's Instructions.
-            //
-            // The warning is appended AFTER trimming, against a budget reserved for
-            // it. Appending first meant the cap ate it off the end: the one line
-            // that tells the agent an operation destroys content was the line most
-            // reliably dropped from the profile that needed it most.
-            if ($compact)
+            if (!empty($a['destructive']))
             {
-                $description = self::truncate($description, 300 - mb_strlen($warning));
+                $description .= ' WARNING: destructive operation — confirm with the user before calling.';
             }
-
-            $description .= $warning;
 
             $op = array(
                 'operationId' => str_replace(array('/', '-'), '_', (string) $a['name']),
                 'summary' => (string) $a['label'],
                 'description' => $description,
                 'security' => array(array('basicAuth' => array())),
-                // ChatGPT confirmation gate: POST operations are "consequential"
-                // (confirm every call) by default. Mark only the narrow confirm
-                // list consequential, so reads and ordinary edits (incl. insert-
-                // blocks, set-featured-image) get a one-time "Always allow".
-                'x-openai-isConsequential' => in_array((string) $a['name'], self::CHATGPT_CONFIRM, true),
                 'responses' => self::responses($a),
             );
 
-            // $post_all forces every operation to POST with a JSON body (used by
-            // the ChatGPT profile, which targets the Content Egg POST proxy):
-            // ChatGPT can't serialize deepObject query params and edge/WAF layers
-            // block parameterized GETs, so readonly abilities go through POST too.
+            // $post_all forces every operation to POST with a JSON body (the post
+            // profile, which targets the Content Egg POST proxy): many HTTP tools
+            // can't serialize deepObject query params and edge/WAF layers block
+            // parameterized GETs, so readonly abilities go through POST too.
             if (!empty($a['readonly']) && !$post_all)
             {
                 $op['parameters'] = array(array(
@@ -193,8 +114,8 @@ final class OpenApiGenerator
                 // at the top level; the canonical wp-abilities route this spec
                 // otherwise documents takes them under "input", and that is core's
                 // contract, not ours to flatten. Publishing the flat shape here
-                // means a Custom GPT has no envelope to omit — the failure mode
-                // that made whole-article writes unreliable.
+                // means a client has no envelope to omit — the failure mode that
+                // made whole-article writes unreliable.
                 $body_schema = self::objectBranch((array) $a['input_schema']);
                 if (!$post_all)
                 {
@@ -226,7 +147,8 @@ final class OpenApiGenerator
                     . ($post_all
                         ? ' Each operation is a POST whose JSON body holds the arguments at the top level, e.g. {"post_id": 12, "mode": "append"}.'
                         : ' Discover all abilities at GET {server}/abilities.')
-                    . ' Full agent guide (workflows, block-choice rules): GET {server-site}/wp-json/content-egg/v1/agent-guide.',
+                    . ' Agent guide (workflows, block-choice rules): GET {server-site}/wp-json/content-egg/v1/agent-guide'
+                    . ' returns the core guide and its topic index; add ?topic=<name> for one topic, ?topic=all for everything.',
             ),
             'servers' => array(array('url' => rtrim($server_url, '/'))),
             'paths' => $paths,
@@ -252,83 +174,6 @@ final class OpenApiGenerator
         );
     }
 
-    /**
-     * Shorten to at most $max characters, preferring a clean boundary: end on the
-     * last full sentence when one sits past ~60% of the budget, else cut on a word
-     * boundary and append an ellipsis. Result is always <= $max.
-     */
-    private static function truncate(string $text, int $max): string
-    {
-        if (mb_strlen($text) <= $max)
-        {
-            return $text;
-        }
-
-        $cut = mb_substr($text, 0, $max - 1);
-
-        $period = self::lastSentenceEnd($cut, (int) ($max * 0.6));
-        if ($period !== false)
-        {
-            return mb_substr($cut, 0, $period + 1); // ends on a sentence, no ellipsis
-        }
-
-        $space = mb_strrpos($cut, ' ');
-        if ($space !== false)
-        {
-            $cut = mb_substr($cut, 0, $space);
-        }
-        return rtrim($cut) . '…';
-    }
-
-    /** Periods that end an abbreviation, not a sentence. */
-    const NOT_SENTENCE_END = array('e.g.', 'i.e.', 'etc.', 'vs.');
-
-    /**
-     * Offset of the rightmost sentence-ending ". " sitting past $min, or false.
-     *
-     * Plain strrpos('. ') treats "e.g. " as a sentence end, so a description
-     * truncated there came back reading as a COMPLETE sentence that stops right
-     * where its example was about to start — and with no ellipsis, nothing told
-     * the reader anything had been dropped. Skip those and keep looking left.
-     *
-     * @return int|false
-     */
-    private static function lastSentenceEnd(string $text, int $min)
-    {
-        $offset = mb_strlen($text);
-
-        while ($offset > 0)
-        {
-            $pos = mb_strrpos(mb_substr($text, 0, $offset), '. ');
-            if ($pos === false || $pos <= $min)
-            {
-                return false;
-            }
-
-            $start = max(0, $pos - 3);
-            $window = mb_strtolower(mb_substr($text, $start, $pos - $start + 1));
-
-            $is_abbr = false;
-            foreach (self::NOT_SENTENCE_END as $abbr)
-            {
-                if (mb_substr($window, -mb_strlen($abbr)) === $abbr)
-                {
-                    $is_abbr = true;
-                    break;
-                }
-            }
-
-            if (!$is_abbr)
-            {
-                return $pos;
-            }
-
-            $offset = $pos; // keep searching to the left of this abbreviation
-        }
-
-        return false;
-    }
-
     private static function objectBranch(array $schema): array
     {
         $schema['type'] = 'object';
@@ -340,7 +185,7 @@ final class OpenApiGenerator
         // OpenAPI/JSON-Schema consumer rejects. Callers omit the parameter
         // instead, so drop it.
         unset($schema['default']);
-        // ChatGPT (and strict OpenAPI validators) reject an object schema with no
+        // Strict OpenAPI validators (ChatGPT's among them) reject an object schema with no
         // "properties" key — no-input abilities have none, so emit an empty object
         // (stdClass so it serializes as {} rather than []).
         if (empty($schema['properties']))

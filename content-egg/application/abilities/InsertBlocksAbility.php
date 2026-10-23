@@ -31,9 +31,6 @@ final class InsertBlocksAbility extends AbilityBase
 
     public function description(): string
     {
-        // Front-loaded, and tightly: this is a destructive operation, so the
-        // ChatGPT profile reserves 70 of its 300 characters for the warning line.
-        // The mode list is the contract and has to survive inside what is left.
         return 'Writes a validated block tree into an existing post. Modes: append, prepend, '
             . 'at_index (insert before "index"), replace_at_index (replace the one block at '
             . '"index"), replace_all (DESTRUCTIVE: discards current content). '
