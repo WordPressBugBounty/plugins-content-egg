@@ -7,6 +7,7 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\BlockTemplateManager;
 use ContentEgg\application\components\ShortcodeAtts;
+use ContentEgg\application\components\ProductsAccess;
 
 use function ContentEgg\prn;
 use function ContentEgg\prnx;;
@@ -68,7 +69,11 @@ class BlockShortcode extends EggShortcode
             $post_id = $post->ID;
         }
         else
+        {
             $post_id = $a['post_id'];
+            if (!ProductsAccess::canShow($post_id))
+                return '';
+        }
 
         if (empty($a['template']))
             return '';

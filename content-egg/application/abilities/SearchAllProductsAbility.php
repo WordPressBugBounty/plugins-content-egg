@@ -197,7 +197,7 @@ final class SearchAllProductsAbility extends AbilityBase
                     'search_mode' => $found['search_mode'],
                     'results' => $fields === 'full'
                         ? $full_items
-                        : ($fields === 'match' ? LeanProduct::matchList($items, $module_id) : LeanProduct::mapList($items)),
+                        : ($fields === 'match' ? LeanProduct::matchList($items, $module_id) : LeanProduct::mapList($items, $module_id)),
                 );
                 // Each module group carries its own token: one add call per module/search.
                 if ($full_items)

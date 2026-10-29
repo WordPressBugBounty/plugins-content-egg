@@ -16,6 +16,7 @@ use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\OfferCountService;
 use ContentEgg\application\components\ShopMigration;
 use ContentEgg\application\helpers\LogoHelper;
+use ContentEgg\application\deals\DealKeysBackfill;
 use ContentEgg\application\models\LinkIndexModel;
 
 /**
@@ -118,6 +119,7 @@ class Installer
         MaintenanceCron::clear();
         self::clearFeedSyncEvents();
         \wp_clear_scheduled_hook(\ContentEgg\application\deals\DealsCron::HOOK);
+        \wp_clear_scheduled_hook(DealKeysBackfill::HOOK);
     }
 
     /**
@@ -276,6 +278,9 @@ class Installer
         if ($db_version && $db_version < 99)
             self::upgrade_v99();
 
+        if ($db_version && $db_version < 100)
+            self::upgrade_v100();
+
         if (Plugin::isPaidBuild())
             MaintenanceCron::schedule();
 
@@ -365,6 +370,15 @@ class Installer
 
         if ($pinned !== $stored)
             \update_option($name, $pinned);
+    }
+
+    /**
+     * Deal keys and end-date sources for existing deals, in WP-cron batches
+     * (DealKeysBackfill) so a large site never times out on this admin request.
+     */
+    private static function upgrade_v100()
+    {
+        DealKeysBackfill::start();
     }
 
     /**

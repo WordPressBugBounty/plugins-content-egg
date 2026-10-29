@@ -40,7 +40,7 @@ abstract class AbstractSearchAbility extends AbilityBase
     abstract protected function moduleKind(): string;
 
     /** Map raw result items to this type's lean envelope. */
-    abstract protected function mapLean(array $items): array;
+    abstract protected function mapLean(array $items, string $module_id = ''): array;
 
     /**
      * The `fields` profiles this ability accepts. Only the product searches add
@@ -58,7 +58,7 @@ abstract class AbstractSearchAbility extends AbilityBase
      */
     protected function mapMatch(array $items, string $module_id): array
     {
-        return $this->mapLean($items);
+        return $this->mapLean($items, $module_id);
     }
 
     /** Whether the response says how the module treated the query (search_mode). */
@@ -201,7 +201,7 @@ abstract class AbstractSearchAbility extends AbilityBase
             'notice' => $found['notice'],
             'results' => $fields === 'full'
                 ? $full_items
-                : ($fields === 'match' ? $this->mapMatch($found['items'], $module_id) : $this->mapLean($found['items'])),
+                : ($fields === 'match' ? $this->mapMatch($found['items'], $module_id) : $this->mapLean($found['items'], $module_id)),
         );
         if ($this->echoesSearchMode())
         {

@@ -24,14 +24,19 @@ class DealsBlock
 
     public static function initAction(): void
     {
+        // The deal styles as the block's editor style: WordPress prints a block's
+        // editor_style into the iframed editor canvas, and on no other admin page.
+        // (enqueue_block_assets could not do it: while it collects the iframe's
+        // assets, WordPress forces should_load_block_editor_scripts_and_styles to
+        // false.) On the front end the block enqueues them when it renders.
+        DealTemplates::register();
         \register_block_type('content-egg/deals', array(
             'editor_script' => self::EDITOR_HANDLE,
+            'editor_style' => 'cegg-deals',
             'render_callback' => array(__CLASS__, 'render'),
             'attributes' => self::attributes(),
         ));
         \add_action('enqueue_block_editor_assets', array(__CLASS__, 'enqueueEditor'));
-        // The editor canvas is an iframe; only enqueue_block_assets reaches it.
-        \add_action('enqueue_block_assets', array(__CLASS__, 'enqueueCanvasStyle'));
     }
 
     /**
@@ -118,18 +123,6 @@ class DealsBlock
         $asset = file_exists($asset_file) ? require $asset_file : array('dependencies' => array(), 'version' => false);
 
         \wp_register_script(self::EDITOR_HANDLE, \plugins_url('block.js', __FILE__), (array) $asset['dependencies'], $asset['version']);
-    }
-
-    public static function enqueueCanvasStyle(): void
-    {
-        // enqueue_block_assets also fires admin-wide (admin_enqueue_scripts ->
-        // wp_common_block_scripts_and_styles()), not just in the block editor -
-        // restrict to editor screens so this style doesn't load on every wp-admin page.
-        if (!\is_admin() || !\wp_should_load_block_editor_scripts_and_styles())
-            return;
-
-        DealTemplates::register();
-        \wp_enqueue_style('cegg-deals');
     }
 
     private static function slugs($value): array

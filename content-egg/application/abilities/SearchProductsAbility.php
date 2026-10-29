@@ -47,9 +47,9 @@ final class SearchProductsAbility extends AbstractSearchAbility
         return 'product';
     }
 
-    protected function mapLean(array $items): array
+    protected function mapLean(array $items, string $module_id = ''): array
     {
-        return LeanProduct::mapList($items);
+        return LeanProduct::mapList($items, $module_id);
     }
 
     protected function fieldsEnum(): array

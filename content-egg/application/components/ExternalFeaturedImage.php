@@ -25,6 +25,11 @@ class ExternalFeaturedImage
     const EXTERNAL_URL_META = '_cegg_thumbnail_external';
     const FAKE_INT_START = '99998';
 
+    // Short enough for a JS number: WooCommerce's gallery script runs the ids
+    // through parseInt() on every edit. Ids made before used 18 digits.
+    const FAKE_ID_LENGTH = 15;
+    const LEGACY_FAKE_ID_LENGTH = 18;
+
     public static function initAction()
     {
         self::initFeaturedImage();
@@ -74,36 +79,55 @@ class ExternalFeaturedImage
         \add_filter('wp_get_attachment_image_src', array(__CLASS__, 'replaceImageSrc'), 10, 4);
         \add_filter('woocommerce_product_get_gallery_image_ids', array(__CLASS__, 'getFakeGalleryIds'), 99, 2);
         \add_action('content_egg_save_data', array(__CLASS__, 'setExternalGallery'), 13, 4);
+
+        if (\is_admin())
+            \add_action('add_meta_boxes_product', array(__CLASS__, 'upgradeGalleryIds'));
     }
 
-    private static function generateFakeId($post_id, $image_key = 0)
+    public static function generateFakeId($post_id, $image_key = 0)
     {
         if ($image_key > 9)
             $image_key = 9;
 
-        $max_len = strlen(strval(PHP_INT_MAX)) - 1;
-        $post_id_len = strlen(strval($post_id));
+        $post_id = (string) $post_id;
+        $length = strlen($post_id) > self::FAKE_ID_LENGTH - strlen(self::FAKE_INT_START) - 1 ? self::LEGACY_FAKE_ID_LENGTH : self::FAKE_ID_LENGTH;
 
-        $fake_id = self::FAKE_INT_START;
-        $pad = max(0, $max_len - $post_id_len - strlen($fake_id) - 1);
-        $fake_id .= str_repeat('0', $pad);
-        $fake_id .= $post_id;
-        $fake_id .= $image_key;
-
-        return $fake_id;
+        return self::FAKE_INT_START . str_pad($post_id, $length - strlen(self::FAKE_INT_START) - 1, '0', STR_PAD_LEFT) . $image_key;
     }
 
     private static function getRealId($post_id)
     {
-        if (strlen(strval($post_id)) != strlen(strval(PHP_INT_MAX)) - 1)
+        $post_id = (string) $post_id;
+
+        if (!in_array(strlen($post_id), array(self::FAKE_ID_LENGTH, self::LEGACY_FAKE_ID_LENGTH), true))
             return false;
 
-        if (substr((string) $post_id, 0, strlen(self::FAKE_INT_START)) != self::FAKE_INT_START)
+        if (strpos($post_id, self::FAKE_INT_START) !== 0)
             return false;
 
-        $real = substr_replace((string) $post_id, '', 0, strlen(self::FAKE_INT_START));
-        $real = substr($real, 0, -1);
-        return (int) $real;
+        return (int) substr($post_id, strlen(self::FAKE_INT_START), -1);
+    }
+
+    /**
+     * Rewrite gallery slot ids stored in the old 18-digit format before the
+     * product editor prints them: its script would round them.
+     */
+    public static function upgradeGalleryIds($post)
+    {
+        $stored = (string) \get_post_meta($post->ID, '_product_image_gallery', true);
+        if (!$stored)
+            return;
+
+        $ids = explode(',', $stored);
+        foreach ($ids as $i => $id)
+        {
+            if (strlen($id) === self::LEGACY_FAKE_ID_LENGTH && self::getRealId($id) === (int) $post->ID)
+                $ids[$i] = self::generateFakeId($post->ID, self::getRealImageKey($id));
+        }
+
+        $upgraded = implode(',', $ids);
+        if ($upgraded !== $stored)
+            \update_post_meta($post->ID, '_product_image_gallery', $upgraded);
     }
 
     public static function setImage($data, $module_id, $post_id, $is_last_iteration)
@@ -137,12 +161,11 @@ class ExternalFeaturedImage
             }
             $item = $data[0];
         }
-        if (empty($item['img']))
+        $img_url = !empty($item['img_large']) ? $item['img_large'] : ($item['img'] ?? '');
+        if (!$img_url)
         {
             return;
         }
-
-        $img_url = $item['img'];
 
         return self::updateExternalMeta($img_url, $post_id);
     }

@@ -49,6 +49,9 @@ class FamilyStore
 	// A member of the post being deleted: its family is rebuilt once the term links are gone.
 	private static $pending_delete = false;
 
+	// Families of the pages being deleted in this request: deleted_post checks whether any is left empty.
+	private static $deleting_from = array();
+
 	// Depth of suspendCatalog() calls; rebuilds wait while it is above 0.
 	private static $suspended = 0;
 
@@ -832,18 +835,89 @@ class FamilyStore
 	 */
 	public static function onBeforeDeletePost($post_id): void
 	{
-		if (self::familyIdOf((int) $post_id) > 0 && !self::$pending_delete)
+		$family_id = self::familyIdOf((int) $post_id);
+		if ($family_id <= 0)
+		{
+			return;
+		}
+
+		self::$deleting_from[$family_id] = true;
+		if (!self::$pending_delete)
 		{
 			self::$pending_delete = true;
 			\add_action('deleted_post', array(__CLASS__, 'onDeletedPost'));
 		}
 	}
 
+	/**
+	 * A member was deleted for good. A family left with no page at all, not
+	 * even one in the trash, is deleted too: nothing can come back to it, and
+	 * an empty family would only be picked up again by the next agent.
+	 */
 	public static function onDeletedPost($post_id = 0): void
 	{
 		\remove_action('deleted_post', array(__CLASS__, 'onDeletedPost'));
 		self::$pending_delete = false;
+
+		$families = array_keys(self::$deleting_from);
+		self::$deleting_from = array();
+		foreach (self::emptiedFamilies($families, array(__CLASS__, 'hasAnyMember')) as $family_id)
+		{
+			try
+			{
+				self::delete($family_id);
+			}
+			catch (\Throwable $e)
+			{
+				// Already gone, or WordPress refused: the family stays, as before.
+			}
+		}
+
 		self::markCatalogStale();
+	}
+
+	/**
+	 * Pure: the families among $family_ids that $has_member says have no page left.
+	 *
+	 * @param int[]    $family_ids
+	 * @param callable $has_member function (int $family_id): bool
+	 * @return int[]
+	 */
+	public static function emptiedFamilies(array $family_ids, callable $has_member): array
+	{
+		$empty = array();
+		foreach ($family_ids as $family_id)
+		{
+			$family_id = (int) $family_id;
+			if ($family_id > 0 && !$has_member($family_id))
+			{
+				$empty[] = $family_id;
+			}
+		}
+
+		return $empty;
+	}
+
+	/** Any page in the family, the trash and every other status included. */
+	public static function hasAnyMember(int $id): bool
+	{
+		$ids = \get_posts(array(
+			// Every type: 'any' skips types hidden from search, and a page of a type
+			// no longer in Content Egg's post types still belongs to the family.
+			'post_type' => array_values(\get_post_types()),
+			'post_status' => array_keys(\get_post_stati()),
+			'tax_query' => array(array(
+				'taxonomy' => VariantFamily::TAXONOMY,
+				'field' => 'term_id',
+				'terms' => array($id),
+			)),
+			'fields' => 'ids',
+			'numberposts' => 1,
+			'no_found_rows' => true,
+			'suppress_filters' => true,
+		));
+
+		return !empty($ids);
 	}
 
 	/**

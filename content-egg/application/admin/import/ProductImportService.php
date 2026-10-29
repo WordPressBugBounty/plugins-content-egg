@@ -306,7 +306,7 @@ class ProductImportService
 
             if ('' !== $unique_id)
             {
-                $existing_id = PostHelper::getPostIdByUniqueId($unique_id);
+                $existing_id = ImportDuplicateCheck::existingPostId((string) ($preset['post_type'] ?? 'post'), (string) ($row['module_id'] ?? ''), $unique_id);
                 if ($existing_id)
                 {
                     $msg = sprintf(

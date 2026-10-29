@@ -5,6 +5,7 @@ namespace ContentEgg\application\abilities;
 defined('\ABSPATH') || exit;
 
 use ContentEgg\application\components\OfferCondition;
+use ContentEgg\application\deals\DealSignals;
 use ContentEgg\application\helpers\Gtin;
 
 /**
@@ -40,8 +41,9 @@ final class LeanProduct
 
     /**
      * @param object|array $item
+     * @param string $module_id used when the item does not carry its own module_id
      */
-    public static function map($item): array
+    public static function map($item, string $module_id = ''): array
     {
         $a = is_object($item) ? get_object_vars($item) : (array) $item;
 
@@ -53,7 +55,7 @@ final class LeanProduct
             list($excerpt, $truncated) = self::excerpt((string) $a['description']);
         }
 
-        return array(
+        $lean = array(
             'unique_id' => (string) ($a['unique_id'] ?? ''),
             'title' => (string) ($a['title'] ?? ''),
             // Emit null (not 0) when there is no usable price: some modules
@@ -69,11 +71,19 @@ final class LeanProduct
             'description_excerpt' => $excerpt,
             'description_truncated' => $truncated,
         );
+
+        return self::withDeal($lean, $a, $module_id);
     }
 
-    public static function mapList(array $items): array
+    public static function mapList(array $items, string $module_id = ''): array
     {
-        return array_values(array_map(array(self::class, 'map'), $items));
+        return array_values(array_map(
+            static function ($item) use ($module_id)
+            {
+                return self::map($item, $module_id);
+            },
+            $items
+        ));
     }
 
     /**
@@ -116,7 +126,7 @@ final class LeanProduct
             $model = self::featureCode($a['features'] ?? null, self::MODEL_FEATURES);
         }
 
-        return array(
+        $match = array(
             'unique_id' => self::text($a['unique_id'] ?? null),
             'module_id' => $module_id,
             'title' => self::text($a['title'] ?? null),
@@ -144,6 +154,8 @@ final class LeanProduct
             'group' => self::text($a['group'] ?? null),
             'last_update' => (int) ($a['last_update'] ?? 0),
         );
+
+        return self::withDeal($match, $a, $module_id);
     }
 
     public static function matchList(array $items, string $module_id = ''): array
@@ -177,6 +189,32 @@ final class LeanProduct
      * return 0 / empty for in-stock items whose price is unavailable, and a
      * literal 0 reads as "free" to an agent.
      */
+    /**
+     * Adds the store's deal facts (DealSignals) as `deal`, times in ISO UTC, when
+     * the module has any. Never on fullItem(): full items are echoed back to the
+     * attach abilities and stored as product data.
+     */
+    private static function withDeal(array $out, array $a, string $module_id): array
+    {
+        $own_module_id = self::text($a['module_id'] ?? null);
+        $signals = DealSignals::fromItem($own_module_id !== '' ? $own_module_id : $module_id, $a);
+        if ($signals === null)
+        {
+            return $out;
+        }
+
+        foreach (array('starts', 'ends') as $key)
+        {
+            if (isset($signals[$key]))
+            {
+                $signals[$key] = gmdate('Y-m-d\TH:i:s\Z', $signals[$key]);
+            }
+        }
+        $out['deal'] = $signals;
+
+        return $out;
+    }
+
     private static function usablePrice(array $a): ?float
     {
         return isset($a['price']) && $a['price'] !== '' && (float) $a['price'] > 0 ? (float) $a['price'] : null;

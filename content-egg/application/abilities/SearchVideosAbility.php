@@ -47,7 +47,7 @@ final class SearchVideosAbility extends AbstractSearchAbility
         return 'video';
     }
 
-    protected function mapLean(array $items): array
+    protected function mapLean(array $items, string $module_id = ''): array
     {
         return LeanVideo::mapList($items);
     }

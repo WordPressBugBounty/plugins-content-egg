@@ -6,10 +6,10 @@ namespace ContentEgg;
   Plugin Name: Content Egg
   Plugin URI: https://www.keywordrush.com/contentegg
   Description: Multi-network affiliate plugin — imports, price comparison, automation, and structured blocks for affiliate content.
-  Version: 12.0.0
+  Version: 12.1.0
   Requires at least: 6.9
   Requires PHP: 8.0
-  Tested up to: 7.1.3
+  Tested up to: 7.1.4
   Author: keywordrush.com
   Author URI: https://www.keywordrush.com
   Text Domain: content-egg

@@ -438,6 +438,10 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!$post_id)
             \wp_die('Invalid post ID');
 
+        // The nonce is not bound to a post: check rights on this one.
+        if (!\current_user_can('edit_post', $post_id))
+            \wp_die('You don\'t have access to this post.');
+
         @set_time_limit(60);
 
         $action = isset($_POST['btn']) ? TextHelper::clear(\sanitize_text_field(\wp_unslash($_POST['btn']))) : null;

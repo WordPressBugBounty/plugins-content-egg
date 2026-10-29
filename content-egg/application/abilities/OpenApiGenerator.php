@@ -214,6 +214,11 @@ final class OpenApiGenerator
         {
             $r['409'] = self::errorResponse('Revision conflict (cegg_conflict; data.revision carries the current revision)');
         }
+        // create-post with a deal object refuses a second active deal for an offer.
+        if (empty($a['readonly']) && !empty($a['input_schema']['properties']['deal']))
+        {
+            $r['409'] = self::errorResponse('An active deal for this offer exists (cegg_duplicate_deal; data.deal_id names it — update it with content-egg/update-deal or set deal.allow_duplicate)');
+        }
         if (strpos((string) $a['name'], 'content-egg/search-') === 0)
         {
             // All search abilities are rate-limited and can surface an upstream

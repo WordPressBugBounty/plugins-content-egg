@@ -138,14 +138,41 @@ class DealService
                 \update_post_meta($post_id, DealPostType::META_BASE_PRICE, (float) $meta['price']);
 
             self::assignStore($post_id, $meta);
+            // Follows the item, so a changed product URL moves the URL key too.
+            self::writeKeys($post_id, $pin['module_id'], $item);
         }
+
+        // The end date first: an "offer" end follows the store's own deal end
+        // time, and a store extension can revive a deal that ended.
+        $signals = $item ? DealSignals::fromItem($pin['module_id'], $item) : null;
+        $current_ends = (int) \get_post_meta($post_id, DealPostType::META_ENDS, true);
+        $source = (string) \get_post_meta($post_id, DealPostType::META_ENDS_SOURCE, true);
+        // Recorded on first sight, so a deal refreshed before the v100 upgrade ran
+        // (or restored from the trash) keeps an end date a person set.
+        if ($source === '')
+        {
+            $source = DealEnds::sourceFor('', $current_ends);
+            \update_post_meta($post_id, DealPostType::META_ENDS_SOURCE, $source);
+        }
+        $ends = DealEnds::resolve(array(
+            'source' => $source,
+            'ends' => $current_ends,
+            'signal_ends' => (int) ($signals['ends'] ?? 0),
+            'status' => (string) \get_post_meta($post_id, DealPostType::META_STATUS, true),
+            'reason' => (string) \get_post_meta($post_id, DealPostType::META_REASON, true),
+            'now' => time(),
+        ));
+        if ($ends['ends'] > 0)
+            \update_post_meta($post_id, DealPostType::META_ENDS, $ends['ends']);
+        else
+            \delete_post_meta($post_id, DealPostType::META_ENDS);
 
         $result = DealStatus::evaluate(array(
             'item' => $item,
             'base_price' => (float) \get_post_meta($post_id, DealPostType::META_BASE_PRICE, true),
-            'ends' => (int) \get_post_meta($post_id, DealPostType::META_ENDS, true),
-            'status' => (string) \get_post_meta($post_id, DealPostType::META_STATUS, true),
-            'reason' => (string) \get_post_meta($post_id, DealPostType::META_REASON, true),
+            'ends' => $ends['ends'],
+            'status' => $ends['status'],
+            'reason' => $ends['reason'],
             'threshold' => DealsSettings::threshold(),
             'auto_reactivate' => DealsSettings::autoReactivate(),
             'now' => time(),
@@ -183,6 +210,10 @@ class DealService
      */
     public static function markActive(int $post_id): void
     {
+        // A person reactivating overrules the store: otherwise the next
+        // refresh() would write the store's past end back and expire it again.
+        \update_post_meta($post_id, DealPostType::META_ENDS_SOURCE, DealEnds::SOURCE_MANUAL);
+
         if ($item = self::pinnedItem($post_id))
             \update_post_meta($post_id, DealPostType::META_BASE_PRICE, (float) ($item['price'] ?? 0));
 
@@ -201,8 +232,11 @@ class DealService
      * moves into the future or is cleared; refresh() then applies its normal
      * rules. Any other expiry reason is left to refresh().
      */
-    public static function setEnds(int $post_id, int $timestamp): void
+    public static function setEnds(int $post_id, int $timestamp, string $source = DealEnds::SOURCE_MANUAL): void
     {
+        // A manual 0 means "no end", and store dates are ignored from then on.
+        \update_post_meta($post_id, DealPostType::META_ENDS_SOURCE, $source);
+
         if ($timestamp > 0)
             \update_post_meta($post_id, DealPostType::META_ENDS, $timestamp);
         else
@@ -218,6 +252,13 @@ class DealService
             \update_post_meta($post_id, DealPostType::META_REASON, '');
         }
 
+        self::refresh($post_id);
+    }
+
+    /** Back to following the store's own deal end time. */
+    public static function followStoreEnds(int $post_id): void
+    {
+        \update_post_meta($post_id, DealPostType::META_ENDS_SOURCE, DealEnds::SOURCE_OFFER);
         self::refresh($post_id);
     }
 
@@ -267,9 +308,32 @@ class DealService
         );
     }
 
+    /**
+     * The pinned offer's keys (DealKey) for duplicate lookups. An empty key is
+     * deleted rather than stored, so it can never match another deal.
+     */
+    public static function writeKeys(int $post_id, string $module_id, ?array $item): void
+    {
+        $keys = $item ? DealKey::fromItem($module_id, $item) : array('key' => '', 'url_key' => '', 'gtin' => '');
+        $map = array(
+            DealPostType::META_KEY => $keys['key'],
+            DealPostType::META_URL_KEY => $keys['url_key'],
+            DealPostType::META_GTIN => $keys['gtin'],
+        );
+
+        foreach ($map as $meta_key => $value)
+        {
+            if ($value !== '')
+                \update_post_meta($post_id, $meta_key, $value);
+            else
+                \delete_post_meta($post_id, $meta_key);
+        }
+    }
+
     private static function savePin(int $post_id, array $pin, ?array $item): void
     {
         \update_post_meta($post_id, DealPostType::META_ITEM, $pin);
+        self::writeKeys($post_id, $pin['module_id'], $item);
         \update_post_meta($post_id, DealPostType::META_BASE_PRICE, $item ? (float) ($item['price'] ?? 0) : 0.0);
         \update_post_meta($post_id, DealPostType::META_STATUS, DealStatus::ACTIVE);
         \update_post_meta($post_id, DealPostType::META_REASON, '');

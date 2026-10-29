@@ -544,7 +544,11 @@ abstract class Config
                 $value = $this->get_current($option);
                 if (!empty($res['when']))
                 {
-                    $this->out[$res['when']] = $this->get_current($res['when']);
+                    // A condition list ('is_active' => 1, 'api_mode' => ...) resets each field it names.
+                    foreach (is_array($res['when']) ? array_keys($res['when']) : array($res['when']) as $when_option)
+                    {
+                        $this->out[$when_option] = $this->get_current($when_option);
+                    }
                 }
             }
             else

@@ -206,7 +206,7 @@ final class SetFamilyAbility extends AbilityBase
         $candidates = self::readCandidates(array_merge($prepared['add'], $prepared['remove']));
 
         // Checked as a whole before anything is written.
-        $plan = self::plan($prepared, $family, $members, $candidates);
+        $plan = self::plan($prepared, $family, $members, $candidates, \current_user_can('edit_others_posts'));
 
         // Every join and leave would rebuild the catalog cache: hold the rebuilds and run one at the end,
         // also when a write fails half-way.
@@ -400,10 +400,11 @@ final class SetFamilyAbility extends AbilityBase
      * @param array      $members    FamilyStore::members($id, false) with can_edit per member: [{post_id, status, variant, can_edit, ...}]
      * @param array      $candidates post_id => {exists, can_edit, type_ok, post_type, status, passport, variant, family_id, family_name}
      *                               for every post id in add and remove (see readCandidates())
+     * @param bool       $edits_others whether the user may edit others' pages (edit_others_posts)
      * @return array {name: ?string, definition: array (normalized), update_definition: bool, add: int[], remove: int[]}
      * @throws AbilityInputException
      */
-    public static function plan(array $prepared, ?array $family, array $members, array $candidates): array
+    public static function plan(array $prepared, ?array $family, array $members, array $candidates, bool $edits_others = false): array
     {
         $family_id = (int) $prepared['family_id'];
         $creating = $family_id === 0;
@@ -483,6 +484,15 @@ final class SetFamilyAbility extends AbilityBase
                     '%s holds %s, so you cannot change its name, brand, dimensions, order or primary (adding and removing the pages you can edit is fine).',
                     ucfirst($label),
                     self::cannotEdit(count($locked))
+                );
+            }
+
+            // An empty family has no page to decide who may change it.
+            if (!$members && !$edits_others)
+            {
+                $problems[] = sprintf(
+                    '%s has no pages, so only a user who can edit others\' pages can change its name, brand, dimensions, order or primary (adding pages you can edit is fine).',
+                    ucfirst($label)
                 );
             }
         }
@@ -806,6 +816,11 @@ final class SetFamilyAbility extends AbilityBase
         if ($locked)
         {
             throw new AbilityInputException(sprintf('Family %d holds %s, so you cannot delete it. Nothing was changed.', $family_id, self::cannotEdit($locked)));
+        }
+
+        if (!$members && !\current_user_can('edit_others_posts'))
+        {
+            throw new AbilityInputException(sprintf('Family %d has no pages, so only a user who can edit others\' pages can delete it. Nothing was changed.', $family_id));
         }
 
         FamilyStore::delete($family_id);

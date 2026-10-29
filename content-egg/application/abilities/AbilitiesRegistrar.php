@@ -89,6 +89,7 @@ final class AbilitiesRegistrar
             MatchOffersAbility::class => 'free',
             AuditOffersAbility::class => 'free',
             GetFamilyAbility::class => 'free',
+            FindDealsAbility::class => 'free',
             AddProductsToPostAbility::class => 'pro',
             AddCouponsToPostAbility::class => 'pro',
             AddImagesToPostAbility::class => 'pro',
@@ -111,6 +112,7 @@ final class AbilitiesRegistrar
             SetPassportAbility::class => 'pro',
             SetOfferDecisionsAbility::class => 'pro',
             SetFamilyAbility::class => 'pro',
+            UpdateDealAbility::class => 'pro',
         );
     }
 
@@ -233,6 +235,15 @@ final class AbilitiesRegistrar
             return new \WP_Error('cegg_rate_limited', $e->getMessage(), array(
                 'status' => 429,
                 'retry_after' => $e->retryAfter(),
+            ));
+        }
+        catch (AbilityDuplicateDealException $e)
+        {
+            self::log($ability, 'error', 'cegg_duplicate_deal', $input, $start);
+
+            return new \WP_Error('cegg_duplicate_deal', $e->getMessage(), array(
+                'status' => 409,
+                'deal_id' => $e->dealId(),
             ));
         }
         catch (AbilityConflictException $e)

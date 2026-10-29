@@ -716,10 +716,11 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
                 );
             }
 
-            $file = $this->acquireFeedFile($feed_url);
+            $local = $this->isLocalSource();
+            $file = $local ? null : $this->acquireFeedFile($feed_url);
             $this->current_file = $file;
 
-            if ($file === null)
+            if ($file === null && !$local)
             {
                 // Feed content and settings unchanged since the last import:
                 // keep the current catalog, just refresh the timestamps.
@@ -737,7 +738,10 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
 
             try
             {
-                $this->processFeed($file);
+                if ($local)
+                    $this->processRows($this->localSourceRows(), __('No products found.', 'content-egg'));
+                else
+                    $this->processFeed($file);
             }
             finally
             {
@@ -1334,6 +1338,121 @@ abstract class AffiliateFeedParserModule extends AffiliateParserModule
         }
 
         return $dest_file;
+    }
+
+    /**
+     * True when products come from this site rather than a feed file: nothing
+     * is downloaded and every sync re-reads the source.
+     */
+    protected function isLocalSource(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Raw rows of a local source, in the shape feedProductPrepare() takes.
+     *
+     * @return iterable<array>
+     */
+    protected function localSourceRows(): iterable
+    {
+        return array();
+    }
+
+    /**
+     * Run raw rows through the same per-row steps as a feed file: prepare,
+     * in-stock and product filters, variation filter, batched insert.
+     */
+    protected function processRows(iterable $rows, string $empty_error): void
+    {
+        $in_stock_only = $this->config('in_stock', false);
+        $variationFilter = $this->config('filter_variations') ? new FeedVariationFilter() : null;
+        $productFilter = $this->makeProductFilter();
+
+        $i = 0;
+        $products = array();
+        $variationsSkipped = 0;
+        $filteredSkipped = 0;
+        $rowsRead = 0;
+
+        foreach ($rows as $data)
+        {
+            $rowsRead++;
+
+            if (!$data || !$product = $this->feedProductPrepare($data))
+            {
+                continue;
+            }
+
+            if (!empty($product['ean']))
+            {
+                $product['ean'] = TextHelper::fixEan($product['ean']);
+            }
+
+            if ($in_stock_only && $product['stock_status'] == ContentProduct::STOCK_STATUS_OUT_OF_STOCK)
+            {
+                continue;
+            }
+
+            if ($this->isFilteredOut($product, $productFilter))
+            {
+                ++$filteredSkipped;
+                continue;
+            }
+
+            if ($variationFilter !== null && $variationFilter->isVariation(
+                (string) ($product['title'] ?? ''),
+                (string) ($product['orig_url'] ?? ''),
+                (string) ($product['ean'] ?? '')
+            ))
+            {
+                ++$variationsSkipped;
+                continue;
+            }
+
+            $products[] = $product;
+            $i++;
+            if ($i % static::MULTIPLE_INSERT_ROWS == 0)
+            {
+                $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
+                $products = array();
+                $this->importStatus()->tick(array(
+                    'rows_read' => $rowsRead,
+                    'inserted' => $i,
+                    'skipped' => $filteredSkipped + $variationsSkipped,
+                ));
+            }
+        }
+
+        if ($products)
+        {
+            $this->product_model->multipleInsert($products, static::MULTIPLE_INSERT_ROWS);
+        }
+
+        if ($i == 0 && !$this->getLastImportError())
+        {
+            $this->setLastImportError($empty_error);
+        }
+
+        $this->importStatus()->tick(array(
+            'rows_read' => $rowsRead,
+            'inserted' => $i,
+            'skipped' => $filteredSkipped + $variationsSkipped,
+        ));
+
+        $skippedNotice = array();
+        if ($filteredSkipped > 0)
+        {
+            $skippedNotice[] = sprintf(__('%s filtered', 'content-egg'), number_format_i18n($filteredSkipped));
+        }
+        if ($variationsSkipped > 0)
+        {
+            $skippedNotice[] = sprintf(__('%s variation', 'content-egg'), number_format_i18n($variationsSkipped));
+        }
+        if ($skippedNotice)
+        {
+            $this->setLastImportNotice(__('Skipped rows', 'content-egg') . ': ' . implode(', ', $skippedNotice));
+        }
     }
 
     protected function processFeed(string $file): void

@@ -8,6 +8,9 @@ use ContentEgg\application\admin\GeneralConfig;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ParserModule;
 use ContentEgg\application\components\WooProductFields;
+use ContentEgg\application\deals\DealLookup;
+use ContentEgg\application\deals\DealPostType;
+use ContentEgg\application\deals\DealKey;
 use ContentEgg\application\components\matching\ProductPassport;
 use ContentEgg\application\helpers\WooHelper;
 use ContentEgg\application\BlockKit\Validator;
@@ -52,6 +55,11 @@ final class CreatePostAbility extends AbilityBase
             . 'type (external or simple), categories (existing ids or names), gtin and '
             . 'catalog_visibility; you never set the price, Content Egg syncs it from the '
             . 'attached offers. '
+            . 'For post_type "cegg_deal" (a deal: one offer from one store) the optional "deal" '
+            . 'object sets the offer the deal follows (pin), its end date, category, coupon and '
+            . 'featured image - never its price, which follows the pinned product. Creating a '
+            . 'second active deal for the same offer fails with 409 cegg_duplicate_deal '
+            . '(data.deal_id) unless deal.allow_duplicate is true; check with find-deals first. '
             . 'Publishing requires the publish_posts capability; '
             . 'default status is draft.';
     }
@@ -75,6 +83,7 @@ final class CreatePostAbility extends AbilityBase
                         . 'object of editorial fields (products only).',
                 ),
                 'search_tokens' => self::searchTokensSchema(),
+                'deal' => DealFields::schema(false),
                 'woo' => array(
                     'type' => 'object',
                     'description' => 'WooCommerce product fields; only with post_type "product". Checked '
@@ -107,6 +116,8 @@ final class CreatePostAbility extends AbilityBase
                         'warnings' => array('type' => 'array', 'items' => array('type' => 'string')),
                     ),
                 ),
+                'deal' => LeanDeal::schema(),
+                'warnings' => array('type' => 'array', 'items' => array('type' => 'string'), 'description' => 'Deal notes: an expired deal for the same offer, a featured image that could not be set.'),
             ),
         );
     }
@@ -159,6 +170,12 @@ final class CreatePostAbility extends AbilityBase
             throw new AbilityInputException("'status' must be one of: " . implode(', ', self::STATUSES) . '.');
         }
 
+        // Before the post_types check: its "enable the type" hint is the wrong fix here.
+        if ($post_type === DealPostType::POST_TYPE)
+        {
+            DealFields::requireDealsEnabled();
+        }
+
         $post_types = (array) GeneralConfig::getInstance()->option('post_types');
         if (!in_array($post_type, $post_types, true))
         {
@@ -171,6 +188,7 @@ final class CreatePostAbility extends AbilityBase
         // WooCommerce, every field and the category names (against the site's
         // product categories).
         $woo = self::prepareWoo($input, $post_type);
+        $deal = self::prepareDeal($input, $post_type);
 
         // 0. Swap unique_id refs for the server's stored copy of each search
         //    result, BEFORE validating: the validator resolves product_refs
@@ -190,6 +208,25 @@ final class CreatePostAbility extends AbilityBase
                 'Block tree invalid: ' . \wp_json_encode(array_slice($result->errors, 0, 5))
                     . ' Use content-egg/validate-blocks to iterate.'
             );
+        }
+
+        // 1b. A deal: the offer it will follow, and no second active deal for it.
+        $warnings = array();
+        if ($deal !== null)
+        {
+            $target = DealFields::pinFor($deal, $products);
+            if ($target)
+            {
+                $deal['pin'] = array('module_id' => $target['module_id'], 'unique_id' => $target['unique_id']);
+                if (empty($deal['allow_duplicate']))
+                {
+                    $existing = DealLookup::activeDuplicate($target['module_id'], $target['item']);
+                    if ($existing)
+                        throw new AbilityDuplicateDealException($existing);
+                }
+                $warnings = self::expiredDealWarnings($target['module_id'], $target['item']);
+            }
+            unset($deal['allow_duplicate']);
         }
 
         // 2. Create the post as a draft first; the requested status is applied
@@ -239,6 +276,13 @@ final class CreatePostAbility extends AbilityBase
                 $attached[(string) $module_id] = $r['added'];
             }
 
+            // 3b. Deal fields go on once the pinned product is attached.
+            if ($deal !== null)
+            {
+                $applied = DealFields::apply($post_id, $deal);
+                $warnings = array_merge($warnings, $applied['warnings']);
+            }
+
             // 4. Serialize the content and apply the requested status in one update.
             $updated = \wp_update_post(\wp_slash(array(
                 'ID' => $post_id,
@@ -277,6 +321,15 @@ final class CreatePostAbility extends AbilityBase
             $output['woo'] = $woo_result;
         }
 
+        if ($deal !== null)
+        {
+            $output['deal'] = LeanDeal::row($post_id);
+        }
+        if ($warnings)
+        {
+            $output['warnings'] = $warnings;
+        }
+
         return $output;
     }
 
@@ -309,6 +362,51 @@ final class CreatePostAbility extends AbilityBase
         }
 
         return UpdateWooProductAbility::prepare($input['woo']);
+    }
+
+    /**
+     * The checked `deal` input: null for any post type but cegg_deal (where it
+     * is always an array, so every deal gets the duplicate check).
+     *
+     * @throws AbilityInputException
+     */
+    public static function prepareDeal(array $input, string $post_type): ?array
+    {
+        if ($post_type !== DealPostType::POST_TYPE)
+        {
+            if (isset($input['deal']))
+            {
+                throw new AbilityInputException("'deal' sets deal fields, so it is only allowed with post_type \"" . DealPostType::POST_TYPE . "\" (this call has post_type \"{$post_type}\").");
+            }
+
+            return null;
+        }
+
+        if (isset($input['deal']) && !is_array($input['deal']))
+        {
+            throw new AbilityInputException("'deal' must be an object.");
+        }
+
+        return DealFields::prepare((array) ($input['deal'] ?? array()), false);
+    }
+
+    /** A note for each expired deal on the same offer: reactivating it may beat a new post. */
+    private static function expiredDealWarnings(string $module_id, array $item): array
+    {
+        $keys = DealKey::fromItem($module_id, $item);
+        $ids = DealLookup::byKey($keys['key'], 'expired');
+        if (!$ids && explode('__', $module_id)[0] === 'Offer')
+        {
+            $ids = DealLookup::byUrlKey($keys['url_key'], 'expired');
+        }
+
+        $out = array();
+        foreach ($ids as $id)
+        {
+            $out[] = "An expired deal for this offer exists (post {$id}); content-egg/update-deal with state \"active\" would reopen it instead.";
+        }
+
+        return $out;
     }
 
     /**

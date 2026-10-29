@@ -47,7 +47,7 @@ final class SearchImagesAbility extends AbstractSearchAbility
         return 'image';
     }
 
-    protected function mapLean(array $items): array
+    protected function mapLean(array $items, string $module_id = ''): array
     {
         return LeanImage::mapList($items);
     }

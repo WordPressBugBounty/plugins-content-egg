@@ -2,9 +2,9 @@
 Contributors: keywordrush
 Tags: affiliate marketing, price comparison, csv import, affiliate links, gutenberg blocks
 Requires at least: 6.9
-Tested up to: 7.1.3
+Tested up to: 7.1.4
 Requires PHP: 8.0
-Stable tag: 12.0.0
+Stable tag: 12.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -260,6 +260,16 @@ For more details, read: [Content Egg vs. Affiliate Egg](https://ei-docs.keywordr
 
 
 == Changelog ==
+
+= 12.1.0 =
+
+* New: AI agents can look up your deals: whether a product already has a deal (by product, link or GTIN), or a list of deals by status, store, category or end date. Creating and changing deals through an agent is part of Content Egg PRO.
+* New: Feed module — this site's WooCommerce products can be the product source instead of a feed file. Your own catalog becomes searchable in Content Egg and usable as the product source for Too Much Niche e-commerce plans.
+* Improvement: Settings → Deals links to your deals archive.
+* Fix: WooCommerce — removing or reordering external gallery images in the product editor broke the gallery.
+* Fix: Deals — imports with a Deal preset no longer create a second deal for a product that already has one.
+* Fix: Deals block — styles in the block editor, card titles the same size as on the site, and clicking a card in the editor no longer leaves the editor or casts a vote.
+* Security: Hardened permission checks.
 
 = 12.0.0 =
 

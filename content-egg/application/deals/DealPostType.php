@@ -34,6 +34,12 @@ class DealPostType
     const META_COUPON_CODE = '_cegg_deal_coupon_code';
     const META_COUPON_NOTE = '_cegg_deal_coupon_note';
     const META_HAS_COUPON = '_cegg_deal_has_coupon';
+    // Identity of the pinned offer, as scalars a meta query can match (DealKey).
+    const META_KEY = '_cegg_deal_key';
+    const META_URL_KEY = '_cegg_deal_url_key';
+    const META_GTIN = '_cegg_deal_gtin';
+    // Where the end date comes from: DealEnds::SOURCE_OFFER or SOURCE_MANUAL.
+    const META_ENDS_SOURCE = '_cegg_deal_ends_source';
 
     const TERM_META_DOMAIN = '_cegg_domain';
     const TERM_META_LOGO = '_cegg_logo';

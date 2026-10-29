@@ -92,6 +92,8 @@ object is what you can actually write.
 
 - Errors are structured: `cegg_validation_failed` (400, self-correct from the
   message), `cegg_conflict` (409, re-read and retry with the new revision),
+  `cegg_duplicate_deal` (409, an active deal for that offer exists — `data.deal_id`;
+  don't retry: update-deal it, or set deal.allow_duplicate),
   `cegg_rate_limited` (429, respect retry_after), `cegg_feed_pending` (409,
   poll get-feed-status), `cegg_search_failed` (502, the module's API failed —
   e.g. a missing/invalid API key; relay the message to the user, do not retry

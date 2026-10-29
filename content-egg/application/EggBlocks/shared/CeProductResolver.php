@@ -4,6 +4,7 @@ namespace ContentEgg\application\EggBlocks\shared;
 
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\ModuleManager;
+use ContentEgg\application\components\ProductsAccess;
 
 defined('ABSPATH') || exit;
 
@@ -71,7 +72,7 @@ class CeProductResolver
         $post_id = isset($productRef['post_id']) ? (int) $productRef['post_id'] : 0;
 
         if ($post_id > 0) {
-            return $post_id;
+            return ProductsAccess::canShow($post_id) ? $post_id : 0;
         }
 
         $current_post_id = (int) get_the_ID();

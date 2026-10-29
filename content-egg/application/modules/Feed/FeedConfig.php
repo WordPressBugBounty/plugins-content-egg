@@ -18,6 +18,57 @@ use ContentEgg\application\helpers\TextHelper;
  */
 class FeedConfig extends AffiliateFeedParserModuleConfig
 {
+    // Required-field checks apply to an active module that reads a feed file.
+    const WHEN_FILE_SOURCE = array('is_active' => true, 'feed_source' => 'file');
+
+    // Hidden, and not needed, when products come from WooCommerce.
+    const FILE_ONLY_OPTIONS = array(
+        'feed_url', 'feed_format', 'archive_format', 'encoding', 'currency', 'domain', 'auto_mapping',
+        'mapping', 'tracking_params', 'deeplink', 'csv_delimiter', 'csv_enclosure', 'price_decimal_separator', 'xml_processor',
+    );
+
+    public function adminInit()
+    {
+        parent::adminInit();
+
+        if (!empty($_GET['page']) && \sanitize_text_field(\wp_unslash($_GET['page'])) === $this->page_slug())
+        {
+            \add_action('admin_footer', array($this, 'printSourceToggleScript'));
+        }
+    }
+
+    /**
+     * Hide the feed-file settings while WooCommerce is the product source.
+     */
+    public function printSourceToggleScript()
+    {
+        $config = array(
+            'option' => $this->option_name(),
+            'fileOnly' => self::FILE_ONLY_OPTIONS,
+        );
+?>
+        <script>
+            jQuery(function($) {
+                var cfg = <?php echo \wp_json_encode($config); ?>;
+                var $source = $('select[name="' + cfg.option + '[feed_source]"]');
+                if (!$source.length)
+                    return;
+
+                var $rows = $();
+                $.each(cfg.fileOnly, function(i, name) {
+                    $rows = $rows.add($('[name^="' + cfg.option + '[' + name + ']"]').closest('tr'));
+                });
+
+                function toggle() {
+                    $rows.toggle($source.val() !== '<?php echo esc_js(WooCatalogSource::SOURCE); ?>');
+                }
+
+                $source.on('change', toggle);
+                toggle();
+            });
+        </script>
+<?php
+    }
 
     public function options()
     {
@@ -66,6 +117,15 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                     ),
                 ),
             ),
+            'feed_source' => array(
+                'title' => __('Product source', 'content-egg'),
+                'callback' => array($this, 'render_dropdown'),
+                'dropdown_options' => array(
+                    'file' => __('Feed file (CSV, XML, JSON)', 'content-egg'),
+                    WooCatalogSource::SOURCE => __('This site\'s WooCommerce products', 'content-egg'),
+                ),
+                'default' => 'file',
+            ),
             'feed_url' => [
                 'title'       => sprintf(
                     '%s <span class="cegg_required">*</span>',
@@ -78,12 +138,12 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                     'trim',
                     [
                         'call'    => [\ContentEgg\application\helpers\FormValidator::class, 'required'],
-                        'when'    => 'is_active',
+                        'when'    => self::WHEN_FILE_SOURCE,
                         'message' => __('Please provide the feed URL.', 'content-egg'),
                     ],
                     [
                         'call'    => [$this, 'validateFeedUrl'],
-                        'when'    => 'is_active',
+                        'when'    => self::WHEN_FILE_SOURCE,
                         'message' => __('Please enter a valid feed URL. Supported schemes: http://, https://, ftp://, ftps://.', 'content-egg'),
                     ],
 
@@ -133,7 +193,7 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                 'validator' => array(
                     array(
                         'call' => array('\ContentEgg\application\helpers\FormValidator', 'required'),
-                        'when' => 'is_active',
+                        'when' => self::WHEN_FILE_SOURCE,
                         'message' => sprintf(__('The field "%s" can not be empty.', 'content-egg'), 'Default merchant domain'),
                     ),
                     array(
@@ -165,7 +225,7 @@ class FeedConfig extends AffiliateFeedParserModuleConfig
                     ),
                     array(
                         'call' => array($this, 'mappingValidate'),
-                        'when' => 'is_active',
+                        'when' => self::WHEN_FILE_SOURCE,
                         'message' => __('Please fill out all required mapping fields.', 'content-egg'),
                     ),
                 ),

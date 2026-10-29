@@ -2,6 +2,9 @@
 
 namespace ContentEgg\application;
 
+use ContentEgg\application\components\ProductsAccess;
+use WP_Error;
+
 use function ContentEgg\prnx;
 
 defined('\ABSPATH') || exit;
@@ -183,6 +186,24 @@ class BlockRenderRestController
             $content = isset($item['content']) ? (string) $item['content'] : '';
             $type = isset($item['type']) ? sanitize_key($item['type']) : '';
 
+            // A placeholder this site signed carries what the page render
+            // already checked; it replaces the loose fields above. Unsigned
+            // ones (pages cached before signing) get the check in viewData().
+            $signed = false;
+            if (isset($item['signed'], $item['sig']) && is_string($item['signed']) && is_string($item['sig'])
+                && ProductsAccess::verify($item['signed'], $item['sig']))
+            {
+                $payload = json_decode($item['signed'], true);
+                if (is_array($payload))
+                {
+                    $signed  = true;
+                    $post_id = isset($payload['post_id']) ? absint($payload['post_id']) : 0;
+                    $atts    = isset($payload['atts']) ? $payload['atts'] : array();
+                    $content = isset($payload['content']) ? (string) $payload['content'] : '';
+                    $type    = isset($payload['type']) ? sanitize_key($payload['type']) : '';
+                }
+            }
+
             if (!$id)
             {
                 // Skip items without IDs; caller can't map the response anyway.
@@ -206,15 +227,17 @@ class BlockRenderRestController
                 $atts_norm['post_id'] = $post_id;
                 $atts_norm['async']   = 0;
 
-                // Render
-                if ($type === 'module' || !empty($atts_norm['module']))
+                $render = function () use ($type, $atts_norm, $content)
                 {
-                    $html = EggShortcode::getInstance()->viewData($atts_norm, $content);
-                }
-                else
-                {
-                    $html = BlockShortcode::getInstance()->viewData($atts_norm, $content);
-                }
+                    if ($type === 'module' || !empty($atts_norm['module']))
+                    {
+                        return EggShortcode::getInstance()->viewData($atts_norm, $content);
+                    }
+
+                    return BlockShortcode::getInstance()->viewData($atts_norm, $content);
+                };
+
+                $html = $signed ? ProductsAccess::runSigned($render) : $render();
 
                 $results[$id] = array(
                     'html' => (string) $html,

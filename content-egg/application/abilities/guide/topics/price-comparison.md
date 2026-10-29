@@ -185,7 +185,8 @@ lowest prices. get-family is free; set-family is Pro.
 5. set-passport `clear: true` also takes the page out of its family
    (`left_family`); a new passport must still fit.
 6. Check with get-family. Visitors never see drafts or trashed pages; a page
-   restored from the trash leaves the family when it no longer fits.
+   restored from the trash leaves the family when it no longer fits; a
+   family whose last page is deleted for good is deleted with it.
 7. On a post put `eggb/variant-switcher` (`variant`: chips | list) directly
    above the offer list, or `[content-egg-variants style="chips|list"]`.
    WooCommerce products get it automatically ("Variant Switcher" setting);

@@ -50,7 +50,6 @@ $guide_copy_row = ob_get_clean();
 
     <h1 class="cegg-aa__title">
         <?php esc_html_e('AI Agents', 'content-egg'); ?>
-        <span class="cegg-aa__beta"><?php esc_html_e('Beta', 'content-egg'); ?></span>
     </h1>
     <p class="cegg-aa__lead">
         <?php esc_html_e('Connect your own AI assistant — ChatGPT, Claude, or another — and let it run Content Egg for you: update settings, find products, build pages from blocks, and more.', 'content-egg'); ?>

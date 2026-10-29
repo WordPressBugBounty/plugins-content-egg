@@ -45,9 +45,10 @@
 .cegg-deal-card__store-link:hover span { text-decoration: underline; }
 .cegg-deal-card__store-logo { width: 16px; height: 16px; object-fit: contain; border-radius: 3px; }
 .cegg-deal-card__coupon { flex: none; padding: 1px 6px; border: 1px dashed var(--cegg-deal-accent, #e11d48); border-radius: 4px; color: var(--cegg-deal-accent, #e11d48); font-weight: 700; font-size: .9em; text-transform: uppercase; letter-spacing: .03em; }
-.cegg-deal-card__title { font-size: 1em; font-weight: 600; line-height: 1.35; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.cegg-deal-card__title a { text-decoration: none; color: inherit; }
-.cegg-deal-card__title a:hover { text-decoration: underline; }
+/* .cegg-deal-card twice: in the block editor themes prefix their heading rules with .editor-styles-wrapper (0,1,1), which beat a single class. */
+.cegg-deal-card .cegg-deal-card__title { font-size: 1em; font-weight: 600; line-height: 1.35; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cegg-deal-card .cegg-deal-card__title a { text-decoration: none; color: inherit; }
+.cegg-deal-card .cegg-deal-card__title a:hover { text-decoration: underline; }
 .cegg-deal-card__foot { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--cegg-deal-border, rgba(127, 127, 127, .25)); display: flex; align-items: center; gap: 12px; font-size: .8em; color: var(--cegg-deal-muted, #6b7280); }
 .cegg-deal-card__score, .cegg-deal-card__comments { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
 .cegg-deal-card__ago { margin-left: auto; white-space: nowrap; }

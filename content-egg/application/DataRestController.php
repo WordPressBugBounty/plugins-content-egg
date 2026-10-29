@@ -90,7 +90,7 @@ class DataRestController extends \WP_REST_Controller
         else
             $return_synced = (bool) $request['synced'];
 
-        if (\get_post_status($post_id) !== 'publish')
+        if (\get_post_status($post_id) !== 'publish' || \post_password_required($post_id))
             return new \WP_Error('cegg_rest_post_invalid_id', 'Invalid post ID.', array('status' => 404));
 
         if (!in_array(\get_post_type($post_id), GeneralConfig::getInstance()->option('post_types')))

@@ -1676,7 +1676,7 @@ class GeneralConfig extends Config
             ),
             'deals_archive_slug' => array(
                 'title' => __('Deals archive slug', 'content-egg'),
-                'description' => __('The URL of the deals listing, e.g. /deals/.', 'content-egg'),
+                'description' => $this->dealsArchiveDescription(),
                 'callback' => array($this, 'render_input'),
                 'default' => 'deals',
                 'validator' => array(
@@ -1779,6 +1779,23 @@ class GeneralConfig extends Config
      * validated first, so the archive check sees the single slug that will
      * actually be saved - a rejected archive keeps its current value.
      */
+    /**
+     * Links the live deals archive (opens in a new tab) once Deals are on and the
+     * post type is registered; the plain example before that.
+     */
+    private function dealsArchiveDescription(): string
+    {
+        $url = \post_type_exists(DealPostType::POST_TYPE) ? \get_post_type_archive_link(DealPostType::POST_TYPE) : '';
+        if (!$url)
+            return __('The URL of the deals listing, e.g. /deals/.', 'content-egg');
+
+        return sprintf(
+            /* translators: %s: link to the deals listing */
+            __('The URL of the deals listing: %s', 'content-egg'),
+            '<a href="' . \esc_url($url) . '" target="_blank" rel="noopener">' . \esc_html($url) . '</a>'
+        );
+    }
+
     public function dealSlugsDiffer($value, $field = 'deals_slug')
     {
         $other = $field === 'deals_slug' ? 'deals_archive_slug' : 'deals_slug';

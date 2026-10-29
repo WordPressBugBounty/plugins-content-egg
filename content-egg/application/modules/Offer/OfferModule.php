@@ -164,27 +164,27 @@ class OfferModule extends AffiliateParserModule
             if (!$item['title'])
                 continue;
 
-            $item['subtitle'] = trim(\sanitize_text_field($item['subtitle']));
-            $item['badge'] = trim(\sanitize_text_field($item['badge']));
-            $item['badge_color'] = trim(\sanitize_text_field($item['badge_color']));
-            $item['merchant'] = trim(\sanitize_text_field($item['merchant']));
-            $item['domain'] = trim(\sanitize_text_field($item['domain']));
-            $item['description'] = trim(\wp_kses_post($item['description']));
+            $item['subtitle'] = trim(\sanitize_text_field($item['subtitle'] ?? ''));
+            $item['badge'] = trim(\sanitize_text_field($item['badge'] ?? ''));
+            $item['badge_color'] = trim(\sanitize_text_field($item['badge_color'] ?? ''));
+            $item['merchant'] = trim(\sanitize_text_field($item['merchant'] ?? ''));
+            $item['domain'] = trim(\sanitize_text_field($item['domain'] ?? ''));
+            $item['description'] = trim(\wp_kses_post($item['description'] ?? ''));
 
             $item['orig_url'] = trim(strip_tags($item['orig_url']));
             if ($item['orig_url'] !== '#' && !filter_var($item['orig_url'], FILTER_VALIDATE_URL))
                 continue;
 
-            $item['img'] = trim(strip_tags($item['img']));
+            $item['img'] = trim(strip_tags($item['img'] ?? ''));
             if ($item['img'] && !filter_var($item['img'], FILTER_VALIDATE_URL))
                 $item['img'] = '';
 
-            $item['logo'] = trim(strip_tags($item['logo']));
+            $item['logo'] = trim(strip_tags($item['logo'] ?? ''));
             $item['extra']['deeplink'] = isset($item['extra']['deeplink']) ? trim(strip_tags($item['extra']['deeplink'])) : '';
-            $item['price'] = $item['price'] ?  (float) TextHelper::parsePriceAmount($item['price']) : '';
-            $item['priceOld'] = $item['priceOld'] ? (float) TextHelper::parsePriceAmount($item['priceOld']) : '';
-            $item['ratingDecimal'] = $item['ratingDecimal'] ? round((float)$item['ratingDecimal'], 1) : '';
-            $item['order'] = $item['order'] ? (int) $item['order'] : '';
+            $item['price'] = !empty($item['price']) ? (float) TextHelper::parsePriceAmount($item['price']) : '';
+            $item['priceOld'] = !empty($item['priceOld']) ? (float) TextHelper::parsePriceAmount($item['priceOld']) : '';
+            $item['ratingDecimal'] = !empty($item['ratingDecimal']) ? round((float)$item['ratingDecimal'], 1) : '';
+            $item['order'] = !empty($item['order']) ? (int) $item['order'] : '';
 
             if (!$item['domain'])
             {

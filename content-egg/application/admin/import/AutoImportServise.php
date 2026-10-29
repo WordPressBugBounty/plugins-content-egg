@@ -4,7 +4,6 @@ namespace ContentEgg\application\admin\import;
 
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\ModuleManager;
-use ContentEgg\application\helpers\PostHelper;
 use ContentEgg\application\helpers\TextHelper;
 use ContentEgg\application\models\AutoImportRuleModel;
 use ContentEgg\application\models\ImportQueueModel;
@@ -159,6 +158,9 @@ final class AutoImportServise
             return 0;
         }
 
+        $preset = PresetRepository::get((int) $rule['preset_id']);
+        $postType = (string) ($preset['post_type'] ?? 'post');
+
         $minDiscount = !empty($rule['min_discount']) ? (int) $rule['min_discount'] : null;
         $inStockOnly = !empty($rule['in_stock_only']);
 
@@ -175,7 +177,7 @@ final class AutoImportServise
                 $filtered++;
                 continue;
             }
-            if (PostHelper::getPostIdByUniqueId($p['unique_id']))
+            if (ImportDuplicateCheck::existingPostId($postType, (string) $rule['module_id'], (string) $p['unique_id']))
             {
                 $dupPost++;
                 continue;

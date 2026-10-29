@@ -146,7 +146,7 @@ final class GetPostProductsAbility extends AbilityBase
                 'revision' => (string) ProductDataService::revision($post_id, $module_id),
                 'items' => $fields === 'full'
                     ? array_values(array_map(array(LeanProduct::class, 'fullItem'), $data))
-                    : ($fields === 'match' ? self::matchItems(LeanProduct::matchList($data, (string) $module_id), (string) $module_id, $has_passport, $decisions) : LeanProduct::mapList($data)),
+                    : ($fields === 'match' ? self::matchItems(LeanProduct::matchList($data, (string) $module_id), (string) $module_id, $has_passport, $decisions) : LeanProduct::mapList($data, (string) $module_id)),
             );
         }
 

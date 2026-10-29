@@ -102,12 +102,14 @@ class ProductPrefillController
                 'nonce_action' => 'cegg_prefill_stop',
                 'nonce_key' => 'cegg_prefill_stop_nonce',
                 'method_type' => 'post',
+                'shared_queue' => true,
             ],
             'prefill_restart' => [
                 'method' => 'actionPrefillRestart',
                 'nonce_action' => 'cegg_prefill_restart',
                 'nonce_key' => 'cegg_prefill_restart_nonce',
                 'method_type' => 'post',
+                'shared_queue' => true,
             ],
             'prefill_run_once' => [
                 'method' => 'actionPrefillRunOnce',
@@ -120,6 +122,7 @@ class ProductPrefillController
                 'nonce_action' => 'cegg_prefill_restart_failed',
                 'nonce_key' => 'cegg_prefill_restart_failed_nonce',
                 'method_type' => 'post',
+                'shared_queue' => true,
             ],
         ];
 
@@ -134,6 +137,12 @@ class ProductPrefillController
                 {
                     wp_die(esc_html__('Security check failed.', 'content-egg'));
                 }
+            }
+
+            // One queue holds every user's runs: stopping or restarting it acts on others' posts too.
+            if (!empty($config['shared_queue']) && !current_user_can('edit_others_posts'))
+            {
+                wp_die(esc_html__('Sorry, you are not allowed to manage the prefill queue.', 'content-egg'));
             }
 
             $this->{$config['method']}();

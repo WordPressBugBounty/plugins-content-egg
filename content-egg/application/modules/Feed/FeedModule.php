@@ -116,8 +116,29 @@ class FeedModule extends AffiliateFeedParserModule
         return $this->getArchiveFormat() === 'zip';
     }
 
+    public function isWooSource(): bool
+    {
+        return $this->config('feed_source') === WooCatalogSource::SOURCE;
+    }
+
+    protected function isLocalSource(): bool
+    {
+        return $this->isWooSource();
+    }
+
+    protected function localSourceRows(): iterable
+    {
+        if (!WooCatalogSource::isAvailable())
+            throw new \Exception(esc_html__('WooCommerce is not active.', 'content-egg'));
+
+        return WooCatalogSource::rows($this->getId());
+    }
+
     public function getFeedUrl()
     {
+        if ($this->isWooSource())
+            return \home_url('/');
+
         $url = $this->config('feed_url');
 
         if (!filter_var($url, FILTER_VALIDATE_URL))
@@ -147,7 +168,7 @@ class FeedModule extends AffiliateFeedParserModule
     {
         $format = $this->config('feed_format');
 
-        if (in_array($format, ['csv', 'json'], true))
+        if (!$this->isWooSource() && in_array($format, ['csv', 'json'], true))
         {
             $this->maybeAiAutomap($data);
         }
@@ -650,6 +671,9 @@ class FeedModule extends AffiliateFeedParserModule
         if ($orig_url != $affiliate_url)
             return TextHelper::getHostName($orig_url);
 
+        if ($this->isWooSource())
+            return TextHelper::getHostName(\home_url());
+
         return $this->config('domain');
     }
 
@@ -669,6 +693,10 @@ class FeedModule extends AffiliateFeedParserModule
 
     public function mapProduct(array $data)
     {
+        // WooCommerce rows already use the Feed's field names.
+        if ($this->isWooSource())
+            return $data;
+
         $mapping = $this->config('mapping');
 
         // Awin feeds trick for multiple image support
@@ -724,6 +752,9 @@ class FeedModule extends AffiliateFeedParserModule
 
     protected function mapAttributes(array $data)
     {
+        if ($this->isWooSource())
+            return isset($data['attributes']) && is_array($data['attributes']) ? $data['attributes'] : array();
+
         $mapping = $this->config('mapping');
         if (!isset($mapping['attributes']) || !$mapping['attributes'])
             return array();

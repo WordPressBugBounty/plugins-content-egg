@@ -2,7 +2,6 @@
 
 namespace ContentEgg\application\admin\import;
 
-use ContentEgg\application\helpers\PostHelper;
 use ContentEgg\application\admin\import\ProductImportScheduler;
 use ContentEgg\application\helpers\WooHelper;
 use ContentEgg\application\models\ImportQueueModel;
@@ -169,6 +168,17 @@ class ImportQueueApi
             wp_send_json_error(['message' => __('Insufficient permissions', 'content-egg')], 403);
         }
 
+        // The post is inserted as the preset author. Only a user who may write
+        // in someone else's name can use another user's preset.
+        if ((int) ($preset['author_id'] ?? 0) !== get_current_user_id()
+            && !current_user_can($pto->cap->edit_others_posts))
+        {
+            wp_send_json_error(
+                ['message' => __('This preset creates posts as another user. Ask an administrator to make you its author.', 'content-egg')],
+                403
+            );
+        }
+
         // 'future' cannot be stored on a preset, but a publish preset combined
         // with scheduled_at becomes a scheduled post, so treat both alike.
         if (in_array($preset['post_status'] ?? 'publish', ['publish', 'future'], true)
@@ -228,7 +238,7 @@ class ImportQueueApi
             // Duplicate checks by unique_id
             if ($avoid_duplicates && $unique_id !== '')
             {
-                $existing_post_id = PostHelper::getPostIdByUniqueId($unique_id);
+                $existing_post_id = ImportDuplicateCheck::existingPostId((string) ($preset['post_type'] ?? 'post'), (string) $module_id, $unique_id);
                 if ($existing_post_id)
                 {
                     $skipped[] = [

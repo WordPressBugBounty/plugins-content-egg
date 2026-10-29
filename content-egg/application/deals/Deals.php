@@ -28,6 +28,9 @@ class Deals
         // swallow itself rather than print as raw text.
         \ContentEgg\application\blocks\dealsblock\DealsBlock::registerShortcode();
 
+        // Before the enabled check: deals turned off still get their keys.
+        DealKeysBackfill::initAction();
+
         $enabled = DealsSettings::enabled();
 
         if ($enabled)

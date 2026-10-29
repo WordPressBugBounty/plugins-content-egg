@@ -7,6 +7,7 @@ defined('\ABSPATH') || exit;
 use ContentEgg\application\components\ContentManager;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\ModuleTemplateManager;
+use ContentEgg\application\components\ProductsAccess;
 use ContentEgg\application\components\ShortcodeAtts;
 use ContentEgg\application\components\Shortcoded;
 use ContentEgg\application\helpers\TextHelper;
@@ -102,7 +103,11 @@ class EggShortcode
                 $post_id = $post->ID;
         }
         else
+        {
             $post_id = $a['post_id'];
+            if (!ProductsAccess::canShow($post_id))
+                return '';
+        }
 
         if (!$post_id)
             return '';
@@ -163,7 +168,7 @@ class EggShortcode
             'content' => (string) $content,
         );
 
-        $payload_json = esc_attr(\wp_json_encode($payload));
+        $payload_json = (string) \wp_json_encode($payload);
 
         $html  = '<div'
             . ' id="' . esc_attr($container_id) . '"'
@@ -171,7 +176,8 @@ class EggShortcode
             . (!empty($a['lazy']) ? ' data-cegg-lazy="1"' : '')
             . ' data-cegg-endpoint="' . esc_url($endpoint) . '"'
             . ($nonce ? ' data-cegg-nonce="' . esc_attr($nonce) . '"' : '')
-            . ' data-cegg-payload="' . $payload_json . '"'
+            . ' data-cegg-payload="' . esc_attr($payload_json) . '"'
+            . ' data-cegg-sig="' . esc_attr(ProductsAccess::sign($payload_json)) . '"'
             . '></div>';
 
         $html .= '<noscript>' . esc_html__('Please enable JavaScript to view this content.', 'content-egg') . '</noscript>';

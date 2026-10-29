@@ -4,6 +4,7 @@ namespace ContentEgg\application\abilities;
 
 defined('\ABSPATH') || exit;
 
+use ContentEgg\application\deals\DealsSettings;
 use ContentEgg\application\Plugin;
 use ContentEgg\application\components\ModuleManager;
 use ContentEgg\application\components\WooPreflight;
@@ -83,6 +84,16 @@ final class GetStatusAbility extends AbilityBase
             'license' => array(
                 'type' => array('object', 'null'),
                 'description' => 'License summary. Null on free builds or when the user lacks manage_options.',
+            ),
+            'deals' => array(
+                'type' => 'object',
+                'description' => 'Deals (post type cegg_deal): whether they are on, and the settings that decide when a deal expires.',
+                'properties' => array(
+                    'enabled' => array('type' => 'boolean', 'description' => 'False: create-post (cegg_deal), find-deals and update-deal refuse; ask the user before turning Deals on.'),
+                    'price_up_threshold' => array('type' => 'number', 'description' => 'Percent above the base price at which a deal expires as price_up.'),
+                    'auto_reactivate' => array('type' => 'boolean', 'description' => 'Whether deals expired as out_of_stock, unavailable or price_up come back on their own.'),
+                    'hide_expired' => array('type' => 'boolean', 'description' => 'Whether listings hide expired deals.'),
+                ),
             ),
             'woocommerce' => array(
                 'type' => array('object', 'null'),
@@ -172,6 +183,12 @@ final class GetStatusAbility extends AbilityBase
             'openapi_url' => \rest_url('content-egg/v1/openapi'),
             'license' => null,
             'woocommerce' => WooPreflight::current(),
+            'deals' => array(
+                'enabled' => DealsSettings::enabled(),
+                'price_up_threshold' => DealsSettings::threshold(),
+                'auto_reactivate' => DealsSettings::autoReactivate(),
+                'hide_expired' => DealsSettings::hideExpired(),
+            ),
         );
 
         if ($build !== 'free' && \current_user_can('manage_options'))

@@ -78,7 +78,8 @@ class ImageProxy
         $head = curl_init();
         curl_setopt($head, CURLOPT_URL, $image_url);
         curl_setopt($head, CURLOPT_NOBODY, true);
-        curl_setopt($head, CURLOPT_FOLLOWLOCATION, true);
+        // No redirects: the domain and IP checks above cover this URL only.
+        curl_setopt($head, CURLOPT_FOLLOWLOCATION, false);
         curl_setopt($head, CURLOPT_TIMEOUT, 5);
         curl_setopt($head, CURLOPT_CONNECTTIMEOUT, 3);
         curl_setopt($head, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; CE ImageProxy/1.0)');
@@ -115,7 +116,7 @@ class ImageProxy
         // 5. Perform the GET request to stream the actual image
         $ch = curl_init($image_url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, false); // We'll stream directly
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
         curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; CE ImageProxy/1.0)');

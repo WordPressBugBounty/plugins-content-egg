@@ -167,7 +167,7 @@ abstract class ParserModule extends Module
                     $item['img'] = $old_data[$key]['img'];
                     $item['img_file'] = $old_data[$key]['img_file'];
                 }
-                elseif ($item['img'] && empty($item['img_file']))
+                elseif (!empty($item['img']) && empty($item['img_file']))
                 {
                     $local_img_name = ImageHelper::saveImgLocaly($item['img'], $item['title']);
                     if ($local_img_name)
